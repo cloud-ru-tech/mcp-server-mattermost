@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 54">
+  <style>
+    .mcp { fill: #26d07c; }
+    .mm { fill: #0058CC; }
+    text { font-family: monospace; font-size: 16px; white-space: pre; }
+  </style>
+  <text x="0" y="16">
+    <tspan class="mcp">┌┬┐┌─┐┌─┐</tspan><tspan class="mm">   ┌┬┐┌─┐┌┬┐┌┬┐┌─┐┬─┐┌┬┐┌─┐┌─┐┌┬┐</tspan>
+  </text>
+  <text x="0" y="34">
+    <tspan class="mcp">││││  ├─┘</tspan><tspan class="mm">   │││├─┤ │  │ ├┤ ├┬┘││││ │└─┐ │</tspan>
+  </text>
+  <text x="0" y="52">
+    <tspan class="mcp">┴ ┴└─┘┴</tspan><tspan class="mm">     ┴ ┴┴ ┴ ┴  ┴ └─┘┴└─┴ ┴└─┘└─┘ ┴</tspan>
+  </text>
+</svg>

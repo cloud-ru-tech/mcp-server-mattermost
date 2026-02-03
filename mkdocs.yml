@@ -1,0 +1,51 @@
+site_name: MCP Server Mattermost
+site_url: https://legard.github.io/mcp-server-mattermost
+site_description: MCP server for Mattermost integration
+repo_url: https://github.com/legard/mcp-server-mattermost
+repo_name: legard/mcp-server-mattermost
+
+theme:
+  name: material
+  logo: assets/logo.svg
+  palette:
+    - scheme: default
+      primary: white
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Configuration: configuration.md
+  - Docker: docker.md
+  - Examples: examples.md
+  - Tools:
+      - Overview: tools/index.md
+      - Channels: tools/channels.md
+      - Messages: tools/messages.md
+      - Reactions & Threads: tools/posts.md
+      - Users: tools/users.md
+      - Teams: tools/teams.md
+      - Files: tools/files.md
+      - Bookmarks: tools/bookmarks.md
+
+exclude_docs: |
+  plans/
+  lessons/
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences

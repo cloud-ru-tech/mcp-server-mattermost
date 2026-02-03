@@ -1,0 +1,34 @@
+---
+fail_fast: false
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        language: system
+        entry: uv run ruff check --fix
+        types: [python]
+        stages: [pre-commit]
+
+      - id: ruff-format
+        name: ruff-format
+        language: system
+        entry: uv run ruff format
+        types: [python]
+        stages: [pre-commit]
+
+      - id: mypy
+        name: mypy
+        language: system
+        entry: uv run mypy
+        types: [python]
+        exclude: ^tests/
+        stages: [pre-commit]
+
+      - id: pytest
+        name: pytest
+        language: system
+        entry: uv run pytest --cov=mcp_server_mattermost --cov-fail-under=80
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

@@ -1,0 +1,407 @@
+<div align="center">
+
+<img src="assets/logo.svg" alt="mcp-server-mattermost" width="400">
+
+### Let AI assistants read, search, and post in your Mattermost workspace
+
+Channels · Messages · Reactions · Threads · Files · Users
+
+[![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io/)
+[![PyPI version](https://badge.fury.io/py/mcp-server-mattermost.svg)](https://pypi.org/project/mcp-server-mattermost/)
+[![Tests](https://github.com/legard/mcp-server-mattermost/workflows/CI/badge.svg)](https://github.com/legard/mcp-server-mattermost/actions)
+[![Coverage](https://codecov.io/gh/legard/mcp-server-mattermost/branch/main/graph/badge.svg)](https://codecov.io/gh/legard/mcp-server-mattermost)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://legard.github.io/mcp-server-mattermost)
+
+</div>
+
+## Features
+
+**Channels** — list, create, join, manage channels and DMs<br>
+**Messages** — send, search, edit, delete with rich attachments<br>
+**Reactions & Threads** — emoji reactions, pins, full thread history<br>
+**Users & Teams** — lookup, search, status<br>
+**Files** — upload, metadata, download links<br>
+**Bookmarks** — save links and files in channels (Entry+ edition)
+
+## Installation
+
+### Using uvx (recommended)
+
+```bash
+uvx mcp-server-mattermost
+```
+
+### Using pip
+
+```bash
+pip install mcp-server-mattermost
+```
+
+### From source
+
+```bash
+git clone https://github.com/legard/mcp-server-mattermost
+cd mcp-server-mattermost
+uv sync
+uv run mcp-server-mattermost
+```
+
+### Using Docker
+
+```bash
+docker pull legard/mcp-server-mattermost
+```
+
+## Quick Start
+
+### 1. Get a Mattermost Bot Token
+
+1. Go to **System Console** → **Integrations** → **Bot Accounts**
+2. Create a new bot or use an existing one
+3. Copy the access token
+
+### 2. Configure your MCP client
+
+<details>
+<summary>Claude Desktop</summary>
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
+or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "mattermost": {
+      "command": "uvx",
+      "args": ["mcp-server-mattermost"],
+      "env": {
+        "MATTERMOST_URL": "https://your-mattermost-server.com",
+        "MATTERMOST_TOKEN": "your-bot-token"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Cursor</summary>
+
+Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
+
+```json
+{
+  "mcpServers": {
+    "mattermost": {
+      "command": "uvx",
+      "args": ["mcp-server-mattermost"],
+      "env": {
+        "MATTERMOST_URL": "https://your-mattermost-server.com",
+        "MATTERMOST_TOKEN": "your-bot-token"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Claude Code</summary>
+
+```bash
+claude mcp add mattermost \
+  -e MATTERMOST_URL=https://your-mattermost-server.com \
+  -e MATTERMOST_TOKEN=your-bot-token \
+  -- uvx mcp-server-mattermost
+```
+
+Use `--scope user` for global or `--scope project` for project-only.
+
+</details>
+
+<details>
+<summary>Opencode</summary>
+
+Add to `opencode.json` (project) or `~/.config/opencode/opencode.json` (global):
+
+```json
+{
+  "mcp": {
+    "mattermost": {
+      "type": "local",
+      "command": ["uvx", "mcp-server-mattermost"],
+      "enabled": true,
+      "environment": {
+        "MATTERMOST_URL": "https://your-mattermost-server.com",
+        "MATTERMOST_TOKEN": "your-bot-token"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+### 3. Restart your client
+
+The Mattermost tools will now be available in your conversations.
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MATTERMOST_URL` | Yes | — | Mattermost server URL |
+| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
+| `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
+| `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
+| `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
+| `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
+| `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
+
+## Docker
+
+### Stdio mode (default)
+
+```bash
+docker run -i --rm \
+  -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_TOKEN=your-token \
+  legard/mcp-server-mattermost
+```
+
+<details>
+<summary>Claude Desktop config</summary>
+
+```json
+{
+  "mcpServers": {
+    "mattermost": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MATTERMOST_URL=https://your-mattermost.com",
+        "-e", "MATTERMOST_TOKEN=your-token",
+        "legard/mcp-server-mattermost"
+      ]
+    }
+  }
+}
+```
+
+</details>
+
+> **Note:** In container orchestration (Kubernetes, Docker Swarm), disable healthcheck
+> with `--no-healthcheck` as it only works in HTTP mode.
+
+### HTTP mode (production)
+
+```bash
+docker run -d -p 8000:8000 \
+  -e MCP_TRANSPORT=http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_TOKEN=your-token \
+  legard/mcp-server-mattermost
+```
+
+Health check: `curl http://localhost:8000/health`
+
+### Environment Variables (Docker)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
+| `MCP_HOST` | `127.0.0.1` | HTTP bind host (use `0.0.0.0` in Docker) |
+| `MCP_PORT` | `8000` | HTTP port |
+
+## Available Tools
+
+<details>
+<summary>Channels (9 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `list_channels` | List channels in a team | `team_id` ✓ |
+| `get_channel` | Get channel details by ID | `channel_id` ✓ |
+| `get_channel_by_name` | Get channel by name | `team_id`, `channel_name` ✓ |
+| `create_channel` | Create a new channel | `team_id`, `name`, `display_name` ✓ |
+| `join_channel` | Join a public channel | `channel_id` ✓ |
+| `leave_channel` | Leave a channel | `channel_id` ✓ |
+| `get_channel_members` | List channel members | `channel_id` ✓ |
+| `add_user_to_channel` | Add user to channel | `channel_id`, `user_id` ✓ |
+| `create_direct_channel` | Create DM channel | `user_id_1`, `user_id_2` ✓ |
+
+</details>
+
+<details>
+<summary>Messages (5 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `post_message` | Send a message to a channel | `channel_id`, `message` ✓, `attachments` |
+| `get_channel_messages` | Get recent messages | `channel_id` ✓ |
+| `search_messages` | Search messages by term | `team_id`, `terms` ✓ |
+| `update_message` | Edit a message | `post_id`, `message` ✓, `attachments` |
+| `delete_message` | Delete a message | `post_id` ✓ |
+
+</details>
+
+<details>
+<summary>Reactions & Threads (6 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `add_reaction` | Add emoji reaction | `post_id`, `emoji_name` ✓ |
+| `remove_reaction` | Remove emoji reaction | `post_id`, `emoji_name` ✓ |
+| `get_reactions` | Get all reactions on a post | `post_id` ✓ |
+| `pin_message` | Pin a message | `post_id` ✓ |
+| `unpin_message` | Unpin a message | `post_id` ✓ |
+| `get_thread` | Get thread messages | `post_id` ✓ |
+
+</details>
+
+<details>
+<summary>Users (5 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `get_me` | Get current user info | — |
+| `get_user` | Get user by ID | `user_id` ✓ |
+| `get_user_by_username` | Get user by username | `username` ✓ |
+| `search_users` | Search users | `term` ✓ |
+| `get_user_status` | Get online status | `user_id` ✓ |
+
+</details>
+
+<details>
+<summary>Teams (3 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `list_teams` | List your teams | — |
+| `get_team` | Get team details | `team_id` ✓ |
+| `get_team_members` | List team members | `team_id` ✓ |
+
+</details>
+
+<details>
+<summary>Files (3 tools)</summary>
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `upload_file` | Upload a file | `channel_id`, `file_path` ✓ |
+| `get_file_info` | Get file metadata | `file_id` ✓ |
+| `get_file_link` | Get download link | `file_id` ✓ |
+
+</details>
+
+<details>
+<summary>Bookmarks (5 tools) — Requires Entry+ edition</summary>
+
+> **Note:** Requires Entry, Professional, Enterprise, or Enterprise Advanced edition
+> (not available in Team Edition). Minimum version: v10.1.
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `list_bookmarks` | List channel bookmarks | `channel_id` ✓ |
+| `create_bookmark` | Create link or file bookmark | `channel_id`, `display_name`, `bookmark_type` ✓ |
+| `update_bookmark` | Update bookmark properties | `channel_id`, `bookmark_id` ✓ |
+| `delete_bookmark` | Delete a bookmark | `channel_id`, `bookmark_id` ✓ |
+| `update_bookmark_sort_order` | Reorder bookmark | `channel_id`, `bookmark_id`, `new_sort_order` ✓ |
+
+</details>
+
+## Example Queries
+
+Once configured, you can ask your AI assistant:
+
+- "List all channels and find where the deployment discussion is happening"
+- "Send a build status alert to #engineering with a red attachment"
+- "Search for messages about the outage last week and summarize"
+- "Reply in the thread with the test results"
+- "Who's online in my team right now?"
+- "Upload the report.pdf to #general and share the link"
+
+## Documentation
+
+📖 **[legard.github.io/mcp-server-mattermost](https://legard.github.io/mcp-server-mattermost)**
+
+- [Getting Started](https://legard.github.io/mcp-server-mattermost/getting-started/) — Installation and setup
+- [Configuration](https://legard.github.io/mcp-server-mattermost/configuration/) — Environment variables
+- [Tools Reference](https://legard.github.io/mcp-server-mattermost/tools/) — Detailed API documentation
+- [llms.txt](llms.txt) — AI-readable documentation index
+
+## Development
+
+```bash
+# Clone and install
+git clone https://github.com/legard/mcp-server-mattermost
+cd mcp-server-mattermost
+uv sync --dev
+
+# Run unit tests
+uv run pytest
+
+# Run integration tests (requires Docker or external Mattermost)
+uv run pytest tests/integration -v
+
+# Type checking
+uv run mypy src/
+
+# Linting
+uv run ruff check src/ tests/
+
+# Run locally
+MATTERMOST_URL=https://... MATTERMOST_TOKEN=... uv run mcp-server-mattermost
+```
+
+### Integration Tests
+
+Integration tests run against a real Mattermost server via Docker (Testcontainers) or external server.
+
+```bash
+# With Docker (Testcontainers) — automatic setup
+uv run pytest tests/integration -v
+
+# Against external Mattermost server
+export MATTERMOST_URL=https://your-server.com
+export MATTERMOST_TOKEN=your-bot-token
+uv run pytest tests/integration -v
+
+# Run specific test module
+uv run pytest tests/integration/test_channels.py -v
+```
+
+Integration tests are excluded from the default `pytest` run. Unit tests run with:
+
+```bash
+uv run pytest  # Unit tests only
+```
+
+## Debugging
+
+Use the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) to debug:
+
+```bash
+npx @modelcontextprotocol/inspector uvx mcp-server-mattermost
+```
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+Built with [FastMCP](https://gofastmcp.com/) · [Mattermost API v4](https://api.mattermost.com/)
+
+</div>

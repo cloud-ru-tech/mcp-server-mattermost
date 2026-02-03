@@ -1,0 +1,20 @@
+.git
+.gitignore
+.github
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build
+tests
+docs
+# Exclude markdown except README (required by hatchling for package metadata)
+*.md
+!README.md
+Makefile
+.env*
