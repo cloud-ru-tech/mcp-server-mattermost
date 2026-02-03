@@ -319,15 +319,15 @@ Once configured, you can ask your AI assistant:
 - "List all channels and find where the deployment discussion is happening"
 - "Send a build status alert to #engineering with a red attachment"
 - "Search for messages about the outage last week and summarize"
-- "Reply in the thread with the test results"
-- "Who's online in my team right now?"
+- "Summarize this thread and post the key decisions"
+- "Find who worked on the authentication bug last week"
 - "Upload the report.pdf to #general and share the link"
 
 ## Documentation
 
 📖 **[legard.github.io/mcp-server-mattermost](https://legard.github.io/mcp-server-mattermost)**
 
-- [Getting Started](https://legard.github.io/mcp-server-mattermost/getting-started/) — Installation and setup
+- [Quick Start](https://legard.github.io/mcp-server-mattermost/quickstart/) — Installation and setup
 - [Configuration](https://legard.github.io/mcp-server-mattermost/configuration/) — Environment variables
 - [Tools Reference](https://legard.github.io/mcp-server-mattermost/tools/) — Detailed API documentation
 - [llms.txt](llms.txt) — AI-readable documentation index

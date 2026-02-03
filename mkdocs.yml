@@ -26,7 +26,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
+  - Quick Start: quickstart.md
   - Configuration: configuration.md
   - Docker: docker.md
   - Examples: examples.md
@@ -49,3 +49,5 @@ markdown_extensions:
   - admonition
   - pymdownx.highlight
   - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
