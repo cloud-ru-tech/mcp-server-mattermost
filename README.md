@@ -194,9 +194,6 @@ docker run -i --rm \
 
 </details>
 
-> **Note:** In container orchestration (Kubernetes, Docker Swarm), disable healthcheck
-> with `--no-healthcheck` as it only works in HTTP mode.
-
 ### HTTP mode (production)
 
 ```bash

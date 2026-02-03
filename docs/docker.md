@@ -78,9 +78,23 @@ curl http://localhost:8000/health
 | `MCP_HOST` | `127.0.0.1` | HTTP bind host (use `0.0.0.0` in Docker) |
 | `MCP_PORT` | `8000` | HTTP port |
 
-## Container Orchestration
+## Healthcheck Behavior
 
-When running in Kubernetes or Docker Swarm, disable the healthcheck for stdio mode:
+The Dockerfile includes a healthcheck that probes `/health` endpoint. This only works
+in HTTP mode (`MCP_TRANSPORT=http`).
+
+**In stdio mode:**
+
+- Healthcheck fails (no HTTP server running)
+- Container status shows `unhealthy`
+- This is harmless for normal `docker run` — the container works fine
+
+**When this becomes a problem:**
+
+- Docker Compose with `restart: on-failure` or `restart: always`
+- Docker Swarm (restarts unhealthy containers automatically)
+
+**Solution:** Add `--no-healthcheck` flag:
 
 ```bash
 docker run -i --rm --no-healthcheck \
@@ -89,7 +103,15 @@ docker run -i --rm --no-healthcheck \
   legard/mcp-server-mattermost
 ```
 
-The healthcheck only works in HTTP mode.
+Or override in compose file:
+
+```yaml
+services:
+  mattermost-mcp:
+    image: legard/mcp-server-mattermost
+    healthcheck:
+      disable: true
+```
 
 ## Build from Source
 
