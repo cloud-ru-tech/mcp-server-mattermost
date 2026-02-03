@@ -25,195 +25,16 @@ Channels · Messages · Reactions · Threads · Files · Users
 **Files** — upload, metadata, download links<br>
 **Bookmarks** — save links and files in channels (Entry+ edition)
 
-## Installation
+## Example Queries
 
-### Using uvx (recommended)
+Once configured, you can ask your AI assistant:
 
-```bash
-uvx mcp-server-mattermost
-```
-
-### Using pip
-
-```bash
-pip install mcp-server-mattermost
-```
-
-### From source
-
-```bash
-git clone https://github.com/legard/mcp-server-mattermost
-cd mcp-server-mattermost
-uv sync
-uv run mcp-server-mattermost
-```
-
-### Using Docker
-
-```bash
-docker pull legard/mcp-server-mattermost
-```
-
-## Quick Start
-
-### 1. Get a Mattermost Bot Token
-
-1. Go to **System Console** → **Integrations** → **Bot Accounts**
-2. Create a new bot or use an existing one
-3. Copy the access token
-
-### 2. Configure your MCP client
-
-<details>
-<summary>Claude Desktop</summary>
-
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
-or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
-```json
-{
-  "mcpServers": {
-    "mattermost": {
-      "command": "uvx",
-      "args": ["mcp-server-mattermost"],
-      "env": {
-        "MATTERMOST_URL": "https://your-mattermost-server.com",
-        "MATTERMOST_TOKEN": "your-bot-token"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Cursor</summary>
-
-Add to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (project):
-
-```json
-{
-  "mcpServers": {
-    "mattermost": {
-      "command": "uvx",
-      "args": ["mcp-server-mattermost"],
-      "env": {
-        "MATTERMOST_URL": "https://your-mattermost-server.com",
-        "MATTERMOST_TOKEN": "your-bot-token"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary>Claude Code</summary>
-
-```bash
-claude mcp add mattermost \
-  -e MATTERMOST_URL=https://your-mattermost-server.com \
-  -e MATTERMOST_TOKEN=your-bot-token \
-  -- uvx mcp-server-mattermost
-```
-
-Use `--scope user` for global or `--scope project` for project-only.
-
-</details>
-
-<details>
-<summary>Opencode</summary>
-
-Add to `opencode.json` (project) or `~/.config/opencode/opencode.json` (global):
-
-```json
-{
-  "mcp": {
-    "mattermost": {
-      "type": "local",
-      "command": ["uvx", "mcp-server-mattermost"],
-      "enabled": true,
-      "environment": {
-        "MATTERMOST_URL": "https://your-mattermost-server.com",
-        "MATTERMOST_TOKEN": "your-bot-token"
-      }
-    }
-  }
-}
-```
-
-</details>
-
-### 3. Restart your client
-
-The Mattermost tools will now be available in your conversations.
-
-## Configuration
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
-| `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
-| `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
-| `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
-| `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
-| `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
-
-## Docker
-
-### Stdio mode (default)
-
-```bash
-docker run -i --rm \
-  -e MATTERMOST_URL=https://your-mattermost.com \
-  -e MATTERMOST_TOKEN=your-token \
-  legard/mcp-server-mattermost
-```
-
-<details>
-<summary>Claude Desktop config</summary>
-
-```json
-{
-  "mcpServers": {
-    "mattermost": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "-e", "MATTERMOST_URL=https://your-mattermost.com",
-        "-e", "MATTERMOST_TOKEN=your-token",
-        "legard/mcp-server-mattermost"
-      ]
-    }
-  }
-}
-```
-
-</details>
-
-### HTTP mode (production)
-
-```bash
-docker run -d -p 8000:8000 \
-  -e MCP_TRANSPORT=http \
-  -e MCP_HOST=0.0.0.0 \
-  -e MATTERMOST_URL=https://your-mattermost.com \
-  -e MATTERMOST_TOKEN=your-token \
-  legard/mcp-server-mattermost
-```
-
-Health check: `curl http://localhost:8000/health`
-
-### Environment Variables (Docker)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
-| `MCP_HOST` | `127.0.0.1` | HTTP bind host (use `0.0.0.0` in Docker) |
-| `MCP_PORT` | `8000` | HTTP port |
+- "List all channels and find where the deployment discussion is happening"
+- "Send a build status alert to #engineering with a red attachment"
+- "Search for messages about the outage last week and summarize"
+- "Summarize this thread and post the key decisions"
+- "Find who worked on the authentication bug last week"
+- "Upload the report.pdf to #general and share the link"
 
 ## Available Tools
 
@@ -312,16 +133,94 @@ Health check: `curl http://localhost:8000/health`
 
 </details>
 
-## Example Queries
+## Quick Start
 
-Once configured, you can ask your AI assistant:
+1. Get a [Mattermost bot token](https://developers.mattermost.com/integrate/admin-guide/admin-bot-accounts/)
+2. Add to your MCP client config:
 
-- "List all channels and find where the deployment discussion is happening"
-- "Send a build status alert to #engineering with a red attachment"
-- "Search for messages about the outage last week and summarize"
-- "Summarize this thread and post the key decisions"
-- "Find who worked on the authentication bug last week"
-- "Upload the report.pdf to #general and share the link"
+```json
+{
+  "mcpServers": {
+    "mattermost": {
+      "command": "uvx",
+      "args": ["mcp-server-mattermost"],
+      "env": {
+        "MATTERMOST_URL": "https://your-server.com",
+        "MATTERMOST_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+3. Restart your client
+
+> **[Full setup guide](https://legard.github.io/mcp-server-mattermost/quickstart/)** — Claude Desktop, Cursor, Claude Code, Opencode, Docker, pip
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MATTERMOST_URL` | Yes | — | Mattermost server URL |
+| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
+| `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
+| `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
+| `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
+| `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
+| `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
+
+## Docker
+
+### Stdio mode (default)
+
+```bash
+docker run -i --rm \
+  -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_TOKEN=your-token \
+  legard/mcp-server-mattermost
+```
+
+<details>
+<summary>Claude Desktop config</summary>
+
+```json
+{
+  "mcpServers": {
+    "mattermost": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MATTERMOST_URL=https://your-mattermost.com",
+        "-e", "MATTERMOST_TOKEN=your-token",
+        "legard/mcp-server-mattermost"
+      ]
+    }
+  }
+}
+```
+
+</details>
+
+### HTTP mode (production)
+
+```bash
+docker run -d -p 8000:8000 \
+  -e MCP_TRANSPORT=http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_TOKEN=your-token \
+  legard/mcp-server-mattermost
+```
+
+Health check: `curl http://localhost:8000/health`
+
+### Environment Variables (Docker)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MCP_TRANSPORT` | `stdio` | Transport: `stdio` or `http` |
+| `MCP_HOST` | `127.0.0.1` | HTTP bind host (use `0.0.0.0` in Docker) |
+| `MCP_PORT` | `8000` | HTTP port |
 
 ## Documentation
 
