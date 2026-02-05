@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.svg" alt="mcp-server-mattermost" width="400">
+<img src="https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/assets/logo.svg" alt="mcp-server-mattermost" width="400">
 
 ### Let AI assistants read, search, and post in your Mattermost workspace
 
