@@ -25,6 +25,6 @@ Once configured, ask your AI assistant:
 
 ## Links
 
-- [GitHub Repository](https://github.com/legard/mcp-server-mattermost)
+- [GitHub Repository](https://github.com/cloud-ru-tech/mcp-server-mattermost)
 - [PyPI Package](https://pypi.org/project/mcp-server-mattermost/)
 - [Mattermost API](https://api.mattermost.com/)

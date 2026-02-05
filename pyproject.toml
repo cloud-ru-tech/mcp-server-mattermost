@@ -53,10 +53,10 @@ docs = [
 mcp-server-mattermost = "mcp_server_mattermost:main"
 
 [project.urls]
-Homepage = "https://github.com/legard/mcp-server-mattermost"
-Documentation = "https://legard.github.io/mcp-server-mattermost"
-Repository = "https://github.com/legard/mcp-server-mattermost"
-Issues = "https://github.com/legard/mcp-server-mattermost/issues"
+Homepage = "https://github.com/cloud-ru-tech/mcp-server-mattermost"
+Documentation = "https://cloud-ru-tech.github.io/mcp-server-mattermost"
+Repository = "https://github.com/cloud-ru-tech/mcp-server-mattermost"
+Issues = "https://github.com/cloud-ru-tech/mcp-server-mattermost/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_server_mattermost"]

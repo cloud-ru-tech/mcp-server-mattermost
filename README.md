@@ -8,11 +8,10 @@ Channels · Messages · Reactions · Threads · Files · Users
 
 [![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io/)
 [![PyPI version](https://badge.fury.io/py/mcp-server-mattermost.svg)](https://pypi.org/project/mcp-server-mattermost/)
-[![Tests](https://github.com/legard/mcp-server-mattermost/workflows/CI/badge.svg)](https://github.com/legard/mcp-server-mattermost/actions)
-[![Coverage](https://codecov.io/gh/legard/mcp-server-mattermost/branch/main/graph/badge.svg)](https://codecov.io/gh/legard/mcp-server-mattermost)
+[![Tests](https://github.com/cloud-ru-tech/mcp-server-mattermost/workflows/CI/badge.svg)](https://github.com/cloud-ru-tech/mcp-server-mattermost/actions)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://legard.github.io/mcp-server-mattermost)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://cloud-ru-tech.github.io/mcp-server-mattermost)
 
 </div>
 
@@ -155,7 +154,7 @@ Once configured, you can ask your AI assistant:
 
 3. Restart your client
 
-> **[Full setup guide](https://legard.github.io/mcp-server-mattermost/quickstart/)** — Claude Desktop, Cursor, Claude Code, Opencode, Docker, pip
+> **[Full setup guide](https://cloud-ru-tech.github.io/mcp-server-mattermost/quickstart/)** — Claude Desktop, Cursor, Claude Code, Opencode, Docker, pip
 
 ## Configuration
 
@@ -224,18 +223,18 @@ Health check: `curl http://localhost:8000/health`
 
 ## Documentation
 
-📖 **[legard.github.io/mcp-server-mattermost](https://legard.github.io/mcp-server-mattermost)**
+📖 **[cloud-ru-tech.github.io/mcp-server-mattermost](https://cloud-ru-tech.github.io/mcp-server-mattermost)**
 
-- [Quick Start](https://legard.github.io/mcp-server-mattermost/quickstart/) — Installation and setup
-- [Configuration](https://legard.github.io/mcp-server-mattermost/configuration/) — Environment variables
-- [Tools Reference](https://legard.github.io/mcp-server-mattermost/tools/) — Detailed API documentation
+- [Quick Start](https://cloud-ru-tech.github.io/mcp-server-mattermost/quickstart/) — Installation and setup
+- [Configuration](https://cloud-ru-tech.github.io/mcp-server-mattermost/configuration/) — Environment variables
+- [Tools Reference](https://cloud-ru-tech.github.io/mcp-server-mattermost/tools/) — Detailed API documentation
 - [llms.txt](llms.txt) — AI-readable documentation index
 
 ## Development
 
 ```bash
 # Clone and install
-git clone https://github.com/legard/mcp-server-mattermost
+git clone https://github.com/cloud-ru-tech/mcp-server-mattermost
 cd mcp-server-mattermost
 uv sync --dev
 

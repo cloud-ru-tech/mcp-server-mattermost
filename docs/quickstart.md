@@ -32,7 +32,7 @@ Get up and running in 2 minutes.
 === "From source"
 
     ```bash
-    git clone https://github.com/legard/mcp-server-mattermost
+    git clone https://github.com/cloud-ru-tech/mcp-server-mattermost
     cd mcp-server-mattermost
     uv sync
     ```

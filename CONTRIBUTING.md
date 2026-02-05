@@ -7,7 +7,7 @@ Thank you for your interest in contributing!
 1. **Clone the repository:**
 
    ```bash
-   git clone https://github.com/legard/mcp-server-mattermost.git
+   git clone https://github.com/cloud-ru-tech/mcp-server-mattermost.git
    cd mcp-server-mattermost
    ```
 

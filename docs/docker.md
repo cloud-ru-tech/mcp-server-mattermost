@@ -116,7 +116,7 @@ services:
 ## Build from Source
 
 ```bash
-git clone https://github.com/legard/mcp-server-mattermost
+git clone https://github.com/cloud-ru-tech/mcp-server-mattermost
 cd mcp-server-mattermost
 docker build -t mcp-server-mattermost .
 ```

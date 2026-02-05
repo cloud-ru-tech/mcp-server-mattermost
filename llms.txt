@@ -5,17 +5,17 @@
 
 ## Docs
 
-- [Getting Started](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/getting-started.md): Installation and Claude Desktop configuration
-- [Configuration](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/configuration.md): Environment variables and options
-- [Channel Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/channels.md): List, create, join channels (9 tools)
-- [Message Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/messages.md): Send, search, edit messages (5 tools)
-- [Post Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/posts.md): Reactions, pins, threads (6 tools)
-- [User Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/users.md): Lookup users and status (5 tools)
-- [Team Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/teams.md): Team information (3 tools)
-- [File Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/files.md): Upload and download files (3 tools)
-- [Bookmark Tools](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/docs/tools/bookmarks.md): Channel bookmarks (5 tools)
+- [Getting Started](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/getting-started.md): Installation and Claude Desktop configuration
+- [Configuration](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/configuration.md): Environment variables and options
+- [Channel Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/channels.md): List, create, join channels (9 tools)
+- [Message Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/messages.md): Send, search, edit messages (5 tools)
+- [Post Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/posts.md): Reactions, pins, threads (6 tools)
+- [User Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/users.md): Lookup users and status (5 tools)
+- [Team Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/teams.md): Team information (3 tools)
+- [File Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/files.md): Upload and download files (3 tools)
+- [Bookmark Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/bookmarks.md): Channel bookmarks (5 tools)
 
 ## Optional
 
-- [README](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/README.md): Full project overview
-- [Changelog](https://raw.githubusercontent.com/legard/mcp-server-mattermost/main/CHANGELOG.md): Version history
+- [README](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/README.md): Full project overview
+- [Changelog](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/CHANGELOG.md): Version history
