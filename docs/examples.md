@@ -199,3 +199,10 @@ The AI checks context and decides what to do:
 `post_message` with `root_id`, keeping the conversation organized.
 
 **If replies exist:** the AI summarizes the responses for you instead.
+
+---
+
+!!! tip "Want better results?"
+    The formatting quality depends on how you prompt and configure your AI assistant.
+    Add one line to your CLAUDE.md or .cursorrules to get rich attachments every time.
+    [See the full guide →](best-practices.md)
