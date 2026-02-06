@@ -11,7 +11,7 @@ Channels · Messages · Reactions · Threads · Files · Users
 [![Tests](https://github.com/cloud-ru-tech/mcp-server-mattermost/workflows/CI/badge.svg)](https://github.com/cloud-ru-tech/mcp-server-mattermost/actions)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://cloud-ru-tech.github.io/mcp-server-mattermost)
+[![Docs](https://img.shields.io/badge/docs-Read%20the%20Docs-blue)](https://mcp-server-mattermost.readthedocs.io/)
 
 </div>
 
@@ -154,7 +154,7 @@ Once configured, you can ask your AI assistant:
 
 3. Restart your client
 
-> **[Full setup guide](https://cloud-ru-tech.github.io/mcp-server-mattermost/quickstart/)** — Claude Desktop, Cursor, Claude Code, Opencode, Docker, pip
+> **[Full setup guide](https://mcp-server-mattermost.readthedocs.io/quickstart/)** — Claude Desktop, Cursor, Claude Code, Opencode, Docker, pip
 
 ## Configuration
 
@@ -223,11 +223,11 @@ Health check: `curl http://localhost:8000/health`
 
 ## Documentation
 
-📖 **[cloud-ru-tech.github.io/mcp-server-mattermost](https://cloud-ru-tech.github.io/mcp-server-mattermost)**
+📖 **[mcp-server-mattermost.readthedocs.io](https://mcp-server-mattermost.readthedocs.io/)**
 
-- [Quick Start](https://cloud-ru-tech.github.io/mcp-server-mattermost/quickstart/) — Installation and setup
-- [Configuration](https://cloud-ru-tech.github.io/mcp-server-mattermost/configuration/) — Environment variables
-- [Tools Reference](https://cloud-ru-tech.github.io/mcp-server-mattermost/tools/) — Detailed API documentation
+- [Quick Start](https://mcp-server-mattermost.readthedocs.io/quickstart/) — Installation and setup
+- [Configuration](https://mcp-server-mattermost.readthedocs.io/configuration/) — Environment variables
+- [Tools Reference](https://mcp-server-mattermost.readthedocs.io/tools/) — Detailed API documentation
 - [llms.txt](llms.txt) — AI-readable documentation index
 
 ## Development
