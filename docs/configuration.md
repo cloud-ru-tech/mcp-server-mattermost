@@ -17,6 +17,8 @@ All configuration is done via environment variables with the `MATTERMOST_` prefi
 | `MATTERMOST_MAX_RETRIES` | 3 | Maximum retry attempts for failed requests (0-10) |
 | `MATTERMOST_VERIFY_SSL` | true | Verify SSL certificates |
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
+| `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
+| `MATTERMOST_API_VERSION` | v4 | Mattermost API version |
 
 ## Environment File
 
