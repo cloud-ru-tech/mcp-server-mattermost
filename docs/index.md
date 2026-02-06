@@ -11,7 +11,8 @@ Once configured, ask your AI assistant:
 - "Set up a channel for the new project, invite the team, post the goals"
 - "We shipped v2.1.0 — gather changes from #dev and post release notes"
 
-[See examples with screenshots →](examples.md)
+[See examples with screenshots →](examples.md)<br>
+[Best practices for AI configuration →](best-practices.md)
 
 ## Features
 
