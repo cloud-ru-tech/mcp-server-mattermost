@@ -50,6 +50,8 @@ extra_css:
 markdown_extensions:
   - tables
   - admonition
+  - attr_list
+  - md_in_html
   - pymdownx.highlight
   - pymdownx.superfences
   - pymdownx.tabbed:

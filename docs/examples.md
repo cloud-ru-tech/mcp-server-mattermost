@@ -10,13 +10,9 @@ Each example is a single prompt — the AI decides which tools to call and how t
 The AI reads recent messages from #ops, identifies deployment-related updates,
 and posts a structured summary to #engineering with color-coded status:
 
-<div class="examples-screenshot">
+![Deployment status summary with colored attachments](assets/examples/deployment-status.png){ .examples-screenshot }
 
-![Deployment status summary with colored attachments](assets/examples/deployment-status.png)
-
-</div>
-
-<details>
+<details markdown>
 <summary>How it works</summary>
 
 **Tools used:**
@@ -74,13 +70,9 @@ and posts a structured summary to #engineering with color-coded status:
 The AI searches for questions, checks each thread for replies,
 and posts a report highlighting what still needs attention:
 
-<div class="examples-screenshot">
+![Unanswered questions report](assets/examples/unanswered-questions.png){ .examples-screenshot }
 
-![Unanswered questions report](assets/examples/unanswered-questions.png)
-
-</div>
-
-<details>
+<details markdown>
 <summary>How it works</summary>
 
 **Tools used:**
@@ -115,13 +107,9 @@ and posts a report highlighting what still needs attention:
 The AI gathers changes from team conversations and assembles
 structured release notes — grouped by category, each with its own color:
 
-<div class="examples-screenshot">
+![Release notes with colored sections](assets/examples/release-notes.png){ .examples-screenshot }
 
-![Release notes with colored sections](assets/examples/release-notes.png)
-
-</div>
-
-<details>
+<details markdown>
 <summary>How it works</summary>
 
 **Tools used:**
