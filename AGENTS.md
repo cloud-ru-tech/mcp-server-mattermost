@@ -188,3 +188,8 @@ This project uses manual versioning:
 4. Tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
 5. Push: `git push origin main --tags`
 6. Create GitHub Release from tag → triggers PyPI publish
+
+## Lessons Learned
+
+- When using markdown (images, lists, bold) inside HTML blocks (`<div>`, `<details>`) in MkDocs — add `md_in_html` extension and `markdown` attribute on the HTML tag, otherwise content renders as plain text
+- When adding CSS class to an image in MkDocs — use `attr_list` extension with `![alt](path){ .classname }` instead of wrapping in `<div class="...">`. Cleaner, no HTML needed
