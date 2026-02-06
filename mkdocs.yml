@@ -1,5 +1,5 @@
 site_name: MCP Server Mattermost
-site_url: https://cloud-ru-tech.github.io/mcp-server-mattermost
+site_url: !ENV [READTHEDOCS_CANONICAL_URL, 'https://mcp-server-mattermost.readthedocs.io/']
 site_description: MCP server for Mattermost integration
 repo_url: https://github.com/cloud-ru-tech/mcp-server-mattermost
 repo_name: cloud-ru-tech/mcp-server-mattermost

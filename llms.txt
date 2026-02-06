@@ -5,7 +5,7 @@
 
 ## Docs
 
-- [Getting Started](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/getting-started.md): Installation and Claude Desktop configuration
+- [Quick Start](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/quickstart.md): Installation and Claude Desktop configuration
 - [Configuration](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/configuration.md): Environment variables and options
 - [Channel Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/channels.md): List, create, join channels (9 tools)
 - [Message Tools](https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/docs/tools/messages.md): Send, search, edit messages (5 tools)
