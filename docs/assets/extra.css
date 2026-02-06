@@ -1,0 +1,14 @@
+/* Screenshot styling for examples page */
+.examples-screenshot img {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    border: 1px solid #e0e0e0;
+    max-width: 600px;
+    display: block;
+}
+
+/* Dark mode: adjust border for visibility */
+[data-md-color-scheme="slate"] .examples-screenshot img {
+    border-color: #444;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}

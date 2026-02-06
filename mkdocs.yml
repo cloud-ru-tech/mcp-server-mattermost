@@ -44,6 +44,9 @@ exclude_docs: |
   plans/
   lessons/
 
+extra_css:
+  - assets/extra.css
+
 markdown_extensions:
   - tables
   - admonition
