@@ -202,7 +202,6 @@ The AI checks context and decides what to do:
 
 ---
 
-!!! tip "Want better results?"
-    The formatting quality depends on how you prompt and configure your AI assistant.
-    Add one line to your CLAUDE.md or .cursorrules to get rich attachments every time.
-    [See the full guide →](best-practices.md)
+!!! tip "Want consistent results?"
+    Configure your AI with workspace context and automate recurring workflows.
+    [See best practices →](best-practices.md)
