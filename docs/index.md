@@ -6,11 +6,12 @@ Let AI assistants read, search, and post in your Mattermost workspace.
 
 Once configured, ask your AI assistant:
 
-- "List all channels and find where the deployment discussion is happening"
-- "Send a build status alert to #engineering"
-- "Search for messages about the outage last week"
-- "Summarize this thread and post the key decisions"
-- "Find who worked on the authentication bug last week"
+- "Catch me up on #backend — what happened while I was away?"
+- "Find unanswered questions in #support and post a summary"
+- "Set up a channel for the new project, invite the team, post the goals"
+- "We shipped v2.1.0 — gather changes from #dev and post release notes"
+
+[See examples with screenshots →](examples.md)
 
 ## Features
 
