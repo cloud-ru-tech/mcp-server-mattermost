@@ -1,8 +1,10 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/assets/logo.svg" alt="mcp-server-mattermost" width="400">
+<img src="https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/assets/logo.png" alt="mcp-server-mattermost" width="120">
 
-### Let AI assistants read, search, and post in your Mattermost workspace
+# mcp-server-mattermost
+
+Let AI assistants read, search, and post in your Mattermost workspace
 
 Channels · Messages · Reactions · Threads · Files · Users
 
