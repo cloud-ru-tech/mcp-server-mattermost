@@ -2,6 +2,8 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
@@ -159,8 +161,12 @@ class MattermostClient:
             retry_after_header = response.headers.get("Retry-After")
             retry_after = None
             if retry_after_header:
-                with suppress(ValueError):  # Non-integer Retry-After (e.g., HTTP-date)
+                with suppress(ValueError):
                     retry_after = int(retry_after_header)
+                if retry_after is None:
+                    with suppress(ValueError, TypeError):
+                        dt = parsedate_to_datetime(retry_after_header)
+                        retry_after = max(0, int((dt - datetime.now(timezone.utc)).total_seconds()))
             raise RateLimitError(retry_after)
 
         if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
@@ -870,23 +876,70 @@ class MattermostClient:
             raise FileValidationError(file_path, "Path is not a file")
 
         name = filename or resolved_path.name
+        content = resolved_path.read_bytes()
 
-        with resolved_path.open("rb") as f:
-            files = {"files": (name, f)}
-            data = {"channel_id": channel_id}
+        return await self._upload_file_with_retry(channel_id, name, content)
 
-            if self._client is None:
-                msg = "Client not initialized"
-                raise RuntimeError(msg)
+    async def _upload_file_with_retry(
+        self,
+        channel_id: str,
+        filename: str,
+        content: bytes,
+    ) -> dict[str, Any]:
+        """Upload file with retry logic.
 
-            response = await self._client.post(
-                "/files",
-                params={"channel_id": channel_id, "filename": name},
-                data=data,
-                files=files,
+        Reads file content into memory to avoid stream position issues on retry.
+
+        Args:
+            channel_id: Channel identifier
+            filename: Name for the uploaded file
+            content: File content as bytes
+
+        Returns:
+            Upload response with file_infos list
+        """
+        if self._client is None:
+            msg = "Client not initialized. Use async with client.lifespan():"
+            raise RuntimeError(msg)
+
+        retrying = retry(
+            stop=stop_after_attempt(self.settings.max_retries + 1),
+            wait=_wait_for_rate_limit,
+            retry=retry_if_exception(_is_retryable_exception),
+            before_sleep=_log_retry,
+            reraise=True,
+        )
+
+        @retrying
+        async def _do_upload() -> dict[str, Any] | list[Any] | None:
+            request_id = request_id_var.get()
+            logger.debug(
+                "",
+                extra={
+                    "event": "http_request",
+                    "request_id": request_id,
+                    "method": "POST",
+                    "endpoint": "/files",
+                },
             )
-            result = self._handle_response(response)
-            return result if isinstance(result, dict) else {}
+            response = await self._client.post(  # type: ignore[union-attr]
+                "/files",
+                params={"channel_id": channel_id, "filename": filename},
+                data={"channel_id": channel_id},
+                files={"files": (filename, content)},
+            )
+            logger.debug(
+                "",
+                extra={
+                    "event": "http_response",
+                    "request_id": request_id,
+                    "status_code": response.status_code,
+                },
+            )
+            return self._handle_response(response)
+
+        result = await _do_upload()
+        return result if isinstance(result, dict) else {}
 
     async def get_file_info(self, file_id: str) -> dict[str, Any]:
         """Get file metadata.

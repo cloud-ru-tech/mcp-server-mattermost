@@ -187,7 +187,34 @@ class TestMattermostClientResponseHandler:
         assert exc_info.value.retry_after == 30
 
     def test_handle_response_429_http_date_retry_after(self, mock_settings):
-        """429 with HTTP-date Retry-After should raise RateLimitError with retry_after=None."""
+        """429 with HTTP-date Retry-After should parse date into seconds."""
+        from datetime import datetime, timezone
+
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        get_settings.cache_clear()
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        # Use a date far in the future so we get a positive retry_after
+        future = datetime(2099, 1, 1, tzinfo=timezone.utc)
+        http_date = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": http_date},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError) as exc_info:
+            client._handle_response(response)
+
+        assert exc_info.value.retry_after is not None
+        assert exc_info.value.retry_after > 0
+
+    def test_handle_response_429_http_date_in_past(self, mock_settings):
+        """429 with HTTP-date in the past should clamp retry_after to 0."""
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
@@ -197,7 +224,27 @@ class TestMattermostClientResponseHandler:
 
         response = httpx.Response(
             429,
-            headers={"Retry-After": "Sat, 08 Feb 2026 12:00:00 GMT"},
+            headers={"Retry-After": "Mon, 01 Jan 2001 00:00:00 GMT"},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError) as exc_info:
+            client._handle_response(response)
+
+        assert exc_info.value.retry_after == 0
+
+    def test_handle_response_429_invalid_retry_after(self, mock_settings):
+        """429 with unparseable Retry-After should fall back to retry_after=None."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        get_settings.cache_clear()
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": "not-a-date-or-number"},
             json={"message": "Rate limit exceeded"},
         )
 
@@ -1480,6 +1527,114 @@ class TestMattermostClientFilesAPI:
                     await client.upload_file("ch123", str(symlink))
 
                 assert "symlink" in str(exc_info.value).lower() or "symbolic" in str(exc_info.value).lower()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_file_retries_on_rate_limit(self, mock_settings):
+        """upload_file() should retry on 429 like other API methods."""
+        import tempfile
+        from pathlib import Path
+
+        settings = Settings(
+            url="https://test.mattermost.com",
+            token="test-token-12345",
+            max_retries=2,
+        )
+        client = MattermostClient(settings)
+
+        route = respx.post("https://test.mattermost.com/api/v4/files").mock(
+            side_effect=[
+                httpx.Response(429, headers={"Retry-After": "0"}),
+                httpx.Response(201, json={"file_infos": [{"id": "file123"}]}),
+            ],
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("retry test content")
+            temp_path = f.name
+
+        try:
+            async with client.lifespan():
+                result = await client.upload_file("ch123", temp_path)
+
+            assert result["file_infos"][0]["id"] == "file123"
+            assert route.call_count == 2
+        finally:
+            Path(temp_path).unlink()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_file_retries_on_server_error(self, mock_settings):
+        """upload_file() should retry on 5xx like other API methods."""
+        import tempfile
+        from pathlib import Path
+
+        settings = Settings(
+            url="https://test.mattermost.com",
+            token="test-token-12345",
+            max_retries=2,
+        )
+        client = MattermostClient(settings)
+
+        route = respx.post("https://test.mattermost.com/api/v4/files").mock(
+            side_effect=[
+                httpx.Response(503),
+                httpx.Response(201, json={"file_infos": [{"id": "file123"}]}),
+            ],
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("retry test content")
+            temp_path = f.name
+
+        try:
+            async with client.lifespan():
+                result = await client.upload_file("ch123", temp_path)
+
+            assert result["file_infos"][0]["id"] == "file123"
+            assert route.call_count == 2
+        finally:
+            Path(temp_path).unlink()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_file_sends_file_content_on_retry(self, mock_settings):
+        """upload_file() should send complete file content on every retry attempt."""
+        import tempfile
+        from pathlib import Path
+
+        settings = Settings(
+            url="https://test.mattermost.com",
+            token="test-token-12345",
+            max_retries=2,
+        )
+        client = MattermostClient(settings)
+
+        request_bodies: list[bytes] = []
+
+        def capture_request(request):
+            request_bodies.append(request.content)
+            if len(request_bodies) == 1:
+                return httpx.Response(429, headers={"Retry-After": "0"})
+            return httpx.Response(201, json={"file_infos": [{"id": "file123"}]})
+
+        respx.post("https://test.mattermost.com/api/v4/files").mock(side_effect=capture_request)
+
+        file_content = "important data for retry test"
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write(file_content)
+            temp_path = f.name
+
+        try:
+            async with client.lifespan():
+                await client.upload_file("ch123", temp_path)
+
+            assert len(request_bodies) == 2
+            # Both requests should contain the file content (in multipart encoding)
+            assert file_content.encode() in request_bodies[0]
+            assert file_content.encode() in request_bodies[1]
+        finally:
+            Path(temp_path).unlink()
 
     @pytest.mark.asyncio
     async def test_relative_path_resolved(self, mock_settings, tmp_path, monkeypatch):
