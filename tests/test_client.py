@@ -186,6 +186,45 @@ class TestMattermostClientResponseHandler:
 
         assert exc_info.value.retry_after == 30
 
+    def test_handle_response_429_http_date_retry_after(self, mock_settings):
+        """429 with HTTP-date Retry-After should raise RateLimitError with retry_after=None."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        get_settings.cache_clear()
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": "Sat, 08 Feb 2026 12:00:00 GMT"},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError) as exc_info:
+            client._handle_response(response)
+
+        assert exc_info.value.retry_after is None
+
+    def test_handle_response_429_no_retry_after_header(self, mock_settings):
+        """429 without Retry-After header should raise RateLimitError with retry_after=None."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        get_settings.cache_clear()
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        response = httpx.Response(
+            429,
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError) as exc_info:
+            client._handle_response(response)
+
+        assert exc_info.value.retry_after is None
+
     def test_handle_response_500_raises_api_error(self, mock_settings):
         """5xx response should raise MattermostAPIError."""
         from mcp_server_mattermost.config import get_settings

@@ -1,7 +1,7 @@
 """Async HTTP client for Mattermost API v4."""
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
@@ -157,7 +157,10 @@ class MattermostClient:
 
         if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
             retry_after_header = response.headers.get("Retry-After")
-            retry_after = int(retry_after_header) if retry_after_header else None
+            retry_after = None
+            if retry_after_header:
+                with suppress(ValueError):  # Non-integer Retry-After (e.g., HTTP-date)
+                    retry_after = int(retry_after_header)
             raise RateLimitError(retry_after)
 
         if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
