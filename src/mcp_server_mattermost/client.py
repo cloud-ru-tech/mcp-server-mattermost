@@ -1,12 +1,12 @@
 """Async HTTP client for Mattermost API v4."""
 
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager, suppress
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 import httpx
 from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential
@@ -15,6 +15,9 @@ from .config import Settings
 from .constants import UPDATE_BOOKMARK_RESPONSE_KEY
 from .exceptions import AuthenticationError, MattermostAPIError, NotFoundError, RateLimitError
 from .logging import logger, request_id_var
+
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 def _is_retryable_exception(exc: BaseException) -> bool:
@@ -115,6 +118,20 @@ class MattermostClient:
             self._current_user_id = None  # Clear cache on exit
         logger.info("Mattermost API client closed")
 
+    def _make_retrying(self) -> Callable[[_F], _F]:
+        """Create tenacity retry decorator with instance settings.
+
+        Returns:
+            Configured retry decorator
+        """
+        return retry(
+            stop=stop_after_attempt(self.settings.max_retries + 1),
+            wait=_wait_for_rate_limit,
+            retry=retry_if_exception(_is_retryable_exception),
+            before_sleep=_log_retry,
+            reraise=True,
+        )
+
     def _parse_error_response(self, response: httpx.Response) -> tuple[str, str | None]:
         """Parse error message and ID from response.
 
@@ -135,6 +152,29 @@ class MattermostClient:
             logger.debug("Failed to parse error response as JSON, using raw text")
         return response.text, None
 
+    @staticmethod
+    def _parse_retry_after(header: str) -> int | None:
+        """Parse Retry-After header value (integer seconds or HTTP-date).
+
+        Args:
+            header: Retry-After header value
+
+        Returns:
+            Seconds to wait, or None if unparseable
+        """
+        try:
+            return int(header)
+        except ValueError:
+            logger.debug("Non-integer Retry-After header ignored: %s", header)
+
+        try:
+            dt = parsedate_to_datetime(header)
+            return max(0, int((dt - datetime.now(timezone.utc)).total_seconds()))
+        except (ValueError, TypeError):
+            logger.debug("Unparseable Retry-After header ignored: %s", header)
+
+        return None
+
     def _handle_response(self, response: httpx.Response) -> dict[str, Any] | list[Any] | None:
         """Handle HTTP response and map errors to exceptions.
 
@@ -154,19 +194,12 @@ class MattermostClient:
             raise AuthenticationError
 
         if response.status_code == HTTPStatus.NOT_FOUND:
-            resource = "Resource"
-            raise NotFoundError(resource)
+            message, error_id = self._parse_error_response(response)
+            raise NotFoundError(message, error_id=error_id)
 
         if response.status_code == HTTPStatus.TOO_MANY_REQUESTS:
             retry_after_header = response.headers.get("Retry-After")
-            retry_after = None
-            if retry_after_header:
-                with suppress(ValueError):
-                    retry_after = int(retry_after_header)
-                if retry_after is None:
-                    with suppress(ValueError, TypeError):
-                        dt = parsedate_to_datetime(retry_after_header)
-                        retry_after = max(0, int((dt - datetime.now(timezone.utc)).total_seconds()))
+            retry_after = self._parse_retry_after(retry_after_header) if retry_after_header else None
             raise RateLimitError(retry_after)
 
         if response.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR:
@@ -212,14 +245,7 @@ class MattermostClient:
             msg = "Client not initialized. Use async with client.lifespan():"
             raise RuntimeError(msg)
 
-        # Create retry decorator with instance settings
-        retrying = retry(
-            stop=stop_after_attempt(self.settings.max_retries + 1),
-            wait=_wait_for_rate_limit,
-            retry=retry_if_exception(_is_retryable_exception),
-            before_sleep=_log_retry,
-            reraise=True,
-        )
+        retrying = self._make_retrying()
 
         @retrying
         async def _do_request() -> dict[str, Any] | list[Any] | None:
@@ -902,13 +928,7 @@ class MattermostClient:
             msg = "Client not initialized. Use async with client.lifespan():"
             raise RuntimeError(msg)
 
-        retrying = retry(
-            stop=stop_after_attempt(self.settings.max_retries + 1),
-            wait=_wait_for_rate_limit,
-            retry=retry_if_exception(_is_retryable_exception),
-            before_sleep=_log_retry,
-            reraise=True,
-        )
+        retrying = self._make_retrying()
 
         @retrying
         async def _do_upload() -> dict[str, Any] | list[Any] | None:

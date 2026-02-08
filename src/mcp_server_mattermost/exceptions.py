@@ -72,13 +72,14 @@ class AuthenticationError(MattermostAPIError):
 class NotFoundError(MattermostAPIError):
     """Raised when requested resource is not found (404)."""
 
-    def __init__(self, resource: str) -> None:
+    def __init__(self, message: str = "Resource not found", *, error_id: str | None = None) -> None:
         """Initialize not found error.
 
         Args:
-            resource: Name of the resource that was not found
+            message: Error message (from API response or default)
+            error_id: Mattermost error identifier from API response
         """
-        super().__init__(f"{resource} not found", status_code=404)
+        super().__init__(message, status_code=404, error_id=error_id)
 
 
 class ValidationError(MattermostMCPError):

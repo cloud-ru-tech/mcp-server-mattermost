@@ -29,12 +29,12 @@ def mock_client_auth_error() -> AsyncMock:
 def mock_client_not_found() -> AsyncMock:
     """Create mock client that raises NotFoundError."""
     client = AsyncMock()
-    client.get_channel.side_effect = NotFoundError("Channel")
-    client.get_user.side_effect = NotFoundError("User")
-    client.get_post.side_effect = NotFoundError("Post")
-    client.get_team.side_effect = NotFoundError("Team")
-    client.get_bookmarks.side_effect = NotFoundError("Bookmark")
-    client.delete_bookmark.side_effect = NotFoundError("Bookmark")
+    client.get_channel.side_effect = NotFoundError("Channel not found")
+    client.get_user.side_effect = NotFoundError("User not found")
+    client.get_post.side_effect = NotFoundError("Post not found")
+    client.get_team.side_effect = NotFoundError("Team not found")
+    client.get_bookmarks.side_effect = NotFoundError("Bookmark not found")
+    client.delete_bookmark.side_effect = NotFoundError("Bookmark not found")
     return client
 
 

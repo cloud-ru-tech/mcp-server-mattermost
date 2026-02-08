@@ -37,12 +37,29 @@ def test_authentication_error():
     assert exc.status_code == 401
 
 
-def test_not_found_error():
+def test_not_found_error_default_message():
     from mcp_server_mattermost.exceptions import NotFoundError
 
-    exc = NotFoundError("channel")
+    exc = NotFoundError()
+    assert str(exc) == "Resource not found status=404"
     assert exc.status_code == 404
-    assert "channel" in str(exc)
+
+
+def test_not_found_error_with_message():
+    from mcp_server_mattermost.exceptions import NotFoundError
+
+    exc = NotFoundError("We couldn't find the existing channel.")
+    assert "We couldn't find the existing channel." in str(exc)
+    assert exc.status_code == 404
+
+
+def test_not_found_error_with_error_id():
+    from mcp_server_mattermost.exceptions import NotFoundError
+
+    exc = NotFoundError("Channel not found", error_id="app.channel.get.existing.app_error")
+    assert "Channel not found" in str(exc)
+    assert "error_id=app.channel.get.existing.app_error" in str(exc)
+    assert exc.error_id == "app.channel.get.existing.app_error"
 
 
 def test_validation_error():

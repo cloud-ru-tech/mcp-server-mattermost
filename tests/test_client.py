@@ -157,6 +157,43 @@ class TestMattermostClientResponseHandler:
         with pytest.raises(NotFoundError):
             client._handle_response(response)
 
+    def test_handle_response_404_includes_api_message(self, mock_settings):
+        """404 response should include Mattermost error message."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import NotFoundError
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        response = httpx.Response(
+            404,
+            json={
+                "id": "app.channel.get.existing.app_error",
+                "message": "We couldn't find the existing channel.",
+            },
+        )
+
+        with pytest.raises(NotFoundError) as exc_info:
+            client._handle_response(response)
+
+        assert "We couldn't find the existing channel." in str(exc_info.value)
+        assert exc_info.value.error_id == "app.channel.get.existing.app_error"
+
+    def test_handle_response_404_plain_text_fallback(self, mock_settings):
+        """404 with plain text body should still raise NotFoundError."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import NotFoundError
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        response = httpx.Response(404, text="Not Found")
+
+        with pytest.raises(NotFoundError) as exc_info:
+            client._handle_response(response)
+
+        assert "Not Found" in str(exc_info.value)
+
     def test_handle_response_429_raises_rate_limit_error(self, mock_settings):
         """429 response should raise RateLimitError with retry_after."""
         from mcp_server_mattermost.config import get_settings
@@ -544,6 +581,47 @@ class TestMattermostClientRetry:
         assert len(call_times) == 2
         wait_time = call_times[1] - call_times[0]
         assert wait_time >= 2.0, f"Expected wait >= 2s, got {wait_time}s"
+
+
+class TestRetryConfigShared:
+    """Verify _request and _upload_file_with_retry use same retry logic."""
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_sequential_calls_get_independent_retry_counters(self, mock_settings):
+        """Two sequential calls should each get their own retry attempts."""
+        from mcp_server_mattermost.exceptions import MattermostAPIError
+
+        settings = Settings(
+            url="https://test.mattermost.com",
+            token="test-token-12345",
+            max_retries=1,
+        )
+        client = MattermostClient(settings)
+
+        # First call: exhaust retries (1 attempt + 1 retry = 2 calls, then fail)
+        route1 = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(503),
+        )
+
+        async with client.lifespan():
+            with pytest.raises(MattermostAPIError):
+                await client._request("GET", "/users/me")
+
+            assert route1.call_count == 2
+
+            # Second call: should also get full retry budget (not carry over)
+            route1.reset()
+            route1.mock(
+                side_effect=[
+                    httpx.Response(503),
+                    httpx.Response(200, json={"id": "user123"}),
+                ],
+            )
+
+            result = await client._request("GET", "/users/me")
+            assert result == {"id": "user123"}
+            assert route1.call_count == 2
 
 
 class TestMattermostClientConvenienceMethods:
@@ -1798,3 +1876,73 @@ class TestClientRequestIdLogging:
 
         # Should not raise, request succeeds
         assert result["id"] == "user123"
+
+
+class TestRetryAfterLogging:
+    """Test debug logging for Retry-After header parsing."""
+
+    def test_logs_debug_on_non_integer_retry_after(self, mock_settings, mocker):
+        """Non-integer Retry-After should log debug message."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": "not-a-number-or-date"},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError):
+            client._handle_response(response)
+
+        debug_messages = [str(call) for call in mock_debug.call_args_list]
+        assert any("Retry-After" in msg for msg in debug_messages)
+
+    def test_logs_debug_on_invalid_http_date_retry_after(self, mock_settings, mocker):
+        """Invalid HTTP-date Retry-After should log debug message."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": "123abc"},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError):
+            client._handle_response(response)
+
+        debug_messages = [str(call) for call in mock_debug.call_args_list]
+        assert any("Retry-After" in msg for msg in debug_messages)
+
+    def test_no_debug_log_on_valid_integer_retry_after(self, mock_settings, mocker):
+        """Valid integer Retry-After should NOT trigger debug log about parsing."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.exceptions import RateLimitError
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+
+        response = httpx.Response(
+            429,
+            headers={"Retry-After": "30"},
+            json={"message": "Rate limit exceeded"},
+        )
+
+        with pytest.raises(RateLimitError):
+            client._handle_response(response)
+
+        debug_messages = [str(call) for call in mock_debug.call_args_list]
+        assert not any("Retry-After" in msg and "ignored" in msg.lower() for msg in debug_messages)
