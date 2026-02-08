@@ -21,6 +21,7 @@ def mock_client_auth_error() -> AsyncMock:
     client.get_channel.side_effect = AuthenticationError()
     client.create_post.side_effect = AuthenticationError()
     client.get_me.side_effect = AuthenticationError()
+    client.get_bookmarks.side_effect = AuthenticationError()
     return client
 
 
@@ -32,6 +33,8 @@ def mock_client_not_found() -> AsyncMock:
     client.get_user.side_effect = NotFoundError("User")
     client.get_post.side_effect = NotFoundError("Post")
     client.get_team.side_effect = NotFoundError("Team")
+    client.get_bookmarks.side_effect = NotFoundError("Bookmark")
+    client.delete_bookmark.side_effect = NotFoundError("Bookmark")
     return client
 
 
@@ -106,5 +109,30 @@ def make_reaction_data(
         "post_id": post_id,
         "emoji_name": emoji_name,
         "create_at": 1706400000000,
+        **overrides,
+    }
+
+
+def make_bookmark_data(
+    bookmark_id: str = "bk1234567890123456789012",
+    display_name: str = "Test Bookmark",
+    bookmark_type: str = "link",
+    **overrides,
+) -> dict:
+    """Create full bookmark mock data.
+
+    All ChannelBookmark required fields per Mattermost Go source.
+    """
+    return {
+        "id": bookmark_id,
+        "create_at": 1706400000000,
+        "update_at": 1706400000000,
+        "delete_at": 0,
+        "channel_id": "ch1234567890123456789012",
+        "owner_id": "us1234567890123456789012",
+        "file_id": "",
+        "display_name": display_name,
+        "sort_order": 0,
+        "type": bookmark_type,
         **overrides,
     }
