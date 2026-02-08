@@ -86,7 +86,6 @@ def test_log_format_default(mock_settings):
     """Default log_format is 'json'."""
     from mcp_server_mattermost.config import get_settings
 
-    get_settings.cache_clear()
     settings = get_settings()
     assert settings.log_format == "json"
 

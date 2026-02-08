@@ -48,7 +48,6 @@ class TestMattermostClientInit:
     def test_client_stores_settings(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -59,7 +58,6 @@ class TestMattermostClientInit:
     async def test_request_without_lifespan_raises_runtime_error(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -72,7 +70,6 @@ class TestMattermostClientLifespan:
     async def test_lifespan_creates_client(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -89,7 +86,6 @@ class TestMattermostClientLifespan:
     async def test_lifespan_configures_base_url(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -100,7 +96,6 @@ class TestMattermostClientLifespan:
     async def test_lifespan_sets_auth_header(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -116,7 +111,6 @@ class TestMattermostClientResponseHandler:
         """Successful response with JSON body should return parsed data."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -129,7 +123,6 @@ class TestMattermostClientResponseHandler:
         """Successful response with empty body should return None."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -143,7 +136,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import AuthenticationError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -157,7 +149,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import NotFoundError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -171,7 +162,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -193,7 +183,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -218,7 +207,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -238,7 +226,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -258,7 +245,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import RateLimitError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -277,7 +263,6 @@ class TestMattermostClientResponseHandler:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import MattermostAPIError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -297,7 +282,6 @@ class TestErrorParsing:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import MattermostAPIError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -321,7 +305,6 @@ class TestErrorParsing:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import MattermostAPIError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -337,7 +320,6 @@ class TestErrorParsing:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import MattermostAPIError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -365,7 +347,6 @@ class TestMattermostClientRequest:
         """GET request should return parsed JSON."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -384,7 +365,6 @@ class TestMattermostClientRequest:
         """POST request should send JSON body."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -404,7 +384,6 @@ class TestMattermostClientRequest:
         """Request should log at DEBUG level."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -576,7 +555,6 @@ class TestMattermostClientConvenienceMethods:
         """get() should make GET request."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -595,7 +573,6 @@ class TestMattermostClientConvenienceMethods:
         """post() should make POST request with JSON body."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -614,7 +591,6 @@ class TestMattermostClientConvenienceMethods:
         """put() should make PUT request."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -633,7 +609,6 @@ class TestMattermostClientConvenienceMethods:
         """delete() should make DELETE request."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -650,7 +625,6 @@ class TestMattermostClientConvenienceMethods:
         """get() should pass query parameters."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -672,7 +646,6 @@ class TestMattermostClientTeamsAPI:
         """get_teams() should return user's teams."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -691,7 +664,6 @@ class TestMattermostClientTeamsAPI:
         """get_team() should return team by ID."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -710,7 +682,6 @@ class TestMattermostClientTeamsAPI:
         """get_team_members() should return paginated members."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -735,7 +706,6 @@ class TestMattermostClientChannelsAPI:
         """get_channels() should return team's channels."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -755,7 +725,6 @@ class TestMattermostClientChannelsAPI:
         """get_channel() should return channel by ID."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -774,7 +743,6 @@ class TestMattermostClientChannelsAPI:
         """get_channel_by_name() should return channel by team and name."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -795,7 +763,6 @@ class TestMattermostClientChannelsAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -826,7 +793,6 @@ class TestMattermostClientChannelsAPI:
         """join_channel() should add current user to channel."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -848,7 +814,6 @@ class TestMattermostClientChannelsAPI:
         """leave_channel() should remove current user from channel."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -870,7 +835,6 @@ class TestMattermostClientChannelsAPI:
         """get_channel_members() should return paginated members."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -889,7 +853,6 @@ class TestMattermostClientChannelsAPI:
         """add_user_to_channel() should add specified user to channel."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -912,7 +875,6 @@ class TestMattermostClientMessagesAPI:
         """get_posts() should return channel posts."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -937,7 +899,6 @@ class TestMattermostClientMessagesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -961,7 +922,6 @@ class TestMattermostClientMessagesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -982,7 +942,6 @@ class TestMattermostClientMessagesAPI:
         """get_post() should return post by ID."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1001,7 +960,6 @@ class TestMattermostClientMessagesAPI:
         """update_post() should update post message."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1022,7 +980,6 @@ class TestMattermostClientMessagesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1043,7 +1000,6 @@ class TestMattermostClientMessagesAPI:
         """delete_post() should delete a post."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1062,7 +1018,6 @@ class TestMattermostClientMessagesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1084,7 +1039,6 @@ class TestMattermostClientMessagesAPI:
         """get_thread() should return thread posts."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1109,7 +1063,6 @@ class TestMattermostClientReactionsAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1134,7 +1087,6 @@ class TestMattermostClientReactionsAPI:
         """remove_reaction() should remove reaction from post."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1156,7 +1108,6 @@ class TestMattermostClientReactionsAPI:
         """get_reactions() should return all reactions on post."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1175,7 +1126,6 @@ class TestMattermostClientReactionsAPI:
         """pin_post() should pin a post."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1194,7 +1144,6 @@ class TestMattermostClientReactionsAPI:
         """unpin_post() should unpin a post."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1217,7 +1166,6 @@ class TestMattermostClientUsersAPI:
         """get_me() should return current user."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1236,7 +1184,6 @@ class TestMattermostClientUsersAPI:
         """get_user() should return user by ID."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1255,7 +1202,6 @@ class TestMattermostClientUsersAPI:
         """get_user_by_username() should return user by username."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1276,7 +1222,6 @@ class TestMattermostClientUsersAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1300,7 +1245,6 @@ class TestMattermostClientUsersAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1320,7 +1264,6 @@ class TestMattermostClientUsersAPI:
         """get_user_status() should return user's online status."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1346,7 +1289,6 @@ class TestMattermostClientFilesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1375,7 +1317,6 @@ class TestMattermostClientFilesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1404,7 +1345,6 @@ class TestMattermostClientFilesAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1433,7 +1373,6 @@ class TestMattermostClientFilesAPI:
         """get_file_info() should return file metadata."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1452,7 +1391,6 @@ class TestMattermostClientFilesAPI:
         """get_file_link() should return download link."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1471,7 +1409,6 @@ class TestMattermostClientFilesAPI:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import FileValidationError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1490,7 +1427,6 @@ class TestMattermostClientFilesAPI:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import FileValidationError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1510,7 +1446,6 @@ class TestMattermostClientFilesAPI:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.exceptions import FileValidationError
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1530,11 +1465,8 @@ class TestMattermostClientFilesAPI:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_upload_file_retries_on_rate_limit(self, mock_settings):
+    async def test_upload_file_retries_on_rate_limit(self, mock_settings, tmp_path):
         """upload_file() should retry on 429 like other API methods."""
-        import tempfile
-        from pathlib import Path
-
         settings = Settings(
             url="https://test.mattermost.com",
             token="test-token-12345",
@@ -1549,26 +1481,19 @@ class TestMattermostClientFilesAPI:
             ],
         )
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            f.write("retry test content")
-            temp_path = f.name
+        temp_file = tmp_path / "test.txt"
+        temp_file.write_text("retry test content")
 
-        try:
-            async with client.lifespan():
-                result = await client.upload_file("ch123", temp_path)
+        async with client.lifespan():
+            result = await client.upload_file("ch123", str(temp_file))
 
-            assert result["file_infos"][0]["id"] == "file123"
-            assert route.call_count == 2
-        finally:
-            Path(temp_path).unlink()
+        assert result["file_infos"][0]["id"] == "file123"
+        assert route.call_count == 2
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_upload_file_retries_on_server_error(self, mock_settings):
+    async def test_upload_file_retries_on_server_error(self, mock_settings, tmp_path):
         """upload_file() should retry on 5xx like other API methods."""
-        import tempfile
-        from pathlib import Path
-
         settings = Settings(
             url="https://test.mattermost.com",
             token="test-token-12345",
@@ -1583,26 +1508,19 @@ class TestMattermostClientFilesAPI:
             ],
         )
 
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            f.write("retry test content")
-            temp_path = f.name
+        temp_file = tmp_path / "test.txt"
+        temp_file.write_text("retry test content")
 
-        try:
-            async with client.lifespan():
-                result = await client.upload_file("ch123", temp_path)
+        async with client.lifespan():
+            result = await client.upload_file("ch123", str(temp_file))
 
-            assert result["file_infos"][0]["id"] == "file123"
-            assert route.call_count == 2
-        finally:
-            Path(temp_path).unlink()
+        assert result["file_infos"][0]["id"] == "file123"
+        assert route.call_count == 2
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_upload_file_sends_file_content_on_retry(self, mock_settings):
+    async def test_upload_file_sends_file_content_on_retry(self, mock_settings, tmp_path):
         """upload_file() should send complete file content on every retry attempt."""
-        import tempfile
-        from pathlib import Path
-
         settings = Settings(
             url="https://test.mattermost.com",
             token="test-token-12345",
@@ -1621,20 +1539,16 @@ class TestMattermostClientFilesAPI:
         respx.post("https://test.mattermost.com/api/v4/files").mock(side_effect=capture_request)
 
         file_content = "important data for retry test"
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            f.write(file_content)
-            temp_path = f.name
+        temp_file = tmp_path / "test.txt"
+        temp_file.write_text(file_content)
 
-        try:
-            async with client.lifespan():
-                await client.upload_file("ch123", temp_path)
+        async with client.lifespan():
+            await client.upload_file("ch123", str(temp_file))
 
-            assert len(request_bodies) == 2
-            # Both requests should contain the file content (in multipart encoding)
-            assert file_content.encode() in request_bodies[0]
-            assert file_content.encode() in request_bodies[1]
-        finally:
-            Path(temp_path).unlink()
+        assert len(request_bodies) == 2
+        # Both requests should contain the file content (in multipart encoding)
+        assert file_content.encode() in request_bodies[0]
+        assert file_content.encode() in request_bodies[1]
 
     @pytest.mark.asyncio
     async def test_relative_path_resolved(self, mock_settings, tmp_path, monkeypatch):
@@ -1661,7 +1575,6 @@ class TestCreateDirectChannel:
         """Test creating a direct message channel between two users."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1695,7 +1608,6 @@ class TestMattermostClientBookmarksAPI:
         """get_bookmarks() should return channel bookmarks."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1717,7 +1629,6 @@ class TestMattermostClientBookmarksAPI:
         """get_bookmarks() should pass bookmarks_since param."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1738,7 +1649,6 @@ class TestMattermostClientBookmarksAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1771,7 +1681,6 @@ class TestMattermostClientBookmarksAPI:
 
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1799,7 +1708,6 @@ class TestMattermostClientBookmarksAPI:
         """delete_bookmark() should archive a bookmark."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1821,7 +1729,6 @@ class TestMattermostClientBookmarksAPI:
         """update_bookmark_sort_order() should reorder bookmarks."""
         from mcp_server_mattermost.config import get_settings
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1851,7 +1758,6 @@ class TestClientRequestIdLogging:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.logging import request_id_var
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
@@ -1877,7 +1783,6 @@ class TestClientRequestIdLogging:
         from mcp_server_mattermost.config import get_settings
         from mcp_server_mattermost.logging import request_id_var
 
-        get_settings.cache_clear()
         settings = get_settings()
         client = MattermostClient(settings)
 
