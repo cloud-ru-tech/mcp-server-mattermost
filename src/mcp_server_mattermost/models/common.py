@@ -55,7 +55,6 @@ BookmarkId = Annotated[MattermostId, Field(description=_id_desc("bookmark"))]
 ChannelType = Annotated[
     Literal["O", "P", "D", "G"],
     Field(
-        default="O",
         description="Channel type: O=public, P=private, D=direct message, G=group message",
     ),
 ]

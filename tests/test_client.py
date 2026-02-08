@@ -433,8 +433,11 @@ class TestMattermostClientRequest:
         async with client.lifespan():
             await client._request("GET", "/users/me")
 
-        calls = [str(call) for call in mock_debug.call_args_list]
-        assert any("GET" in call and "/users/me" in call for call in calls)
+        assert any(
+            call.kwargs.get("extra", {}).get("method") == "GET"
+            and call.kwargs.get("extra", {}).get("endpoint") == "/users/me"
+            for call in mock_debug.call_args_list
+        )
 
 
 class TestMattermostClientRetry:
@@ -1900,8 +1903,7 @@ class TestRetryAfterLogging:
         with pytest.raises(RateLimitError):
             client._handle_response(response)
 
-        debug_messages = [str(call) for call in mock_debug.call_args_list]
-        assert any("Retry-After" in msg for msg in debug_messages)
+        assert any(call.args and "Retry-After" in call.args[0] for call in mock_debug.call_args_list)
 
     def test_logs_debug_on_invalid_http_date_retry_after(self, mock_settings, mocker):
         """Invalid HTTP-date Retry-After should log debug message."""
@@ -1922,8 +1924,7 @@ class TestRetryAfterLogging:
         with pytest.raises(RateLimitError):
             client._handle_response(response)
 
-        debug_messages = [str(call) for call in mock_debug.call_args_list]
-        assert any("Retry-After" in msg for msg in debug_messages)
+        assert any(call.args and "Retry-After" in call.args[0] for call in mock_debug.call_args_list)
 
     def test_no_debug_log_on_valid_integer_retry_after(self, mock_settings, mocker):
         """Valid integer Retry-After should NOT trigger debug log about parsing."""
@@ -1944,5 +1945,7 @@ class TestRetryAfterLogging:
         with pytest.raises(RateLimitError):
             client._handle_response(response)
 
-        debug_messages = [str(call) for call in mock_debug.call_args_list]
-        assert not any("Retry-After" in msg and "ignored" in msg.lower() for msg in debug_messages)
+        assert not any(
+            call.args and "Retry-After" in call.args[0] and "ignored" in call.args[0].lower()
+            for call in mock_debug.call_args_list
+        )

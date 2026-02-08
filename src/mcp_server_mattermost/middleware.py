@@ -65,7 +65,7 @@ class LoggingMiddleware(Middleware):
         start_time = time.monotonic()
 
         logger.info(
-            "",
+            "Tool call started",
             extra={
                 "event": "tool_call_start",
                 "request_id": request_id,
@@ -80,7 +80,7 @@ class LoggingMiddleware(Middleware):
             duration_ms = (time.monotonic() - start_time) * 1000
 
             logger.error(
-                "",
+                "Tool call failed",
                 extra={
                     "event": "tool_call_error",
                     "request_id": request_id,
@@ -96,7 +96,7 @@ class LoggingMiddleware(Middleware):
             duration_ms = (time.monotonic() - start_time) * 1000
 
             logger.info(
-                "",
+                "Tool call completed",
                 extra={
                     "event": "tool_call_success",
                     "request_id": request_id,

@@ -132,6 +132,14 @@ class MattermostClient:
             reraise=True,
         )
 
+    @property
+    def _http(self) -> httpx.AsyncClient:
+        """Return initialized httpx client or raise."""
+        if self._client is None:
+            msg = "Client not initialized. Use async with client.lifespan():"
+            raise RuntimeError(msg)
+        return self._client
+
     def _parse_error_response(self, response: httpx.Response) -> tuple[str, str | None]:
         """Parse error message and ID from response.
 
@@ -241,17 +249,13 @@ class MattermostClient:
             RateLimitError: If rate limited (after retries exhausted)
             MattermostAPIError: For other API errors
         """
-        if self._client is None:
-            msg = "Client not initialized. Use async with client.lifespan():"
-            raise RuntimeError(msg)
-
         retrying = self._make_retrying()
 
         @retrying
         async def _do_request() -> dict[str, Any] | list[Any] | None:
             request_id = request_id_var.get()
             logger.debug(
-                "",
+                "HTTP request",
                 extra={
                     "event": "http_request",
                     "request_id": request_id,
@@ -259,9 +263,9 @@ class MattermostClient:
                     "endpoint": endpoint,
                 },
             )
-            response = await self._client.request(method, endpoint, **kwargs)  # type: ignore[union-attr]
+            response = await self._http.request(method, endpoint, **kwargs)
             logger.debug(
-                "",
+                "HTTP response",
                 extra={
                     "event": "http_response",
                     "request_id": request_id,
@@ -924,17 +928,13 @@ class MattermostClient:
         Returns:
             Upload response with file_infos list
         """
-        if self._client is None:
-            msg = "Client not initialized. Use async with client.lifespan():"
-            raise RuntimeError(msg)
-
         retrying = self._make_retrying()
 
         @retrying
         async def _do_upload() -> dict[str, Any] | list[Any] | None:
             request_id = request_id_var.get()
             logger.debug(
-                "",
+                "HTTP request",
                 extra={
                     "event": "http_request",
                     "request_id": request_id,
@@ -942,14 +942,14 @@ class MattermostClient:
                     "endpoint": "/files",
                 },
             )
-            response = await self._client.post(  # type: ignore[union-attr]
+            response = await self._http.post(
                 "/files",
                 params={"channel_id": channel_id, "filename": filename},
                 data={"channel_id": channel_id},
                 files={"files": (filename, content)},
             )
             logger.debug(
-                "",
+                "HTTP response",
                 extra={
                     "event": "http_response",
                     "request_id": request_id,

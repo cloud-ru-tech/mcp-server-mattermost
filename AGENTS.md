@@ -183,11 +183,12 @@ not a mutable default. The function call happens at request time, not at functio
 This project uses manual versioning:
 
 1. Update version in `pyproject.toml`
-2. Update `CHANGELOG.md` with changes
-3. Commit: `git commit -m "chore: bump version to X.Y.Z"`
-4. Tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
-5. Push: `git push origin main --tags`
-6. Create GitHub Release from tag → triggers PyPI publish
+2. Update `__version__` fallback in `src/mcp_server_mattermost/__init__.py`
+3. Update `CHANGELOG.md` with changes
+4. Commit: `git commit -m "chore: bump version to X.Y.Z"`
+5. Tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
+6. Push: `git push origin main --tags`
+7. Create GitHub Release from tag → triggers PyPI publish
 
 ## Lessons Learned
 

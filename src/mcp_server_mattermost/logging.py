@@ -112,4 +112,4 @@ def setup_logging(level: str = "INFO", log_format: str = "json") -> logging.Logg
     return log
 
 
-logger = setup_logging()
+logger = logging.getLogger(LOGGER_NAME)
