@@ -19,3 +19,22 @@ class ToolTag(str, Enum):
     FILE = "file"
     BOOKMARK = "bookmark"
     ENTRY_REQUIRED = "entry-required"  # Requires Entry, Professional, or Enterprise edition
+
+
+class Capability(str, Enum):
+    """Capability labels for agent-based tool filtering.
+
+    Exposed via meta={"capability": value} on each tool.
+    Agents use this to select tools matching their access level.
+
+    Profiles are defined client-side, not server-side. Example:
+        reader:  {Capability.READ}
+        writer:  {Capability.READ, Capability.WRITE}
+        manager: {Capability.READ, Capability.WRITE, Capability.CREATE}
+        admin:   {Capability.READ, Capability.WRITE, Capability.CREATE, Capability.DELETE}
+    """
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"

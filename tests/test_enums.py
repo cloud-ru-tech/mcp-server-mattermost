@@ -33,3 +33,25 @@ def test_tool_tags_are_strings():
     # ToolTag should be usable as string (str, Enum)
     assert isinstance(ToolTag.MATTERMOST, str)
     assert ToolTag.MATTERMOST == "mattermost"
+
+
+def test_capability_enum_exists():
+    from mcp_server_mattermost.enums import Capability
+
+    assert issubclass(Capability, Enum)
+
+
+def test_capability_values():
+    from mcp_server_mattermost.enums import Capability
+
+    assert Capability.READ.value == "read"
+    assert Capability.WRITE.value == "write"
+    assert Capability.CREATE.value == "create"
+    assert Capability.DELETE.value == "delete"
+
+
+def test_capability_are_strings():
+    from mcp_server_mattermost.enums import Capability
+
+    assert isinstance(Capability.READ, str)
+    assert Capability.READ == "read"

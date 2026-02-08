@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import ChannelId, FileId, FileInfo, FileLink, FileUploadResponse
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -14,6 +14,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.FILE},
+    meta={"capability": Capability.WRITE},
 )
 async def upload_file(
     channel_id: ChannelId,
@@ -37,6 +38,7 @@ async def upload_file(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.FILE},
+    meta={"capability": Capability.READ},
 )
 async def get_file_info(
     file_id: FileId,
@@ -54,6 +56,7 @@ async def get_file_info(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.FILE},
+    meta={"capability": Capability.READ},
 )
 async def get_file_link(
     file_id: FileId,

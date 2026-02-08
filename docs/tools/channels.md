@@ -23,6 +23,7 @@ Use this to discover available channels for posting messages.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -61,6 +62,7 @@ For lookup by channel name, use get_channel_by_name instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -97,6 +99,7 @@ For lookup by ID, use get_channel instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -133,6 +136,7 @@ Each call creates a new channel; use get_channel_by_name to check if it exists.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | false |
+| `capability` | create |
 
 ### Parameters
 
@@ -174,6 +178,7 @@ Joining a channel you're already in has no additional effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -210,6 +215,7 @@ Can rejoin public channels later with join_channel.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -245,6 +251,7 @@ Use to see who can receive messages in a channel.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -282,6 +289,7 @@ Adding a user who is already in the channel has no additional effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -319,6 +327,7 @@ Then use post_message with the returned channel_id to send messages.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | create |
 
 ### Parameters
 

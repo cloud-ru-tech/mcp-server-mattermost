@@ -23,6 +23,7 @@ Use to get your own user ID for operations like create_direct_channel.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -57,6 +58,7 @@ For lookup by @username, use get_user_by_username instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -94,6 +96,7 @@ For lookup by ID, use get_user instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -130,6 +133,7 @@ Use to find users when you don't know their exact username or ID.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -167,6 +171,7 @@ Use to check if a user is available before sending a message.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 

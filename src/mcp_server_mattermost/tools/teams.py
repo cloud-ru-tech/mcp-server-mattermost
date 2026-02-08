@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Team, TeamId, TeamMember
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -14,6 +14,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM},
+    meta={"capability": Capability.READ},
 )
 async def list_teams(
     client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
@@ -30,6 +31,7 @@ async def list_teams(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM},
+    meta={"capability": Capability.READ},
 )
 async def get_team(
     team_id: TeamId,
@@ -47,6 +49,7 @@ async def get_team(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_team_members(
     team_id: TeamId,

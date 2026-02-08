@@ -22,6 +22,7 @@ Returns file ID that can be used when posting messages with file_ids parameter.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | false |
+| `capability` | write |
 
 ### Parameters
 
@@ -60,6 +61,7 @@ Use to check file details before downloading or sharing.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -96,6 +98,7 @@ Link may expire based on server settings.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 

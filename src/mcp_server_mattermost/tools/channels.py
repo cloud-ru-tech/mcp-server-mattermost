@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Channel, ChannelId, ChannelMember, ChannelName, ChannelType, TeamId, UserId
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -14,6 +14,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
 )
 async def list_channels(
     team_id: TeamId,
@@ -37,6 +38,7 @@ async def list_channels(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
 )
 async def get_channel(
     channel_id: ChannelId,
@@ -55,6 +57,7 @@ async def get_channel(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
 )
 async def get_channel_by_name(
     team_id: TeamId,
@@ -77,6 +80,7 @@ async def get_channel_by_name(
 @mcp.tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.CREATE},
 )
 async def create_channel(  # noqa: PLR0913
     team_id: TeamId,
@@ -107,6 +111,7 @@ async def create_channel(  # noqa: PLR0913
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.WRITE},
 )
 async def join_channel(
     channel_id: ChannelId,
@@ -125,6 +130,7 @@ async def join_channel(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.WRITE},
 )
 async def leave_channel(
     channel_id: ChannelId,
@@ -142,6 +148,7 @@ async def leave_channel(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_channel_members(
     channel_id: ChannelId,
@@ -165,6 +172,7 @@ async def get_channel_members(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL, ToolTag.USER},
+    meta={"capability": Capability.WRITE},
 )
 async def add_user_to_channel(
     channel_id: ChannelId,
@@ -186,6 +194,7 @@ async def add_user_to_channel(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.CREATE},
 )
 async def create_direct_channel(
     user_id_1: UserId,

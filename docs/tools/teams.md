@@ -23,6 +23,7 @@ Use this to discover available teams before listing channels.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -56,6 +57,7 @@ Use when you have the team ID and need detailed information.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -92,6 +94,7 @@ Use to discover users before sending direct messages or mentions.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 

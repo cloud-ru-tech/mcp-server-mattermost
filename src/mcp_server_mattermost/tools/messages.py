@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Attachment, ChannelId, FileId, Post, PostId, PostList, TeamId
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -14,6 +14,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.WRITE},
 )
 async def post_message(  # noqa: PLR0913
     channel_id: ChannelId,
@@ -55,6 +56,7 @@ async def post_message(  # noqa: PLR0913
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
 )
 async def get_channel_messages(
     channel_id: ChannelId,
@@ -79,6 +81,7 @@ async def get_channel_messages(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.READ},
 )
 async def search_messages(
     team_id: TeamId,
@@ -109,6 +112,7 @@ async def search_messages(
 @mcp.tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.WRITE},
 )
 async def update_message(
     post_id: PostId,
@@ -142,6 +146,7 @@ async def update_message(
 
 @mcp.tool(
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.DELETE},
 )
 async def delete_message(
     post_id: PostId,

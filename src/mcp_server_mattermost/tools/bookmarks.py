@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.exceptions import ValidationError
 from mcp_server_mattermost.models import ChannelBookmark, ChannelId
 from mcp_server_mattermost.models.common import BookmarkId
@@ -16,6 +16,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
+    meta={"capability": Capability.READ},
 )
 async def list_bookmarks(
     channel_id: ChannelId,
@@ -44,6 +45,7 @@ async def list_bookmarks(
 @mcp.tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
+    meta={"capability": Capability.WRITE},
 )
 async def create_bookmark(  # noqa: PLR0913
     channel_id: ChannelId,
@@ -86,6 +88,7 @@ async def create_bookmark(  # noqa: PLR0913
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
+    meta={"capability": Capability.WRITE},
 )
 async def update_bookmark(  # noqa: PLR0913
     channel_id: ChannelId,
@@ -124,6 +127,7 @@ async def update_bookmark(  # noqa: PLR0913
 
 @mcp.tool(
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
+    meta={"capability": Capability.DELETE},
 )
 async def delete_bookmark(
     channel_id: ChannelId,
@@ -148,6 +152,7 @@ async def delete_bookmark(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
+    meta={"capability": Capability.WRITE},
 )
 async def update_bookmark_sort_order(
     channel_id: ChannelId,

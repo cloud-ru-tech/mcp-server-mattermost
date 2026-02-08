@@ -3,7 +3,7 @@
 from fastmcp.dependencies import Depends
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import EmojiName, Post, PostId, PostList, Reaction
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -11,6 +11,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
+    meta={"capability": Capability.WRITE},
 )
 async def add_reaction(
     post_id: PostId,
@@ -33,6 +34,7 @@ async def add_reaction(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
+    meta={"capability": Capability.WRITE},
 )
 async def remove_reaction(
     post_id: PostId,
@@ -53,6 +55,7 @@ async def remove_reaction(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
+    meta={"capability": Capability.READ},
 )
 async def get_reactions(
     post_id: PostId,
@@ -70,6 +73,7 @@ async def get_reactions(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
+    meta={"capability": Capability.WRITE},
 )
 async def pin_message(
     post_id: PostId,
@@ -88,6 +92,7 @@ async def pin_message(
 @mcp.tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
+    meta={"capability": Capability.WRITE},
 )
 async def unpin_message(
     post_id: PostId,
@@ -106,6 +111,7 @@ async def unpin_message(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST, ToolTag.MESSAGE},
+    meta={"capability": Capability.READ},
 )
 async def get_thread(
     post_id: PostId,

@@ -30,6 +30,7 @@ For searching messages, use search_messages instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -67,6 +68,7 @@ For file type, file_id is required (from upload_file).
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | false |
+| `capability` | write |
 
 ### Parameters
 
@@ -109,6 +111,7 @@ Only provided fields are updated; others remain unchanged.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -148,6 +151,7 @@ The bookmark will no longer appear in the channel.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | true |
+| `capability` | delete |
 
 ### Parameters
 
@@ -185,6 +189,7 @@ Returns all affected bookmarks with updated positions.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 

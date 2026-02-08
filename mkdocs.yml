@@ -32,6 +32,7 @@ nav:
   - Docker: docker.md
   - Examples: examples.md
   - Best Practices: best-practices.md
+  - Building Agents: building-agents.md
   - Tools:
       - Overview: tools/index.md
       - Channels: tools/channels.md

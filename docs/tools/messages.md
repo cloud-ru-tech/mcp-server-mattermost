@@ -26,6 +26,7 @@ To read all messages in a thread, use get_thread.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | false |
+| `capability` | write |
 
 ### Parameters
 
@@ -86,6 +87,7 @@ For searching messages by keywords across channels, use search_messages instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -125,6 +127,7 @@ For simply reading recent channel messages, use get_channel_messages instead.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -165,6 +168,7 @@ Use attachments to add or update rich formatted content.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | false |
+| `capability` | write |
 
 ### Parameters
 
@@ -202,6 +206,7 @@ All reactions and thread context will be lost.
 | Hint | Value |
 |------|-------|
 | `destructiveHint` | true |
+| `capability` | delete |
 
 ### Parameters
 

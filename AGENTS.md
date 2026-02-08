@@ -150,6 +150,47 @@ Operation classification:
 
 "Destructive" = irreversible loss of data.
 
+## Tool Capability Metadata
+
+Each tool declares a `capability` in `meta` for agent-based filtering:
+
+- `read` — retrieves data, no side effects (get, list, search)
+- `write` — modifies state within existing resources (post, update, join, pin, react, upload)
+- `create` — creates new top-level entities (channels, DMs)
+- `delete` — permanently destroys a resource
+
+Use `Capability` enum from `enums.py` — never raw strings:
+
+```python
+from mcp_server_mattermost.enums import Capability
+
+@mcp.tool(
+    annotations={"readOnlyHint": True, "idempotentHint": True},
+    tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
+)
+async def list_channels(...):
+```
+
+Classification rules:
+- `create` = only for new standalone entities (channels, DMs)
+- `write` = all other modifications, including "create" operations on dependent resources
+  (bookmarks, messages, reactions, files exist only inside a channel)
+- `delete` = resource permanently ceases to exist
+- Each tool gets exactly one capability
+
+Profiles are defined client-side, not server-side. The server provides capability labels,
+clients assemble profiles from them:
+
+```python
+PROFILES = {
+    "reader":  {"read"},
+    "writer":  {"read", "write"},
+    "manager": {"read", "write", "create"},
+    "admin":   {"read", "write", "create", "delete"},
+}
+```
+
 ## MCP Tool Description Best Practices
 
 Description formula: **WHAT it does + WHEN to use + DISAMBIGUATION**

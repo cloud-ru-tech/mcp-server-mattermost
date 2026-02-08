@@ -24,6 +24,7 @@ Adding the same reaction twice has no additional effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -60,6 +61,7 @@ Removing a non-existent reaction has no effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -97,6 +99,7 @@ Use to see who reacted to a message and with what emoji.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 
@@ -132,6 +135,7 @@ Pinning an already pinned message has no additional effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -167,6 +171,7 @@ Unpinning a non-pinned message has no effect.
 |------|-------|
 | `destructiveHint` | false |
 | `idempotentHint` | true |
+| `capability` | write |
 
 ### Parameters
 
@@ -203,6 +208,7 @@ Use to read full conversation context before replying.
 |------|-------|
 | `readOnlyHint` | true |
 | `idempotentHint` | true |
+| `capability` | read |
 
 ### Parameters
 

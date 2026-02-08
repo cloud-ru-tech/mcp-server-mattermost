@@ -6,7 +6,7 @@ from fastmcp.dependencies import Depends
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.enums import ToolTag
+from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import TeamId, User, UserId, Username, UserStatus
 from mcp_server_mattermost.server import get_client, mcp
 
@@ -14,6 +14,7 @@ from mcp_server_mattermost.server import get_client, mcp
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_me(
     client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
@@ -30,6 +31,7 @@ async def get_me(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_user(
     user_id: UserId,
@@ -48,6 +50,7 @@ async def get_user(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_user_by_username(
     username: Username,
@@ -66,6 +69,7 @@ async def get_user_by_username(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def search_users(
     term: Annotated[str, Field(min_length=1, max_length=256, description="Search term")],
@@ -87,6 +91,7 @@ async def search_users(
 @mcp.tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.USER},
+    meta={"capability": Capability.READ},
 )
 async def get_user_status(
     user_id: UserId,
