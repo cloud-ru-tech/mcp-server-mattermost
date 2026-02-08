@@ -28,8 +28,10 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[None]:
 
     logger.info("Starting Mattermost MCP server")
     logger.debug("Server URL: %s", settings.url)
-    yield
-    logger.info("Mattermost MCP server shutdown complete")
+    try:
+        yield
+    finally:
+        logger.info("Mattermost MCP server shutdown complete")
 
 
 # Create FastMCP instance with lifespan
