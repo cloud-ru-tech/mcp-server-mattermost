@@ -1949,3 +1949,61 @@ class TestRetryAfterLogging:
             call.args and "Retry-After" in call.args[0] and "ignored" in call.args[0].lower()
             for call in mock_debug.call_args_list
         )
+
+
+class TestHttpLoggingHelpers:
+    """Test _log_http_request and _log_http_response helpers."""
+
+    def test_log_http_request_logs_method_and_endpoint(self, mock_settings, mocker):
+        """_log_http_request should log event, request_id, method, endpoint."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+
+        client._log_http_request("GET", "/users/me")
+
+        mock_debug.assert_called_once()
+        extra = mock_debug.call_args[1]["extra"]
+        assert extra["event"] == "http_request"
+        assert extra["method"] == "GET"
+        assert extra["endpoint"] == "/users/me"
+        assert "request_id" in extra
+
+    def test_log_http_response_logs_status_code(self, mock_settings, mocker):
+        """_log_http_response should log event, request_id, status_code."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+
+        client._log_http_response(200)
+
+        mock_debug.assert_called_once()
+        extra = mock_debug.call_args[1]["extra"]
+        assert extra["event"] == "http_response"
+        assert extra["status_code"] == 200
+        assert "request_id" in extra
+
+    def test_log_http_request_reads_request_id_from_context(self, mock_settings, mocker):
+        """Helpers should pick up request_id from ContextVar."""
+        from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.logging import request_id_var
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        mock_debug = mocker.patch("mcp_server_mattermost.client.logger.debug")
+        token = request_id_var.set("ctx-req-789")
+
+        try:
+            client._log_http_request("POST", "/posts")
+
+            extra = mock_debug.call_args[1]["extra"]
+            assert extra["request_id"] == "ctx-req-789"
+        finally:
+            request_id_var.reset(token)

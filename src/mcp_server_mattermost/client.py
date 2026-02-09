@@ -140,6 +140,38 @@ class MattermostClient:
             raise RuntimeError(msg)
         return self._client
 
+    def _log_http_request(self, method: str, endpoint: str) -> None:
+        """Log outgoing HTTP request at DEBUG level.
+
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            endpoint: API endpoint path
+        """
+        logger.debug(
+            "HTTP request",
+            extra={
+                "event": "http_request",
+                "request_id": request_id_var.get(),
+                "method": method,
+                "endpoint": endpoint,
+            },
+        )
+
+    def _log_http_response(self, status_code: int) -> None:
+        """Log incoming HTTP response at DEBUG level.
+
+        Args:
+            status_code: HTTP response status code
+        """
+        logger.debug(
+            "HTTP response",
+            extra={
+                "event": "http_response",
+                "request_id": request_id_var.get(),
+                "status_code": status_code,
+            },
+        )
+
     def _parse_error_response(self, response: httpx.Response) -> tuple[str, str | None]:
         """Parse error message and ID from response.
 
@@ -160,8 +192,7 @@ class MattermostClient:
             logger.debug("Failed to parse error response as JSON, using raw text")
         return response.text, None
 
-    @staticmethod
-    def _parse_retry_after(header: str) -> int | None:
+    def _parse_retry_after(self, header: str) -> int | None:
         """Parse Retry-After header value (integer seconds or HTTP-date).
 
         Args:
@@ -253,25 +284,9 @@ class MattermostClient:
 
         @retrying
         async def _do_request() -> dict[str, Any] | list[Any] | None:
-            request_id = request_id_var.get()
-            logger.debug(
-                "HTTP request",
-                extra={
-                    "event": "http_request",
-                    "request_id": request_id,
-                    "method": method,
-                    "endpoint": endpoint,
-                },
-            )
+            self._log_http_request(method, endpoint)
             response = await self._http.request(method, endpoint, **kwargs)
-            logger.debug(
-                "HTTP response",
-                extra={
-                    "event": "http_response",
-                    "request_id": request_id,
-                    "status_code": response.status_code,
-                },
-            )
+            self._log_http_response(response.status_code)
             return self._handle_response(response)
 
         return await _do_request()
@@ -932,30 +947,14 @@ class MattermostClient:
 
         @retrying
         async def _do_upload() -> dict[str, Any] | list[Any] | None:
-            request_id = request_id_var.get()
-            logger.debug(
-                "HTTP request",
-                extra={
-                    "event": "http_request",
-                    "request_id": request_id,
-                    "method": "POST",
-                    "endpoint": "/files",
-                },
-            )
+            self._log_http_request("POST", "/files")
             response = await self._http.post(
                 "/files",
                 params={"channel_id": channel_id, "filename": filename},
                 data={"channel_id": channel_id},
                 files={"files": (filename, content)},
             )
-            logger.debug(
-                "HTTP response",
-                extra={
-                    "event": "http_response",
-                    "request_id": request_id,
-                    "status_code": response.status_code,
-                },
-            )
+            self._log_http_response(response.status_code)
             return self._handle_response(response)
 
         result = await _do_upload()
