@@ -6,7 +6,7 @@ repo_name: cloud-ru-tech/mcp-server-mattermost
 
 theme:
   name: material
-  logo: assets/logo.png
+  logo: assets/logo.svg
   favicon: assets/favicon.png
   palette:
     - scheme: default

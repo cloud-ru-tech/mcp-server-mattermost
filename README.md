@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/assets/logo.png" alt="mcp-server-mattermost" width="120">
+<img src="https://raw.githubusercontent.com/cloud-ru-tech/mcp-server-mattermost/main/assets/logo.svg" alt="mcp-server-mattermost" width="120">
 
 # mcp-server-mattermost
 
