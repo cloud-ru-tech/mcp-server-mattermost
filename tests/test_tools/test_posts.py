@@ -14,7 +14,7 @@ class TestAddReaction:
         """Test adding a reaction returns Reaction model."""
         mock_client.add_reaction.return_value = make_reaction_data()
 
-        result = await posts.add_reaction.fn(
+        result = await posts.add_reaction(
             post_id="ps1234567890123456789012",
             emoji_name="thumbsup",
             client=mock_client,
@@ -31,7 +31,7 @@ class TestRemoveReaction:
         """Test removing a reaction."""
         mock_client.remove_reaction.return_value = None
 
-        result = await posts.remove_reaction.fn(
+        result = await posts.remove_reaction(
             post_id="ps1234567890123456789012",
             emoji_name="thumbsup",
             client=mock_client,
@@ -47,7 +47,7 @@ class TestGetReactions:
         """Test getting reactions returns list of Reaction models."""
         mock_client.get_reactions.return_value = [make_reaction_data()]
 
-        result = await posts.get_reactions.fn(
+        result = await posts.get_reactions(
             post_id="ps1234567890123456789012",
             client=mock_client,
         )
@@ -64,7 +64,7 @@ class TestPinMessage:
         mock_client.pin_post.return_value = {"status": "OK"}
         mock_client.get_post.return_value = make_post_data(is_pinned=True)
 
-        result = await posts.pin_message.fn(
+        result = await posts.pin_message(
             post_id="ps1234567890123456789012",
             client=mock_client,
         )
@@ -83,7 +83,7 @@ class TestUnpinMessage:
         mock_client.unpin_post.return_value = {"status": "OK"}
         mock_client.get_post.return_value = make_post_data(is_pinned=False)
 
-        result = await posts.unpin_message.fn(
+        result = await posts.unpin_message(
             post_id="ps1234567890123456789012",
             client=mock_client,
         )
@@ -108,7 +108,7 @@ class TestGetThread:
         )
         mock_client.get_thread.return_value = thread_data
 
-        result = await posts.get_thread.fn(
+        result = await posts.get_thread(
             post_id="ps1234567890123456789012",
             client=mock_client,
         )

@@ -18,7 +18,7 @@ class TestListBookmarks:
         """Test successful bookmark listing returns ChannelBookmark models."""
         mock_client.get_bookmarks.return_value = [make_bookmark_data()]
 
-        result = await bookmarks.list_bookmarks.fn(
+        result = await bookmarks.list_bookmarks(
             channel_id="ch1234567890123456789012",
             client=mock_client,
         )
@@ -36,7 +36,7 @@ class TestListBookmarks:
         """Test empty bookmark list."""
         mock_client.get_bookmarks.return_value = []
 
-        result = await bookmarks.list_bookmarks.fn(
+        result = await bookmarks.list_bookmarks(
             channel_id="ch1234567890123456789012",
             client=mock_client,
         )
@@ -47,7 +47,7 @@ class TestListBookmarks:
         """Test bookmarks_since parameter is passed through."""
         mock_client.get_bookmarks.return_value = [make_bookmark_data()]
 
-        await bookmarks.list_bookmarks.fn(
+        await bookmarks.list_bookmarks(
             channel_id="ch1234567890123456789012",
             bookmarks_since=1706400000000,
             client=mock_client,
@@ -68,7 +68,7 @@ class TestCreateBookmark:
             link_url="https://example.com",
         )
 
-        result = await bookmarks.create_bookmark.fn(
+        result = await bookmarks.create_bookmark(
             channel_id="ch1234567890123456789012",
             display_name="Test Bookmark",
             bookmark_type="link",
@@ -95,7 +95,7 @@ class TestCreateBookmark:
             file_id="fl1234567890123456789012",
         )
 
-        result = await bookmarks.create_bookmark.fn(
+        result = await bookmarks.create_bookmark(
             channel_id="ch1234567890123456789012",
             display_name="Test File",
             bookmark_type="file",
@@ -110,7 +110,7 @@ class TestCreateBookmark:
     async def test_create_link_bookmark_missing_url(self, mock_client: AsyncMock) -> None:
         """Test link bookmark without link_url raises ValidationError."""
         with pytest.raises(ValidationError, match="link_url is required"):
-            await bookmarks.create_bookmark.fn(
+            await bookmarks.create_bookmark(
                 channel_id="ch1234567890123456789012",
                 display_name="Test Bookmark",
                 bookmark_type="link",
@@ -120,7 +120,7 @@ class TestCreateBookmark:
     async def test_create_file_bookmark_missing_file_id(self, mock_client: AsyncMock) -> None:
         """Test file bookmark without file_id raises ValidationError."""
         with pytest.raises(ValidationError, match="file_id is required"):
-            await bookmarks.create_bookmark.fn(
+            await bookmarks.create_bookmark(
                 channel_id="ch1234567890123456789012",
                 display_name="Test File",
                 bookmark_type="file",
@@ -135,7 +135,7 @@ class TestCreateBookmark:
             image_url="https://example.com/preview.png",
         )
 
-        await bookmarks.create_bookmark.fn(
+        await bookmarks.create_bookmark(
             channel_id="ch1234567890123456789012",
             display_name="Test Bookmark",
             bookmark_type="link",
@@ -163,7 +163,7 @@ class TestUpdateBookmark:
         """Test updating only display_name passes correct fields."""
         mock_client.update_bookmark.return_value = make_bookmark_data(display_name="Updated")
 
-        result = await bookmarks.update_bookmark.fn(
+        result = await bookmarks.update_bookmark(
             channel_id="ch1234567890123456789012",
             bookmark_id="bk1234567890123456789012",
             display_name="Updated",
@@ -186,7 +186,7 @@ class TestUpdateBookmark:
             emoji="star",
         )
 
-        await bookmarks.update_bookmark.fn(
+        await bookmarks.update_bookmark(
             channel_id="ch1234567890123456789012",
             bookmark_id="bk1234567890123456789012",
             display_name="New Name",
@@ -207,7 +207,7 @@ class TestUpdateBookmark:
         """Test calling update with no optional fields passes empty kwargs."""
         mock_client.update_bookmark.return_value = make_bookmark_data()
 
-        await bookmarks.update_bookmark.fn(
+        await bookmarks.update_bookmark(
             channel_id="ch1234567890123456789012",
             bookmark_id="bk1234567890123456789012",
             client=mock_client,
@@ -226,7 +226,7 @@ class TestDeleteBookmark:
         """Test deleting a bookmark returns ChannelBookmark with delete_at set."""
         mock_client.delete_bookmark.return_value = make_bookmark_data(delete_at=1706400001000)
 
-        result = await bookmarks.delete_bookmark.fn(
+        result = await bookmarks.delete_bookmark(
             channel_id="ch1234567890123456789012",
             bookmark_id="bk1234567890123456789012",
             client=mock_client,
@@ -250,7 +250,7 @@ class TestUpdateBookmarkSortOrder:
             make_bookmark_data(bookmark_id="bk2234567890123456789012", sort_order=1),
         ]
 
-        result = await bookmarks.update_bookmark_sort_order.fn(
+        result = await bookmarks.update_bookmark_sort_order(
             channel_id="ch1234567890123456789012",
             bookmark_id="bk1234567890123456789012",
             new_sort_order=0,
@@ -272,7 +272,7 @@ class TestErrorHandling:
     async def test_list_bookmarks_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
         """Test authentication error propagation."""
         with pytest.raises(AuthenticationError):
-            await bookmarks.list_bookmarks.fn(
+            await bookmarks.list_bookmarks(
                 channel_id="ch1234567890123456789012",
                 client=mock_client_auth_error,
             )
@@ -280,7 +280,7 @@ class TestErrorHandling:
     async def test_list_bookmarks_not_found(self, mock_client_not_found: AsyncMock) -> None:
         """Test not found error propagation."""
         with pytest.raises(NotFoundError):
-            await bookmarks.list_bookmarks.fn(
+            await bookmarks.list_bookmarks(
                 channel_id="ch1234567890123456789012",
                 client=mock_client_not_found,
             )

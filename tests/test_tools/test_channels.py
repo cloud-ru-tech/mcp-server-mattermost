@@ -64,7 +64,7 @@ class TestListChannels:
         """Test successful channel listing returns Channel models."""
         mock_client.get_channels.return_value = [make_channel_data()]
 
-        result = await channels.list_channels.fn(
+        result = await channels.list_channels(
             team_id="tm1234567890123456789012",
             page=0,
             per_page=60,
@@ -89,7 +89,7 @@ class TestGetChannel:
         """Test getting channel by ID returns Channel model."""
         mock_client.get_channel.return_value = make_channel_data()
 
-        result = await channels.get_channel.fn(
+        result = await channels.get_channel(
             channel_id="ch1234567890123456789012",
             client=mock_client,
         )
@@ -106,7 +106,7 @@ class TestGetChannelByName:
         """Test getting channel by name returns Channel model."""
         mock_client.get_channel_by_name.return_value = make_channel_data()
 
-        result = await channels.get_channel_by_name.fn(
+        result = await channels.get_channel_by_name(
             team_id="tm1234567890123456789012",
             channel_name="general",
             client=mock_client,
@@ -123,7 +123,7 @@ class TestCreateChannel:
         """Test creating a public channel returns Channel model."""
         mock_client.create_channel.return_value = make_channel_data(name="new-channel", type="O")
 
-        result = await channels.create_channel.fn(
+        result = await channels.create_channel(
             team_id="tm1234567890123456789012",
             name="new-channel",
             display_name="New Channel",
@@ -144,7 +144,7 @@ class TestJoinChannel:
         """Test joining a channel returns ChannelMember model."""
         mock_client.join_channel.return_value = make_channel_member_data()
 
-        result = await channels.join_channel.fn(
+        result = await channels.join_channel(
             channel_id="ch1234567890123456789012",
             client=mock_client,
         )
@@ -160,7 +160,7 @@ class TestLeaveChannel:
         """Test leaving a channel."""
         mock_client.leave_channel.return_value = None
 
-        result = await channels.leave_channel.fn(
+        result = await channels.leave_channel(
             channel_id="ch1234567890123456789012",
             client=mock_client,
         )
@@ -175,7 +175,7 @@ class TestGetChannelMembers:
         """Test getting channel members returns ChannelMember models."""
         mock_client.get_channel_members.return_value = [make_channel_member_data()]
 
-        result = await channels.get_channel_members.fn(
+        result = await channels.get_channel_members(
             channel_id="ch1234567890123456789012",
             page=0,
             per_page=60,
@@ -193,7 +193,7 @@ class TestAddUserToChannel:
         """Test adding user to channel returns ChannelMember model."""
         mock_client.add_user_to_channel.return_value = make_channel_member_data()
 
-        result = await channels.add_user_to_channel.fn(
+        result = await channels.add_user_to_channel(
             channel_id="ch1234567890123456789012",
             user_id="us1234567890123456789012",
             client=mock_client,
@@ -213,7 +213,7 @@ class TestCreateDirectChannel:
             type="D",
         )
 
-        result = await channels.create_direct_channel.fn(
+        result = await channels.create_direct_channel(
             user_id_1="us1234567890123456789012",
             user_id_2="us2234567890123456789012",
             client=mock_client,
@@ -232,7 +232,7 @@ class TestErrorHandling:
     async def test_list_channels_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
         """Test authentication error propagation."""
         with pytest.raises(AuthenticationError):
-            await channels.list_channels.fn(
+            await channels.list_channels(
                 team_id="tm1234567890123456789012",
                 client=mock_client_auth_error,
             )
@@ -240,7 +240,7 @@ class TestErrorHandling:
     async def test_get_channel_not_found(self, mock_client_not_found: AsyncMock) -> None:
         """Test not found error propagation."""
         with pytest.raises(NotFoundError):
-            await channels.get_channel.fn(
+            await channels.get_channel(
                 channel_id="ch1234567890123456789012",
                 client=mock_client_not_found,
             )
