@@ -56,9 +56,10 @@ class TestServerIntegration:
 
         assert callable(get_client)
 
-    def test_mcp_can_list_tools(self) -> None:
-        """Test that mcp instance can be queried for tools."""
+    @pytest.mark.asyncio
+    async def test_filesystem_provider_discovers_all_tools(self) -> None:
+        """Test that FileSystemProvider auto-discovers all tool modules."""
         from mcp_server_mattermost.server import mcp
 
-        assert hasattr(mcp, "name")
-        assert mcp.name == "Mattermost"
+        tools = await mcp.list_tools()
+        assert len(tools) == 36, f"Expected 36 tools, got {len(tools)}: {[t.name for t in tools]}"

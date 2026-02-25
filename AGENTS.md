@@ -240,4 +240,3 @@ This project uses manual versioning:
 
 - When using markdown (images, lists, bold) inside HTML blocks (`<div>`, `<details>`) in MkDocs — add `md_in_html` extension and `markdown` attribute on the HTML tag, otherwise content renders as plain text
 - When adding CSS class to an image in MkDocs — use `attr_list` extension with `![alt](path){ .classname }` instead of wrapping in `<div class="...">`. Cleaner, no HTML needed
-- Jira status workflow and transition IDs are documented in `~/.claude/skills/jira-implement/SKILL.md` (section "Status Transitions"). Full chain: В очереди на оценку →(211)→ Approved →(221)→ Бэклог →(181)→ В работе →(191)→ Review →(311)→ Done
