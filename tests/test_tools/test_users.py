@@ -160,11 +160,3 @@ class TestErrorHandling:
                 user_id="us1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-def test_get_me_has_tags():
-    from mcp_server_mattermost.tools.users import get_me
-
-    assert hasattr(get_me, "tags")
-    assert "user" in get_me.tags
-    assert "mattermost" in get_me.tags

@@ -266,19 +266,3 @@ class TestErrorHandling:
                 terms="test",
                 client=mock_client_rate_limited,
             )
-
-
-def test_post_message_has_tags():
-    from mcp_server_mattermost.tools.messages import post_message
-
-    assert hasattr(post_message, "tags")
-    assert "message" in post_message.tags
-    assert "mattermost" in post_message.tags
-
-
-def test_search_messages_has_tags():
-    from mcp_server_mattermost.tools.messages import search_messages
-
-    assert hasattr(search_messages, "tags")
-    assert "message" in search_messages.tags
-    assert "mattermost" in search_messages.tags

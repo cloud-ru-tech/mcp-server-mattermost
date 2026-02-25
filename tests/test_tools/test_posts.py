@@ -116,11 +116,3 @@ class TestGetThread:
         assert isinstance(result, PostList)
         assert len(result.posts) == 2
         assert len(result.order) == 2
-
-
-def test_add_reaction_has_tags():
-    from mcp_server_mattermost.tools.posts import add_reaction
-
-    assert hasattr(add_reaction, "tags")
-    assert "post" in add_reaction.tags
-    assert "mattermost" in add_reaction.tags

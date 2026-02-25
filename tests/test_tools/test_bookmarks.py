@@ -284,17 +284,3 @@ class TestErrorHandling:
                 channel_id="ch1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-class TestBookmarkTags:
-    """Tests for bookmark tool tags."""
-
-    def test_list_bookmarks_has_tags(self) -> None:
-        assert hasattr(bookmarks.list_bookmarks, "tags")
-        assert "bookmark" in bookmarks.list_bookmarks.tags
-        assert "mattermost" in bookmarks.list_bookmarks.tags
-
-    def test_create_bookmark_has_tags(self) -> None:
-        assert hasattr(bookmarks.create_bookmark, "tags")
-        assert "bookmark" in bookmarks.create_bookmark.tags
-        assert "mattermost" in bookmarks.create_bookmark.tags

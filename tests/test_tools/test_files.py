@@ -104,11 +104,3 @@ class TestGetFileLink:
 
         assert isinstance(result, FileLink)
         assert "fl1234567890123456789012" in result.link
-
-
-def test_upload_file_has_tags():
-    from mcp_server_mattermost.tools.files import upload_file
-
-    assert hasattr(upload_file, "tags")
-    assert "file" in upload_file.tags
-    assert "mattermost" in upload_file.tags

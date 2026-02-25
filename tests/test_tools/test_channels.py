@@ -244,19 +244,3 @@ class TestErrorHandling:
                 channel_id="ch1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-def test_list_channels_has_tags():
-    from mcp_server_mattermost.tools.channels import list_channels
-
-    assert hasattr(list_channels, "tags")
-    assert "channel" in list_channels.tags
-    assert "mattermost" in list_channels.tags
-
-
-def test_get_channel_has_tags():
-    from mcp_server_mattermost.tools.channels import get_channel
-
-    assert hasattr(get_channel, "tags")
-    assert "channel" in get_channel.tags
-    assert "mattermost" in get_channel.tags

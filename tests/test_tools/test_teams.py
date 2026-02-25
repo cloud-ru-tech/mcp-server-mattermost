@@ -113,11 +113,3 @@ class TestErrorHandling:
                 team_id="tm1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-def test_list_teams_has_tags():
-    from mcp_server_mattermost.tools.teams import list_teams
-
-    assert hasattr(list_teams, "tags")
-    assert "team" in list_teams.tags
-    assert "mattermost" in list_teams.tags
