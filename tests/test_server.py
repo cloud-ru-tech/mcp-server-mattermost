@@ -20,12 +20,6 @@ class TestServerSetup:
         assert mcp.instructions is not None
         assert "Mattermost" in mcp.instructions
 
-    def test_get_settings_dep_exists(self) -> None:
-        """Test that settings dependency provider exists."""
-        from mcp_server_mattermost.deps import get_settings_dep
-
-        assert callable(get_settings_dep)
-
     def test_get_client_exists(self) -> None:
         """Test that client dependency provider exists."""
         from mcp_server_mattermost.deps import get_client
@@ -35,15 +29,6 @@ class TestServerSetup:
 
 class TestDependencyProviders:
     """Tests for dependency injection providers."""
-
-    def test_get_settings_dep_returns_settings(self, mock_settings: None) -> None:
-        """Test that get_settings_dep returns Settings instance."""
-        from mcp_server_mattermost.config import Settings
-        from mcp_server_mattermost.deps import get_settings_dep
-
-        result = get_settings_dep()
-
-        assert isinstance(result, Settings)
 
     @pytest.mark.asyncio
     async def test_get_client_yields_client(self, mock_settings: None) -> None:
@@ -67,9 +52,8 @@ class TestServerIntegration:
 
     def test_deps_imports_work(self) -> None:
         """Test that deps module exports resolve correctly."""
-        from mcp_server_mattermost.deps import get_client, get_settings_dep
+        from mcp_server_mattermost.deps import get_client
 
-        assert callable(get_settings_dep)
         assert callable(get_client)
 
     def test_mcp_can_list_tools(self) -> None:

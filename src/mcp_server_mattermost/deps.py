@@ -4,16 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from .client import MattermostClient
-from .config import Settings, get_settings
-
-
-def get_settings_dep() -> Settings:
-    """Provide application settings.
-
-    Returns:
-        Settings instance loaded from environment
-    """
-    return get_settings()
+from .config import get_settings
 
 
 @asynccontextmanager
