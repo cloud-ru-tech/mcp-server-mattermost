@@ -62,7 +62,8 @@ uv run mcp-server-mattermost
 ## Key Source Files
 
 - `src/mcp_server_mattermost/__init__.py` - Package entry, exports `main()` and `__version__`
-- `src/mcp_server_mattermost/server.py` - FastMCP instance creation
+- `src/mcp_server_mattermost/server.py` - FastMCP instance creation, lifespan, FileSystemProvider
+- `src/mcp_server_mattermost/deps.py` - Dependency injection providers (get_client)
 - `src/mcp_server_mattermost/client.py` - Async HTTP client with retry logic
 - `src/mcp_server_mattermost/config.py` - Settings via pydantic-settings (env vars prefixed `MATTERMOST_`)
 - `src/mcp_server_mattermost/exceptions.py` - Exception hierarchy (`MattermostMCPError` base)
@@ -162,9 +163,10 @@ Each tool declares a `capability` in `meta` for agent-based filtering:
 Use `Capability` enum from `enums.py` — never raw strings:
 
 ```python
-from mcp_server_mattermost.enums import Capability
+from fastmcp.tools import tool
+from mcp_server_mattermost.enums import Capability, ToolTag
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
@@ -212,7 +214,10 @@ For searching by keywords, use search_messages instead.  # ← disambiguation
 All tool functions use this pattern:
 
 ```python
-client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+from fastmcp.dependencies import Depends
+from mcp_server_mattermost.deps import get_client
+
+client: MattermostClient = Depends(get_client),  # noqa: B008
 ```
 
 The `# noqa: B008` suppresses ruff's flake8-bugbear warning "Do not perform function calls
@@ -235,3 +240,4 @@ This project uses manual versioning:
 
 - When using markdown (images, lists, bold) inside HTML blocks (`<div>`, `<details>`) in MkDocs — add `md_in_html` extension and `markdown` attribute on the HTML tag, otherwise content renders as plain text
 - When adding CSS class to an image in MkDocs — use `attr_list` extension with `![alt](path){ .classname }` instead of wrapping in `<div class="...">`. Cleaner, no HTML needed
+- Jira status workflow and transition IDs are documented in `~/.claude/skills/jira-implement/SKILL.md` (section "Status Transitions"). Full chain: В очереди на оценку →(211)→ Approved →(221)→ Бэклог →(181)→ В работе →(191)→ Review →(311)→ Done
