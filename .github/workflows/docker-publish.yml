@@ -3,12 +3,31 @@ name: Publish Docker Image
 on:
   release:
     types: [published]
+  push:
+    branches: [main]
+    paths: [README.md]
 
 env:
   IMAGE_NAME: legard/mcp-server-mattermost
 
 jobs:
+  update-description:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.IMAGE_NAME }}
+          short-description: "MCP server for Mattermost — let AI assistants read, search, and post in your workspace"
+
   build-and-push:
+    if: github.event_name == 'release'
     runs-on: ubuntu-latest
     permissions:
       contents: read
