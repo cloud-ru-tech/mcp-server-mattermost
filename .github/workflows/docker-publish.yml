@@ -61,7 +61,17 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
+      - name: Resolve main branch for SARIF upload
+        id: sarif-ref
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Upload Trivy scan results
+        if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: trivy-results.sarif
+          ref: refs/heads/main
+          sha: ${{ steps.sarif-ref.outputs.sha }}
