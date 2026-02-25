@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-25
+
+### Changed
+
+- **BREAKING:** Migrated from FastMCP 2 to FastMCP 3
+  - Tool registration: `@mcp.tool()` → `@tool()` from `fastmcp.tools`
+  - Auto-discovery via `FileSystemProvider` replaces manual tool imports
+  - Lifespan uses `@lifespan` decorator from `fastmcp.server.lifespan`
+  - DI providers moved from `server.py` to new `deps.py` module
+  - Removed `# type: ignore[arg-type]` — FastMCP 3 has proper DI typing
+
 ## [0.2.0] - 2026-02-09
 
 ### Added

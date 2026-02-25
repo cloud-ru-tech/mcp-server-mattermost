@@ -62,7 +62,8 @@ uv run mcp-server-mattermost
 ## Key Source Files
 
 - `src/mcp_server_mattermost/__init__.py` - Package entry, exports `main()` and `__version__`
-- `src/mcp_server_mattermost/server.py` - FastMCP instance creation
+- `src/mcp_server_mattermost/server.py` - FastMCP instance creation, lifespan, FileSystemProvider
+- `src/mcp_server_mattermost/deps.py` - Dependency injection providers (get_client)
 - `src/mcp_server_mattermost/client.py` - Async HTTP client with retry logic
 - `src/mcp_server_mattermost/config.py` - Settings via pydantic-settings (env vars prefixed `MATTERMOST_`)
 - `src/mcp_server_mattermost/exceptions.py` - Exception hierarchy (`MattermostMCPError` base)
@@ -162,9 +163,10 @@ Each tool declares a `capability` in `meta` for agent-based filtering:
 Use `Capability` enum from `enums.py` — never raw strings:
 
 ```python
-from mcp_server_mattermost.enums import Capability
+from fastmcp.tools import tool
+from mcp_server_mattermost.enums import Capability, ToolTag
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
@@ -212,7 +214,10 @@ For searching by keywords, use search_messages instead.  # ← disambiguation
 All tool functions use this pattern:
 
 ```python
-client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+from fastmcp.dependencies import Depends
+from mcp_server_mattermost.deps import get_client
+
+client: MattermostClient = Depends(get_client),  # noqa: B008
 ```
 
 The `# noqa: B008` suppresses ruff's flake8-bugbear warning "Do not perform function calls
@@ -230,6 +235,19 @@ This project uses manual versioning:
 5. Tag: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
 6. Push: `git push origin main --tags`
 7. Create GitHub Release from tag → triggers PyPI publish
+
+## Pre-commit Checklist
+
+Before committing, always run the full lint suite and fix any issues:
+
+```bash
+uv run ruff check src tests   # lint
+uv run ruff format src tests  # format
+uv run mypy src               # type check
+uv run pytest                 # tests
+```
+
+Do NOT commit code that has lint, type, or test errors.
 
 ## Lessons Learned
 

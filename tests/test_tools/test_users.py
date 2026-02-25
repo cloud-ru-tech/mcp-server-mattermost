@@ -60,7 +60,7 @@ class TestGetMe:
         """Test getting current user returns User model."""
         mock_client.get_me.return_value = make_user_data()
 
-        result = await users.get_me.fn(client=mock_client)
+        result = await users.get_me(client=mock_client)
 
         assert isinstance(result, User)
         assert result.username == "testuser"
@@ -73,7 +73,7 @@ class TestGetUser:
         """Test getting user by ID returns User model."""
         mock_client.get_user.return_value = make_user_data()
 
-        result = await users.get_user.fn(
+        result = await users.get_user(
             user_id="us1234567890123456789012",
             client=mock_client,
         )
@@ -89,7 +89,7 @@ class TestGetUserByUsername:
         """Test getting user by username returns User model."""
         mock_client.get_user_by_username.return_value = make_user_data()
 
-        result = await users.get_user_by_username.fn(
+        result = await users.get_user_by_username(
             username="testuser",
             client=mock_client,
         )
@@ -105,7 +105,7 @@ class TestSearchUsers:
         """Test searching users returns list of User models."""
         mock_client.search_users.return_value = [make_user_data()]
 
-        result = await users.search_users.fn(
+        result = await users.search_users(
             term="test",
             client=mock_client,
         )
@@ -117,7 +117,7 @@ class TestSearchUsers:
         """Test searching users within a team."""
         mock_client.search_users.return_value = []
 
-        await users.search_users.fn(
+        await users.search_users(
             term="test",
             team_id="tm1234567890123456789012",
             client=mock_client,
@@ -136,7 +136,7 @@ class TestGetUserStatus:
         """Test getting user status returns UserStatus model."""
         mock_client.get_user_status.return_value = make_user_status_data()
 
-        result = await users.get_user_status.fn(
+        result = await users.get_user_status(
             user_id="us1234567890123456789012",
             client=mock_client,
         )
@@ -151,20 +151,12 @@ class TestErrorHandling:
     async def test_get_me_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
         """Test authentication error propagation."""
         with pytest.raises(AuthenticationError):
-            await users.get_me.fn(client=mock_client_auth_error)
+            await users.get_me(client=mock_client_auth_error)
 
     async def test_get_user_not_found(self, mock_client_not_found: AsyncMock) -> None:
         """Test not found error propagation."""
         with pytest.raises(NotFoundError):
-            await users.get_user.fn(
+            await users.get_user(
                 user_id="us1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-def test_get_me_has_tags():
-    from mcp_server_mattermost.tools.users import get_me
-
-    assert hasattr(get_me, "tags")
-    assert "user" in get_me.tags
-    assert "mattermost" in get_me.tags

@@ -3,21 +3,22 @@
 from typing import Annotated
 
 from fastmcp.dependencies import Depends
+from fastmcp.tools import tool
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
+from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Team, TeamId, TeamMember
-from mcp_server_mattermost.server import get_client, mcp
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM},
     meta={"capability": Capability.READ},
 )
 async def list_teams(
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[Team]:
     """List teams the current user belongs to.
 
@@ -28,14 +29,14 @@ async def list_teams(
     return [Team(**item) for item in data]
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM},
     meta={"capability": Capability.READ},
 )
 async def get_team(
     team_id: TeamId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Team:
     """Get team details by ID.
 
@@ -46,7 +47,7 @@ async def get_team(
     return Team(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.TEAM, ToolTag.USER},
     meta={"capability": Capability.READ},
@@ -55,7 +56,7 @@ async def get_team_members(
     team_id: TeamId,
     page: Annotated[int, Field(ge=0, description="Page number (0-indexed)")] = 0,
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = 60,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[TeamMember]:
     """Get members of a team.
 

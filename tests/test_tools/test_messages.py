@@ -17,7 +17,7 @@ class TestPostMessage:
         """Test posting a message returns Post model."""
         mock_client.create_post.return_value = make_post_data()
 
-        result = await messages.post_message.fn(
+        result = await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Hello, World!",
             client=mock_client,
@@ -37,7 +37,7 @@ class TestPostMessage:
         """Test posting a reply in thread returns Post model."""
         mock_client.create_post.return_value = make_post_data(root_id="rt1234567890123456789012")
 
-        result = await messages.post_message.fn(
+        result = await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Reply",
             root_id="rt1234567890123456789012",
@@ -51,7 +51,7 @@ class TestPostMessage:
         """Test posting a message with file attachments returns Post model."""
         mock_client.create_post.return_value = make_post_data(file_ids=["fl1234567890123456789012"])
 
-        result = await messages.post_message.fn(
+        result = await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Check this file",
             file_ids=["fl1234567890123456789012"],
@@ -80,7 +80,7 @@ class TestGetChannelMessages:
         )
         mock_client.get_posts.return_value = messages_data
 
-        result = await messages.get_channel_messages.fn(
+        result = await messages.get_channel_messages(
             channel_id="ch1234567890123456789012",
             page=0,
             per_page=60,
@@ -99,7 +99,7 @@ class TestSearchMessages:
         search_data = make_post_list_data()
         mock_client.search_posts.return_value = search_data
 
-        result = await messages.search_messages.fn(
+        result = await messages.search_messages(
             team_id="tm1234567890123456789012",
             terms="hello",
             client=mock_client,
@@ -116,7 +116,7 @@ class TestUpdateMessage:
         """Test updating a message returns Post model."""
         mock_client.update_post.return_value = make_post_data(message="Updated message")
 
-        result = await messages.update_message.fn(
+        result = await messages.update_message(
             post_id="ps1234567890123456789012",
             message="Updated message",
             client=mock_client,
@@ -133,7 +133,7 @@ class TestDeleteMessage:
         """Test deleting a message."""
         mock_client.delete_post.return_value = None
 
-        result = await messages.delete_message.fn(
+        result = await messages.delete_message(
             post_id="ps1234567890123456789012",
             client=mock_client,
         )
@@ -150,7 +150,7 @@ class TestPostMessageWithAttachments:
 
         mock_client.create_post.return_value = make_post_data()
 
-        result = await messages.post_message.fn(
+        result = await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Status update",
             attachments=[Attachment(color="good", text="All systems operational")],
@@ -181,7 +181,7 @@ class TestPostMessageWithAttachments:
             ts=1706400000,
         )
 
-        result = await messages.post_message.fn(
+        result = await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Task update",
             attachments=[attachment],
@@ -202,7 +202,7 @@ class TestPostMessageWithAttachments:
         """Test posting message without attachments does not send props."""
         mock_client.create_post.return_value = make_post_data()
 
-        await messages.post_message.fn(
+        await messages.post_message(
             channel_id="ch1234567890123456789012",
             message="Simple message",
             client=mock_client,
@@ -221,7 +221,7 @@ class TestUpdateMessageWithAttachments:
 
         mock_client.update_post.return_value = make_post_data(message="Updated")
 
-        result = await messages.update_message.fn(
+        result = await messages.update_message(
             post_id="ps1234567890123456789012",
             message="Updated message",
             attachments=[Attachment(color="danger", text="Alert!")],
@@ -236,7 +236,7 @@ class TestUpdateMessageWithAttachments:
         """Test updating message without attachments does not send props."""
         mock_client.update_post.return_value = make_post_data(message="Updated")
 
-        await messages.update_message.fn(
+        await messages.update_message(
             post_id="ps1234567890123456789012",
             message="Updated message",
             client=mock_client,
@@ -252,7 +252,7 @@ class TestErrorHandling:
     async def test_post_message_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
         """Test authentication error propagation."""
         with pytest.raises(AuthenticationError):
-            await messages.post_message.fn(
+            await messages.post_message(
                 channel_id="ch1234567890123456789012",
                 message="Test",
                 client=mock_client_auth_error,
@@ -261,24 +261,8 @@ class TestErrorHandling:
     async def test_search_messages_rate_limited(self, mock_client_rate_limited: AsyncMock) -> None:
         """Test rate limit error propagation."""
         with pytest.raises(RateLimitError):
-            await messages.search_messages.fn(
+            await messages.search_messages(
                 team_id="tm1234567890123456789012",
                 terms="test",
                 client=mock_client_rate_limited,
             )
-
-
-def test_post_message_has_tags():
-    from mcp_server_mattermost.tools.messages import post_message
-
-    assert hasattr(post_message, "tags")
-    assert "message" in post_message.tags
-    assert "mattermost" in post_message.tags
-
-
-def test_search_messages_has_tags():
-    from mcp_server_mattermost.tools.messages import search_messages
-
-    assert hasattr(search_messages, "tags")
-    assert "message" in search_messages.tags
-    assert "mattermost" in search_messages.tags

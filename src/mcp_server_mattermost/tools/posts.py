@@ -1,14 +1,15 @@
 """Post operations: reactions, pins, threads."""
 
 from fastmcp.dependencies import Depends
+from fastmcp.tools import tool
 
 from mcp_server_mattermost.client import MattermostClient
+from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import EmojiName, Post, PostId, PostList, Reaction
-from mcp_server_mattermost.server import get_client, mcp
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
     meta={"capability": Capability.WRITE},
@@ -16,7 +17,7 @@ from mcp_server_mattermost.server import get_client, mcp
 async def add_reaction(
     post_id: PostId,
     emoji_name: EmojiName,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Reaction:
     """Add an emoji reaction to a message.
 
@@ -31,7 +32,7 @@ async def add_reaction(
     return Reaction(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
     meta={"capability": Capability.WRITE},
@@ -39,7 +40,7 @@ async def add_reaction(
 async def remove_reaction(
     post_id: PostId,
     emoji_name: EmojiName,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> None:
     """Remove your emoji reaction from a message.
 
@@ -52,14 +53,14 @@ async def remove_reaction(
     )
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
     meta={"capability": Capability.READ},
 )
 async def get_reactions(
     post_id: PostId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[Reaction]:
     """Get all reactions on a message.
 
@@ -70,14 +71,14 @@ async def get_reactions(
     return [Reaction(**item) for item in data]
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
     meta={"capability": Capability.WRITE},
 )
 async def pin_message(
     post_id: PostId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Post:
     """Pin a message in a channel.
 
@@ -89,14 +90,14 @@ async def pin_message(
     return Post(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST},
     meta={"capability": Capability.WRITE},
 )
 async def unpin_message(
     post_id: PostId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Post:
     """Unpin a message from a channel.
 
@@ -108,14 +109,14 @@ async def unpin_message(
     return Post(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.POST, ToolTag.MESSAGE},
     meta={"capability": Capability.READ},
 )
 async def get_thread(
     post_id: PostId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> PostList:
     """Get all messages in a thread.
 

@@ -68,7 +68,7 @@ def _wait_for_rate_limit(retry_state: RetryCallState) -> float:
         return float(exc.retry_after)
 
     # Otherwise use exponential backoff: 1s, 2s, 4s, 8s... (max 10s)
-    return wait_exponential(multiplier=1, min=1, max=10)(retry_state)
+    return float(wait_exponential(multiplier=1, min=1, max=10)(retry_state))
 
 
 class MattermostClient:

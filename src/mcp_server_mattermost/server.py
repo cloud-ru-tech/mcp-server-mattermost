@@ -1,27 +1,28 @@
 """FastMCP server for Mattermost integration."""
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastmcp import FastMCP
+from fastmcp.server.lifespan import lifespan
+from fastmcp.server.providers import FileSystemProvider
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from .client import MattermostClient
-from .config import Settings, get_settings
+from .config import get_settings
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
 
 
-@asynccontextmanager
-async def app_lifespan(_server: FastMCP) -> AsyncIterator[None]:
+@lifespan
+async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
     """Manage application lifecycle.
 
     Args:
         _server: FastMCP server instance (required by FastMCP)
 
     Yields:
-        None
+        Empty dict (no shared lifespan state)
     """
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
@@ -29,16 +30,17 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[None]:
     logger.info("Starting Mattermost MCP server")
     logger.debug("Server URL: %s", settings.url)
     try:
-        yield
+        yield {}
     finally:
         logger.info("Mattermost MCP server shutdown complete")
 
 
-# Create FastMCP instance with lifespan
+# Create FastMCP instance with lifespan and auto-discovery
 mcp = FastMCP(
     name="Mattermost",
     instructions="MCP server for Mattermost team collaboration platform",
     lifespan=app_lifespan,
+    providers=[FileSystemProvider(Path(__file__).parent / "tools")],
 )
 
 # Register logging middleware
@@ -56,36 +58,3 @@ async def health_check(_request: Request) -> JSONResponse:
         JSON response with service status
     """
     return JSONResponse({"status": "healthy", "service": "mcp-server-mattermost"})
-
-
-# === Dependency Injection Providers ===
-
-
-def get_settings_dep() -> Settings:
-    """Provide application settings.
-
-    Returns:
-        Settings instance loaded from environment
-    """
-    return get_settings()
-
-
-@asynccontextmanager
-async def get_client() -> AsyncIterator[MattermostClient]:
-    """Provide Mattermost client with automatic lifecycle management.
-
-    The client is created and destroyed per-request.
-    Connection pooling is handled by httpx internally.
-
-    Yields:
-        MattermostClient ready for API calls
-    """
-    settings = get_settings()
-    client = MattermostClient(settings)
-    async with client.lifespan():
-        yield client
-
-
-# Register tools with mcp instance
-# Must happen after mcp and get_client are defined
-from . import tools as _tools  # noqa: E402, F401

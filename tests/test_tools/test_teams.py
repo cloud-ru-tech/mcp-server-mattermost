@@ -62,7 +62,7 @@ class TestListTeams:
         """Test listing teams returns list of Team models."""
         mock_client.get_teams.return_value = [make_team_data()]
 
-        result = await teams.list_teams.fn(client=mock_client)
+        result = await teams.list_teams(client=mock_client)
 
         assert len(result) == 1
         assert isinstance(result[0], Team)
@@ -76,7 +76,7 @@ class TestGetTeam:
         """Test getting team by ID returns Team model."""
         mock_client.get_team.return_value = make_team_data()
 
-        result = await teams.get_team.fn(
+        result = await teams.get_team(
             team_id="tm1234567890123456789012",
             client=mock_client,
         )
@@ -92,7 +92,7 @@ class TestGetTeamMembers:
         """Test getting team members returns list of TeamMember models."""
         mock_client.get_team_members.return_value = [make_team_member_data()]
 
-        result = await teams.get_team_members.fn(
+        result = await teams.get_team_members(
             team_id="tm1234567890123456789012",
             page=0,
             per_page=60,
@@ -109,15 +109,7 @@ class TestErrorHandling:
     async def test_get_team_not_found(self, mock_client_not_found: AsyncMock) -> None:
         """Test not found error propagation."""
         with pytest.raises(NotFoundError):
-            await teams.get_team.fn(
+            await teams.get_team(
                 team_id="tm1234567890123456789012",
                 client=mock_client_not_found,
             )
-
-
-def test_list_teams_has_tags():
-    from mcp_server_mattermost.tools.teams import list_teams
-
-    assert hasattr(list_teams, "tags")
-    assert "team" in list_teams.tags
-    assert "mattermost" in list_teams.tags

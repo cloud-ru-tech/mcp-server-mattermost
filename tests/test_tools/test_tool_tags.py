@@ -2,9 +2,6 @@
 
 import pytest
 
-from mcp_server_mattermost.server import mcp
-from mcp_server_mattermost.tools import bookmarks, channels, files, messages, posts, teams, users  # noqa: F401
-
 
 # Tool-to-module mapping for categorization
 _TOOL_TO_MODULE: dict[str, str] = {}
@@ -39,42 +36,43 @@ for _tool in (
 ):
     _TOOL_TO_MODULE[_tool] = "bookmarks"
 
+_MODULE_TO_TAG: dict[str, str] = {
+    "bookmarks": "bookmark",
+    "channels": "channel",
+    "messages": "message",
+    "posts": "post",
+    "users": "user",
+    "teams": "team",
+    "files": "file",
+}
 
-def get_all_tools():
-    """Collect all registered MCP tools from the server's tool manager."""
-    tool_manager = mcp._tool_manager
-    tools = []
-    for name, tool in tool_manager._tools.items():
-        module_name = _TOOL_TO_MODULE.get(name, "unknown")
-        tools.append((module_name, name, tool))
-    return tools
+
+@pytest.fixture
+async def all_tools(mock_settings):
+    from mcp_server_mattermost.server import mcp
+
+    tools = await mcp.list_tools()
+    return {t.name: t for t in tools}
 
 
 class TestAllToolsHaveMattermostTag:
     """Verify all tools include the MATTERMOST tag."""
 
-    @pytest.mark.parametrize(("module_name", "tool_name", "tool"), get_all_tools())
-    def test_tool_has_mattermost_tag(self, module_name, tool_name, tool):
+    @pytest.mark.parametrize("tool_name", list(_TOOL_TO_MODULE.keys()))
+    async def test_tool_has_mattermost_tag(self, all_tools, tool_name):
+        tool = all_tools[tool_name]
+        module_name = _TOOL_TO_MODULE[tool_name]
         assert "mattermost" in tool.tags, f"{module_name}.{tool_name} missing MATTERMOST tag"
 
 
 class TestToolTagConsistency:
     """Verify tools have appropriate category tags."""
 
-    @pytest.mark.parametrize(("module_name", "tool_name", "tool"), get_all_tools())
-    def test_tool_has_category_tag(self, module_name, tool_name, tool):
-        module_to_tag = {
-            "bookmarks": "bookmark",
-            "channels": "channel",
-            "messages": "message",
-            "posts": "post",
-            "users": "user",
-            "teams": "team",
-            "files": "file",
-        }
-
-        expected_tag = module_to_tag.get(module_name)
-
+    @pytest.mark.parametrize("tool_name", list(_TOOL_TO_MODULE.keys()))
+    async def test_tool_has_category_tag(self, all_tools, tool_name):
+        tool = all_tools[tool_name]
+        module_name = _TOOL_TO_MODULE[tool_name]
+        expected_tag = _MODULE_TO_TAG.get(module_name)
         if expected_tag:
             assert expected_tag in tool.tags, f"{module_name}.{tool_name} missing '{expected_tag}' tag"
 
@@ -82,9 +80,12 @@ class TestToolTagConsistency:
 class TestToolCount:
     """Verify expected number of tools are registered."""
 
-    def test_total_tool_count(self):
-        """Ensure we have the expected number of tools registered."""
-        tool_manager = mcp._tool_manager
-        assert len(tool_manager._tools) == 36, (
-            f"Expected 36 tools, got {len(tool_manager._tools)}: {list(tool_manager._tools.keys())}"
+    async def test_total_tool_count(self, all_tools):
+        assert len(all_tools) == 36, f"Expected 36 tools, got {len(all_tools)}: {list(all_tools.keys())}"
+
+    async def test_no_unexpected_tools(self, all_tools):
+        """Catch new tools not in _TOOL_TO_MODULE."""
+        unexpected = set(all_tools.keys()) - set(_TOOL_TO_MODULE.keys())
+        assert not unexpected, (
+            f"New tools not in _TOOL_TO_MODULE: {unexpected}. Add them to the mapping in test_tool_tags.py."
         )

@@ -41,7 +41,7 @@ class TestUploadFile:
         """Test uploading a file returns FileUploadResponse model."""
         mock_client.upload_file.return_value = {"file_infos": [make_file_info_data()], "client_ids": []}
 
-        result = await files.upload_file.fn(
+        result = await files.upload_file(
             channel_id="ch1234567890123456789012",
             file_path="/path/to/test.txt",
             client=mock_client,
@@ -58,7 +58,7 @@ class TestUploadFile:
             "client_ids": [],
         }
 
-        await files.upload_file.fn(
+        await files.upload_file(
             channel_id="ch1234567890123456789012",
             file_path="/path/to/test.txt",
             filename="custom.txt",
@@ -79,7 +79,7 @@ class TestGetFileInfo:
         """Test getting file info returns FileInfo model."""
         mock_client.get_file_info.return_value = make_file_info_data(size=1234)
 
-        result = await files.get_file_info.fn(
+        result = await files.get_file_info(
             file_id="fl1234567890123456789012",
             client=mock_client,
         )
@@ -97,18 +97,10 @@ class TestGetFileLink:
             "link": "https://mattermost.example.com/files/fl1234567890123456789012",
         }
 
-        result = await files.get_file_link.fn(
+        result = await files.get_file_link(
             file_id="fl1234567890123456789012",
             client=mock_client,
         )
 
         assert isinstance(result, FileLink)
         assert "fl1234567890123456789012" in result.link
-
-
-def test_upload_file_has_tags():
-    from mcp_server_mattermost.tools.files import upload_file
-
-    assert hasattr(upload_file, "tags")
-    assert "file" in upload_file.tags
-    assert "mattermost" in upload_file.tags
