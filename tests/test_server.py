@@ -22,13 +22,13 @@ class TestServerSetup:
 
     def test_get_settings_dep_exists(self) -> None:
         """Test that settings dependency provider exists."""
-        from mcp_server_mattermost.server import get_settings_dep
+        from mcp_server_mattermost.deps import get_settings_dep
 
         assert callable(get_settings_dep)
 
     def test_get_client_exists(self) -> None:
         """Test that client dependency provider exists."""
-        from mcp_server_mattermost.server import get_client
+        from mcp_server_mattermost.deps import get_client
 
         assert callable(get_client)
 
@@ -39,7 +39,7 @@ class TestDependencyProviders:
     def test_get_settings_dep_returns_settings(self, mock_settings: None) -> None:
         """Test that get_settings_dep returns Settings instance."""
         from mcp_server_mattermost.config import Settings
-        from mcp_server_mattermost.server import get_settings_dep
+        from mcp_server_mattermost.deps import get_settings_dep
 
         result = get_settings_dep()
 
@@ -49,9 +49,8 @@ class TestDependencyProviders:
     async def test_get_client_yields_client(self, mock_settings: None) -> None:
         """Test that get_client yields MattermostClient."""
         from mcp_server_mattermost.client import MattermostClient
-        from mcp_server_mattermost.server import get_client
+        from mcp_server_mattermost.deps import get_client
 
-        # get_client is an async context manager
         async with get_client() as client:
             assert isinstance(client, MattermostClient)
 
@@ -59,14 +58,17 @@ class TestDependencyProviders:
 class TestServerIntegration:
     """Integration tests for server startup."""
 
-    def test_imports_work(self) -> None:
-        """Test that all imports resolve correctly."""
-        from mcp_server_mattermost.server import app_lifespan, get_client, get_settings_dep, mcp
-
-        _ = app_lifespan, get_client, get_settings_dep  # Mark as used
+    def test_server_imports_work(self) -> None:
+        """Test that server module exports resolve correctly."""
+        from mcp_server_mattermost.server import app_lifespan, mcp
 
         assert mcp is not None
         assert callable(app_lifespan)
+
+    def test_deps_imports_work(self) -> None:
+        """Test that deps module exports resolve correctly."""
+        from mcp_server_mattermost.deps import get_client, get_settings_dep
+
         assert callable(get_settings_dep)
         assert callable(get_client)
 
@@ -74,7 +76,5 @@ class TestServerIntegration:
         """Test that mcp instance can be queried for tools."""
         from mcp_server_mattermost.server import mcp
 
-        # At this stage, no tools are registered yet
-        # This just tests the mcp instance is valid
         assert hasattr(mcp, "name")
         assert mcp.name == "Mattermost"
