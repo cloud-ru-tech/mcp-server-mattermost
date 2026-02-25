@@ -3,15 +3,16 @@
 from typing import Annotated
 
 from fastmcp.dependencies import Depends
+from fastmcp.tools import tool
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
+from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Attachment, ChannelId, FileId, Post, PostId, PostList, TeamId
-from mcp_server_mattermost.server import get_client, mcp
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
     meta={"capability": Capability.WRITE},
@@ -24,7 +25,7 @@ async def post_message(  # noqa: PLR0913
     attachments: Annotated[
         list[Attachment] | None, Field(description="Rich message attachments with colors, fields, images")
     ] = None,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Post:
     """Post a message to a Mattermost channel.
 
@@ -53,7 +54,7 @@ async def post_message(  # noqa: PLR0913
     return Post(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
@@ -62,7 +63,7 @@ async def get_channel_messages(
     channel_id: ChannelId,
     page: Annotated[int, Field(ge=0, description="Page number (0-indexed)")] = 0,
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = 60,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> PostList:
     """Get recent messages from a channel.
 
@@ -78,7 +79,7 @@ async def get_channel_messages(
     return PostList(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
     meta={"capability": Capability.READ},
@@ -87,7 +88,7 @@ async def search_messages(
     team_id: TeamId,
     terms: Annotated[str, Field(min_length=1, max_length=512, description="Search terms (Mattermost syntax)")],
     is_or_search: Annotated[bool, Field(description="Use OR instead of AND for multiple terms")] = False,  # noqa: FBT002
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> PostList:
     """Search for messages matching specific criteria across channels.
 
@@ -109,7 +110,7 @@ async def search_messages(
     return PostList(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
     meta={"capability": Capability.WRITE},
@@ -120,7 +121,7 @@ async def update_message(
     attachments: Annotated[
         list[Attachment] | None, Field(description="Rich message attachments with colors, fields, images")
     ] = None,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Post:
     """Edit an existing message.
 
@@ -144,13 +145,13 @@ async def update_message(
     return Post(**data)
 
 
-@mcp.tool(
+@tool(
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
     meta={"capability": Capability.DELETE},
 )
 async def delete_message(
     post_id: PostId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> None:
     """Delete a message permanently.
 

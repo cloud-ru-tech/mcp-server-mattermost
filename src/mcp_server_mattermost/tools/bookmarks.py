@@ -3,17 +3,18 @@
 from typing import Annotated, Literal
 
 from fastmcp.dependencies import Depends
+from fastmcp.tools import tool
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
+from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.exceptions import ValidationError
 from mcp_server_mattermost.models import ChannelBookmark, ChannelId
 from mcp_server_mattermost.models.common import BookmarkId
-from mcp_server_mattermost.server import get_client, mcp
 
 
-@mcp.tool(
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.READ},
@@ -24,7 +25,7 @@ async def list_bookmarks(
         int | None,
         Field(default=None, description="Timestamp to filter bookmarks updated since"),
     ] = None,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[ChannelBookmark]:
     """List all bookmarks in a channel.
 
@@ -42,7 +43,7 @@ async def list_bookmarks(
     return [ChannelBookmark(**item) for item in data]
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.WRITE},
@@ -55,7 +56,7 @@ async def create_bookmark(  # noqa: PLR0913
     file_id: Annotated[str | None, Field(default=None, description="File ID (required for file type)")] = None,
     emoji: Annotated[str | None, Field(default=None, description="Emoji icon")] = None,
     image_url: Annotated[str | None, Field(default=None, description="Preview image URL")] = None,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> ChannelBookmark:
     """Create a channel bookmark.
 
@@ -85,7 +86,7 @@ async def create_bookmark(  # noqa: PLR0913
     return ChannelBookmark(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.WRITE},
@@ -97,7 +98,7 @@ async def update_bookmark(  # noqa: PLR0913
     link_url: Annotated[str | None, Field(default=None, description="New URL")] = None,
     image_url: Annotated[str | None, Field(default=None, description="New preview image URL")] = None,
     emoji: Annotated[str | None, Field(default=None, description="New emoji icon")] = None,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> ChannelBookmark:
     """Update a channel bookmark.
 
@@ -125,14 +126,14 @@ async def update_bookmark(  # noqa: PLR0913
     return ChannelBookmark(**data)
 
 
-@mcp.tool(
+@tool(
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.DELETE},
 )
 async def delete_bookmark(
     channel_id: ChannelId,
     bookmark_id: BookmarkId,
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> ChannelBookmark:
     """Delete a channel bookmark.
 
@@ -149,7 +150,7 @@ async def delete_bookmark(
     return ChannelBookmark(**data)
 
 
-@mcp.tool(
+@tool(
     annotations={"destructiveHint": False, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.WRITE},
@@ -158,7 +159,7 @@ async def update_bookmark_sort_order(
     channel_id: ChannelId,
     bookmark_id: BookmarkId,
     new_sort_order: Annotated[int, Field(ge=0, description="New position in bookmark list")],
-    client: MattermostClient = Depends(get_client),  # type: ignore[arg-type]  # noqa: B008
+    client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[ChannelBookmark]:
     """Reorder a channel bookmark.
 

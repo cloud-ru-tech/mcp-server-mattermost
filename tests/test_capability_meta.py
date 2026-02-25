@@ -55,13 +55,12 @@ EXPECTED_CAPABILITIES: dict[str, Capability] = {
 
 
 @pytest.fixture
-def all_tools(mock_settings):
+async def all_tools(mock_settings):
     """Get all registered FastMCP tools."""
-    # Force tool registration by importing all tool modules
-    import mcp_server_mattermost.tools  # noqa: F401
     from mcp_server_mattermost.server import mcp
 
-    return dict(mcp._tool_manager._tools)
+    tools = await mcp.list_tools()
+    return {t.name: t for t in tools}
 
 
 class TestCapabilityPresence:
@@ -140,7 +139,6 @@ class TestCapabilityWireFormat:
     @pytest.fixture
     async def wire_tools(self, mock_settings):
         """Get tools via MCP protocol (in-memory transport)."""
-        import mcp_server_mattermost.tools  # noqa: F401
         from mcp_server_mattermost.server import mcp
 
         async with Client(mcp) as client:
