@@ -6,10 +6,11 @@
 
 Let AI assistants read, search, and post in your Mattermost workspace
 
-Channels · Messages · Reactions · Threads · Files · Users
+36 tools · Channels · Messages · Reactions · Threads · Files · Users
 
 [![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io/)
 [![PyPI version](https://badge.fury.io/py/mcp-server-mattermost.svg)](https://pypi.org/project/mcp-server-mattermost/)
+[![Docker Pulls](https://img.shields.io/docker/pulls/legard/mcp-server-mattermost)](https://hub.docker.com/r/legard/mcp-server-mattermost)
 [![Tests](https://github.com/cloud-ru-tech/mcp-server-mattermost/workflows/CI/badge.svg)](https://github.com/cloud-ru-tech/mcp-server-mattermost/actions)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -230,7 +231,7 @@ Health check: `curl http://localhost:8000/health`
 - [Quick Start](https://mcp-server-mattermost.readthedocs.io/quickstart/) — Installation and setup
 - [Configuration](https://mcp-server-mattermost.readthedocs.io/configuration/) — Environment variables
 - [Tools Reference](https://mcp-server-mattermost.readthedocs.io/tools/) — Detailed API documentation
-- [llms.txt](llms.txt) — AI-readable documentation index
+- [llms.txt](https://github.com/cloud-ru-tech/mcp-server-mattermost/blob/main/llms.txt) — AI-readable documentation index
 
 ## Development
 
