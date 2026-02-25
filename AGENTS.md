@@ -236,6 +236,19 @@ This project uses manual versioning:
 6. Push: `git push origin main --tags`
 7. Create GitHub Release from tag → triggers PyPI publish
 
+## Pre-commit Checklist
+
+Before committing, always run the full lint suite and fix any issues:
+
+```bash
+uv run ruff check src tests   # lint
+uv run ruff format src tests  # format
+uv run mypy src               # type check
+uv run pytest                 # tests
+```
+
+Do NOT commit code that has lint, type, or test errors.
+
 ## Lessons Learned
 
 - When using markdown (images, lists, bold) inside HTML blocks (`<div>`, `<details>`) in MkDocs — add `md_in_html` extension and `markdown` attribute on the HTML tag, otherwise content renders as plain text
