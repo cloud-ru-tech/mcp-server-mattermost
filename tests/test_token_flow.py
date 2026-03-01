@@ -104,7 +104,9 @@ class TestClientTokenFlow:
 
         mm_url = "http://mattermost.example.com"
         server_host = "127.0.0.1"
-        server_port = 19_876
+        with socket.socket() as _sock:
+            _sock.bind(("", 0))
+            server_port = _sock.getsockname()[1]
 
         with patch.dict(
             os.environ,
@@ -154,7 +156,7 @@ class TestClientTokenFlow:
                         result = await client.call_tool("get_me", {})
             finally:
                 server_thread.stop()
-                await asyncio.sleep(0.3)
+                server_thread.join(timeout=5.0)
 
             get_settings.cache_clear()
 
