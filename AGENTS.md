@@ -224,6 +224,10 @@ The `# noqa: B008` suppresses ruff's flake8-bugbear warning "Do not perform func
 in argument defaults". This is intentional — `Depends()` is a FastMCP/FastAPI DI marker,
 not a mutable default. The function call happens at request time, not at function definition.
 
+## Commit Messages
+
+Do not include `Co-Authored-By:` trailers in commit messages.
+
 ## Versioning
 
 This project uses manual versioning:
