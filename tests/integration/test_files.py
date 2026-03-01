@@ -31,7 +31,7 @@ class TestFileHappyPath:
             assert len(data["file_infos"]) == 1
             assert data["file_infos"][0]["name"].endswith(".txt")
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     async def test_upload_file_returns_file_id(self, mcp_client, test_channel):
         """upload_file: returns file ID."""
@@ -50,7 +50,7 @@ class TestFileHappyPath:
             assert "id" in file_info
             assert len(file_info["id"]) == 26  # Mattermost ID length
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     async def test_get_file_info(self, mcp_client, test_channel):
         """get_file_info: returns file metadata (id, name, size)."""
@@ -75,7 +75,7 @@ class TestFileHappyPath:
             assert "name" in info
             assert "size" in info
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     async def test_get_file_link(self, mcp_client, test_channel):
         """get_file_link: returns downloadable link."""
@@ -104,7 +104,7 @@ class TestFileHappyPath:
             assert "link" in link_data
             assert link_data["link"].startswith("http")
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     async def test_post_message_with_file(self, mcp_client, test_channel):
         """post_message with file_ids: attaches file to message."""
@@ -133,7 +133,7 @@ class TestFileHappyPath:
 
             await mcp_client.call_tool("delete_message", {"post_id": post["id"]})
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
 
 class TestFileValidation:

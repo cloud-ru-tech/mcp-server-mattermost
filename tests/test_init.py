@@ -41,6 +41,7 @@ class TestMain:
                 transport="http",
                 host="127.0.0.1",
                 port=8000,
+                uvicorn_config={"ws": "wsproto"},
             )
 
     def test_main_with_custom_port(self) -> None:
@@ -58,6 +59,7 @@ class TestMain:
                 transport="http",
                 host="127.0.0.1",
                 port=9000,
+                uvicorn_config={"ws": "wsproto"},
             )
 
     def test_main_with_custom_host(self) -> None:
@@ -75,6 +77,7 @@ class TestMain:
                 transport="http",
                 host="0.0.0.0",  # noqa: S104
                 port=8000,
+                uvicorn_config={"ws": "wsproto"},
             )
 
 

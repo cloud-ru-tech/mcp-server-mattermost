@@ -1407,7 +1407,7 @@ class TestMattermostClientFilesAPI:
 
             assert result["file_infos"][0]["id"] == "file123"
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1435,7 +1435,7 @@ class TestMattermostClientFilesAPI:
 
             assert result["file_infos"][0]["name"] == "custom.txt"
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1466,7 +1466,7 @@ class TestMattermostClientFilesAPI:
             assert params["channel_id"] == "ch123"
             assert params["filename"] == Path(temp_path).name
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1664,7 +1664,7 @@ class TestMattermostClientFilesAPI:
         monkeypatch.chdir(tmp_path)
 
         # Verify path resolution works
-        path = Path("test.txt").resolve(strict=True)
+        path = Path("test.txt").resolve(strict=True)  # noqa: ASYNC240 — sync path check in test
         assert path == test_file
 
 

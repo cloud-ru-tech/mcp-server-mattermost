@@ -75,6 +75,6 @@ def main() -> None:
     from .server import mcp  # noqa: PLC0415
 
     if args.http:
-        mcp.run(transport="http", host=args.host, port=args.port)
+        mcp.run(transport="http", host=args.host, port=args.port, uvicorn_config={"ws": "wsproto"})
     else:
         mcp.run(transport="stdio")

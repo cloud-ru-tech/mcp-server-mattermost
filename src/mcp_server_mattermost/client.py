@@ -911,13 +911,13 @@ class MattermostClient:
         # Resolve to absolute path to prevent TOCTOU race conditions.
         # Normalizes .. and . components.
         try:
-            resolved_path = path.resolve(strict=True)
+            resolved_path = path.resolve(strict=True)  # noqa: ASYNC240 — CPU-bound path resolution, not blocking I/O
         except (FileNotFoundError, OSError) as e:
             raise FileValidationError(file_path, f"Cannot resolve path: {e}") from e
 
         # Validate it's not a symlink (check original path before resolution)
         # Note: resolve() follows symlinks, so we check the original path
-        if path.is_symlink():
+        if path.is_symlink():  # noqa: ASYNC240 — CPU-bound stat check, not blocking I/O
             raise FileValidationError(file_path, "Symbolic links are not allowed")
 
         # Validate it's a regular file (not directory, device, etc.)
