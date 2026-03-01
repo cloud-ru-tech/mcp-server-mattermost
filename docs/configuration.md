@@ -19,6 +19,7 @@ All configuration is done via environment variables with the `MATTERMOST_` prefi
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
 | `MATTERMOST_API_VERSION` | v4 | Mattermost API version |
+| `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | false | Allow HTTP clients to authenticate with their own Mattermost tokens |
 
 ## Environment File
 
@@ -30,6 +31,22 @@ MATTERMOST_TOKEN=your-token-here
 MATTERMOST_TIMEOUT=60
 MATTERMOST_LOG_LEVEL=DEBUG
 ```
+
+## Per-Client Token Authentication
+
+By default, the server uses the `MATTERMOST_TOKEN` environment variable for all API requests. When `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` is set to `true`, HTTP clients (e.g., over SSE transport) can pass their own Mattermost token via the `Authorization: Bearer <token>` header.
+
+**How it works:**
+
+1. The client sends a bearer token in the `Authorization` header
+2. The server validates the token by calling `GET /api/v4/users/me` on the Mattermost server
+3. If valid, the client's token is used for all subsequent API requests in that session
+4. If invalid, the server responds with `401 Unauthorized`
+
+This is useful in multi-user environments where each user should act under their own Mattermost identity rather than a shared bot account.
+
+!!! note
+    This feature only applies to HTTP-based transports (SSE, StreamableHTTP). When using stdio transport (e.g., Claude Desktop), the server always uses `MATTERMOST_TOKEN`.
 
 ## Token Permissions
 
