@@ -71,3 +71,25 @@ class TestGetClient:
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
                 assert client._token_override is None
+
+    @pytest.mark.asyncio
+    async def test_no_override_when_claims_missing_mattermost_token(
+        self, mock_settings_allow_http: None
+    ) -> None:
+        """When allow_http_client_tokens=True but claims lack mattermost_token key, token_override is None."""
+        from fastmcp.server.auth import AccessToken
+
+        from mcp_server_mattermost.client import MattermostClient
+        from mcp_server_mattermost.deps import get_client
+
+        mock_token = AccessToken(
+            token="raw-bearer",
+            client_id="user123",
+            scopes=[],
+            claims={"some_other_claim": "value"},
+        )
+
+        with patch("mcp_server_mattermost.deps.get_access_token", return_value=mock_token):
+            async with get_client() as client:
+                assert isinstance(client, MattermostClient)
+                assert client._token_override is None
