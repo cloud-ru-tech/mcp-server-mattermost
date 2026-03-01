@@ -50,7 +50,7 @@ def _create_mcp() -> FastMCP:
     Returns:
         Configured FastMCP server instance
     """
-    allow_http = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "").lower() in ("1", "true", "yes")
+    allow_http = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "").lower() in {"1", "true", "yes", "on", "t", "y"}
     auth: MattermostTokenVerifier | None = MattermostTokenVerifier() if allow_http else None
     return FastMCP(
         name="Mattermost",

@@ -107,3 +107,24 @@ class TestMcpAuth:
             instance = _create_mcp()
             assert isinstance(instance.auth, MattermostTokenVerifier)
             get_settings.cache_clear()
+
+    @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "t", "y", "TRUE", "On", "YES"])
+    def test_create_mcp_with_auth_truthy_values(self, clean_env: None, value: str) -> None:
+        """All pydantic-compatible truthy values enable auth."""
+        import os
+        from unittest.mock import patch
+
+        from mcp_server_mattermost.auth import MattermostTokenVerifier
+        from mcp_server_mattermost.config import get_settings
+
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": value},
+            clear=True,
+        ):
+            get_settings.cache_clear()
+            from mcp_server_mattermost.server import _create_mcp
+
+            instance = _create_mcp()
+            assert isinstance(instance.auth, MattermostTokenVerifier), f"Expected auth for value={value!r}"
+            get_settings.cache_clear()
