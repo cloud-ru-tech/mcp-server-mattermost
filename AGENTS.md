@@ -64,6 +64,7 @@ uv run mcp-server-mattermost
 - `src/mcp_server_mattermost/__init__.py` - Package entry, exports `main()` and `__version__`
 - `src/mcp_server_mattermost/server.py` - FastMCP instance creation, lifespan, FileSystemProvider
 - `src/mcp_server_mattermost/deps.py` - Dependency injection providers (get_client)
+- `src/mcp_server_mattermost/auth.py` - MattermostTokenVerifier for per-client token auth
 - `src/mcp_server_mattermost/client.py` - Async HTTP client with retry logic
 - `src/mcp_server_mattermost/config.py` - Settings via pydantic-settings (env vars prefixed `MATTERMOST_`)
 - `src/mcp_server_mattermost/exceptions.py` - Exception hierarchy (`MattermostMCPError` base)

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` env var: when `true`, HTTP clients can pass
+  their own Mattermost token via `Authorization: Bearer <token>`. The token is validated
+  against the Mattermost API (`GET /api/v4/users/me`) on each connection via
+  `MattermostTokenVerifier`. When the flag is `false` (default), the server uses
+  `MATTERMOST_TOKEN` from environment.
+- `MattermostTokenVerifier` class in `auth.py`: custom FastMCP 3 `TokenVerifier` that
+  validates Mattermost bearer tokens and injects them into the request context via
+  `AccessToken.claims["mattermost_token"]`.
+
 ## [0.3.0] - 2026-02-25
 
 ### Changed
