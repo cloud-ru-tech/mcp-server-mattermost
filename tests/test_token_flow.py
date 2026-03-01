@@ -147,9 +147,7 @@ class TestClientTokenFlow:
                     # Mock both Mattermost API calls (verify_token + get_me tool).
                     # Because respx patches httpcore globally, it also intercepts
                     # httpx calls from the server thread's event loop.
-                    respx.get(f"{mm_url}/api/v4/users/me").mock(
-                        return_value=httpx.Response(200, json=user_response)
-                    )
+                    respx.get(f"{mm_url}/api/v4/users/me").mock(return_value=httpx.Response(200, json=user_response))
 
                     mcp_url = f"http://{server_host}:{server_port}/mcp"
                     async with Client(mcp_url, auth=BearerAuth("client-token")) as client:
