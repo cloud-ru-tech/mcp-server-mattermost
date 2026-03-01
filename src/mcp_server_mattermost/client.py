@@ -103,7 +103,8 @@ class MattermostClient:
         Yields:
             Self with initialized httpx client
         """
-        effective_token = (self._token_override or self.settings.token or "").strip()
+        raw = self._token_override if self._token_override is not None else (self.settings.token or "")
+        effective_token = raw.strip()
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if effective_token:
             headers["Authorization"] = f"Bearer {effective_token}"
