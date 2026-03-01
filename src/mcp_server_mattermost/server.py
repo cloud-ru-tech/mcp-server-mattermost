@@ -17,6 +17,9 @@ from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
 
 
+_ALLOW_HTTP_CLIENT_TOKENS_ADAPTER: TypeAdapter[bool] = TypeAdapter(bool)
+
+
 @lifespan
 async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
     """Manage application lifecycle.
@@ -34,7 +37,7 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
     try:
         yield {}
     finally:
-        if isinstance(_server.auth, MattermostTokenVerifier):
+        if _server.auth is not None and hasattr(_server.auth, "close"):
             await _server.auth.close()
         logger.info("Mattermost MCP server shutdown complete")
 
@@ -53,7 +56,8 @@ def _create_mcp() -> FastMCP:
     Returns:
         Configured FastMCP server instance
     """
-    allow_http = TypeAdapter(bool).validate_python(os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "false"))
+    raw = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "false")
+    allow_http = _ALLOW_HTTP_CLIENT_TOKENS_ADAPTER.validate_python(raw)
     auth: MattermostTokenVerifier | None = MattermostTokenVerifier() if allow_http else None
     return FastMCP(
         name="Mattermost",

@@ -1163,6 +1163,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "asgi-lifespan" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pymarkdownlnt" },
@@ -1186,6 +1187,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "asgi-lifespan", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "cachetools", specifier = ">=5.0" },
     { name = "fastmcp", specifier = ">=3.0.0,<4" },
     { name = "httpx", specifier = ">=0.28.0" },

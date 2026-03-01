@@ -36,6 +36,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "asgi-lifespan>=2.1.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
@@ -152,7 +153,3 @@ plugins.md033.allowed_elements = "div,img,br,details,summary,a,kbd,sub,sup,table
 plugins.md036.enabled = false
 plugins.md041.enabled = false
 
-[dependency-groups]
-dev = [
-    "asgi-lifespan>=2.1.0",
-]

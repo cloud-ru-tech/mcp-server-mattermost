@@ -11,6 +11,7 @@ from .logging import logger
 
 
 _TOKEN_CACHE_TTL = 60  # seconds
+_TOKEN_CACHE_MAXSIZE = 512
 
 
 class MattermostTokenVerifier(TokenVerifier):
@@ -39,7 +40,7 @@ class MattermostTokenVerifier(TokenVerifier):
         """Initialize verifier with empty cache and no HTTP client."""
         super().__init__()
         self._client: httpx.AsyncClient | None = None
-        self._cache: TTLCache[str, AccessToken] = TTLCache(maxsize=512, ttl=_TOKEN_CACHE_TTL)
+        self._cache: TTLCache[str, AccessToken] = TTLCache(maxsize=_TOKEN_CACHE_MAXSIZE, ttl=_TOKEN_CACHE_TTL)
 
     def _get_client(self) -> httpx.AsyncClient:
         """Return reusable httpx.AsyncClient, creating lazily on first call."""

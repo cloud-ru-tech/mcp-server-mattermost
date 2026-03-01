@@ -179,5 +179,6 @@ class TestMattermostTokenVerifier:
 
         assert all(r is not None for r in results)
         assert all(r.client_id == "user1" for r in results)
-        # After the first call caches the result, subsequent calls use cache
+        # Cache deduplication: all 5 concurrent calls share the same token,
+        # so only 1 HTTP request must be made regardless of concurrency.
         assert route.call_count == 1

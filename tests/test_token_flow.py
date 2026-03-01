@@ -63,17 +63,25 @@ class TestClientTokenFlow:
 
             async with LifespanManager(asgi_app):
 
-                def asgi_httpx_factory(**kwargs: Any) -> httpx.AsyncClient:
+                def asgi_httpx_factory(
+                    headers: dict[str, str] | None = None,
+                    timeout: httpx.Timeout | None = None,
+                    auth: httpx.Auth | None = None,
+                    **kwargs: Any,
+                ) -> httpx.AsyncClient:
                     """Create httpx client with ASGI transport for in-memory testing."""
                     return httpx.AsyncClient(
                         transport=httpx.ASGITransport(app=asgi_app),
+                        headers=headers,
+                        timeout=timeout,
+                        auth=auth,
                         **kwargs,
                     )
 
                 transport = StreamableHttpTransport(
                     url="http://localhost/mcp",
                     auth=BearerAuth("client-token"),
-                    httpx_client_factory=asgi_httpx_factory,  # type: ignore[arg-type]
+                    httpx_client_factory=asgi_httpx_factory,
                 )
 
                 with respx.mock:
