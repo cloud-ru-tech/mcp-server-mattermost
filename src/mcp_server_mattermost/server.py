@@ -9,6 +9,7 @@ from fastmcp.server.providers import FileSystemProvider
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from .auth import MattermostTokenVerifier
 from .config import get_settings
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
@@ -16,7 +17,14 @@ from .middleware import LoggingMiddleware
 
 @lifespan
 async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
-    """Manage application lifespan: setup logging and yield."""
+    """Manage application lifecycle.
+
+    Args:
+        _server: FastMCP server instance (required by FastMCP lifespan protocol)
+
+    Yields:
+        Empty dict (no shared lifespan state needed)
+    """
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
     logger.info("Starting Mattermost MCP server")
@@ -27,17 +35,39 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
         logger.info("Mattermost MCP server shutdown complete")
 
 
-mcp = FastMCP(
-    name="Mattermost",
-    instructions="MCP server for Mattermost team collaboration platform",
-    lifespan=app_lifespan,
-    providers=[FileSystemProvider(Path(__file__).parent / "tools")],
-)
+def _create_mcp() -> FastMCP:
+    """Create FastMCP instance with optional Mattermost token authentication.
 
+    When ``allow_http_client_tokens`` is True in settings, attaches a
+    ``MattermostTokenVerifier`` that validates bearer tokens against the
+    Mattermost API before allowing tool access.
+
+    Returns:
+        Configured FastMCP server instance
+    """
+    settings = get_settings()
+    auth = MattermostTokenVerifier(settings) if settings.allow_http_client_tokens else None
+    return FastMCP(
+        name="Mattermost",
+        instructions="MCP server for Mattermost team collaboration platform",
+        lifespan=app_lifespan,
+        providers=[FileSystemProvider(Path(__file__).parent / "tools")],
+        auth=auth,
+    )
+
+
+mcp = _create_mcp()
 mcp.add_middleware(LoggingMiddleware())
 
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(_request: Request) -> JSONResponse:
-    """Return a simple health check response."""
+    """Health check endpoint for container orchestration.
+
+    Args:
+        _request: Incoming HTTP request (required by FastMCP route signature)
+
+    Returns:
+        JSON response with service status
+    """
     return JSONResponse({"status": "healthy", "service": "mcp-server-mattermost"})
