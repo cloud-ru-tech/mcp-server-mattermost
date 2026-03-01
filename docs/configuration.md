@@ -7,7 +7,12 @@ All configuration is done via environment variables with the `MATTERMOST_` prefi
 | Variable | Description |
 |----------|-------------|
 | `MATTERMOST_URL` | Mattermost server URL (e.g., `https://mattermost.example.com`) |
-| `MATTERMOST_TOKEN` | Bot or personal access token |
+
+## Conditional Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MATTERMOST_TOKEN` | Bot or personal access token. MATTERMOST_TOKEN is required only when per-client token authentication (MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS) is not enabled. |
 
 ## Optional Variables
 

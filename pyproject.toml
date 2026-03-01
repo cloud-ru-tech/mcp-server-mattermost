@@ -25,6 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "cachetools>=5.0",
     "fastmcp>=3.0.0,<4",
     "httpx>=0.28.0",
     "pydantic>=2.0",
@@ -45,6 +46,7 @@ dev = [
     "pre-commit>=4.0",
     "testcontainers[postgres]>=4.0",
     "pymarkdownlnt>=0.9.35",
+    "types-cachetools",
 ]
 docs = [
     "mkdocs-material",
@@ -149,3 +151,8 @@ plugins.md025.enabled = false
 plugins.md033.allowed_elements = "div,img,br,details,summary,a,kbd,sub,sup,table,tr,td,th,picture,source,p,h1,h2,h3,!--"
 plugins.md036.enabled = false
 plugins.md041.enabled = false
+
+[dependency-groups]
+dev = [
+    "asgi-lifespan>=2.1.0",
+]

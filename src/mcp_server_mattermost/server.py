@@ -7,6 +7,7 @@ from pathlib import Path
 from fastmcp import FastMCP
 from fastmcp.server.lifespan import lifespan
 from fastmcp.server.providers import FileSystemProvider
+from pydantic import TypeAdapter
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -33,6 +34,8 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
     try:
         yield {}
     finally:
+        if isinstance(_server.auth, MattermostTokenVerifier):
+            await _server.auth.close()
         logger.info("Mattermost MCP server shutdown complete")
 
 
@@ -50,7 +53,7 @@ def _create_mcp() -> FastMCP:
     Returns:
         Configured FastMCP server instance
     """
-    allow_http = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "").lower() in {"1", "true", "yes", "on", "t", "y"}
+    allow_http = TypeAdapter(bool).validate_python(os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "false"))
     auth: MattermostTokenVerifier | None = MattermostTokenVerifier() if allow_http else None
     return FastMCP(
         name="Mattermost",

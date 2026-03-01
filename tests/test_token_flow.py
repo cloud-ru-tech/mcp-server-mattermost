@@ -2,15 +2,16 @@
 
 import json
 import os
+from typing import Any
 from unittest.mock import patch
 
 import httpx
 import pytest
 import respx
+from asgi_lifespan import LifespanManager
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth
-
-from tests.helpers import UvicornTestServer
+from fastmcp.client.transports.http import StreamableHttpTransport
 
 
 class TestClientTokenFlow:
@@ -60,25 +61,29 @@ class TestClientTokenFlow:
                 "locale": "en",
             }
 
-            server = UvicornTestServer(asgi_app)
-            server.start()
-            assert server.wait_until_ready(), "Server did not start in time"
+            async with LifespanManager(asgi_app):
 
-            try:
+                def asgi_httpx_factory(**kwargs: Any) -> httpx.AsyncClient:
+                    """Create httpx client with ASGI transport for in-memory testing."""
+                    return httpx.AsyncClient(
+                        transport=httpx.ASGITransport(app=asgi_app),
+                        **kwargs,
+                    )
+
+                transport = StreamableHttpTransport(
+                    url="http://localhost/mcp",
+                    auth=BearerAuth("client-token"),
+                    httpx_client_factory=asgi_httpx_factory,  # type: ignore[arg-type]
+                )
+
                 with respx.mock:
-                    # Pass through real TCP connections to the local MCP server so that
-                    # the FastMCP client can complete the MCP protocol handshake.
-                    respx.route(host=server.host).pass_through()
-                    # Mock both Mattermost API calls (verify_token + get_me tool).
-                    # Because respx patches httpcore globally, it also intercepts
-                    # httpx calls from the server thread's event loop.
-                    respx.get(f"{mm_url}/api/v4/users/me").mock(return_value=httpx.Response(200, json=user_response))
+                    # Mock Mattermost API calls (verify_token + get_me tool).
+                    respx.get(f"{mm_url}/api/v4/users/me").mock(
+                        return_value=httpx.Response(200, json=user_response),
+                    )
 
-                    async with Client(f"{server.url}/mcp", auth=BearerAuth("client-token")) as client:
+                    async with Client(transport) as client:
                         result = await client.call_tool("get_me", {})
-            finally:
-                server.stop()
-                server.join(timeout=5.0)
 
             get_settings.cache_clear()
 

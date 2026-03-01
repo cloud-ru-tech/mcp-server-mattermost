@@ -1,10 +1,10 @@
 """Mattermost token verifier for FastMCP authentication."""
 
 import hashlib
-import time
 from http import HTTPStatus
 
 import httpx
+from cachetools import TTLCache
 from fastmcp.server.auth import AccessToken, TokenVerifier
 
 from .logging import logger
@@ -39,7 +39,7 @@ class MattermostTokenVerifier(TokenVerifier):
         """Initialize verifier with empty cache and no HTTP client."""
         super().__init__()
         self._client: httpx.AsyncClient | None = None
-        self._cache: dict[str, tuple[AccessToken, float]] = {}
+        self._cache: TTLCache[str, AccessToken] = TTLCache(maxsize=512, ttl=_TOKEN_CACHE_TTL)
 
     def _get_client(self) -> httpx.AsyncClient:
         """Return reusable httpx.AsyncClient, creating lazily on first call."""
@@ -70,10 +70,7 @@ class MattermostTokenVerifier(TokenVerifier):
         cache_key = self._hash_token(token)
         cached = self._cache.get(cache_key)
         if cached is not None:
-            access_token, cached_at = cached
-            if time.monotonic() - cached_at < _TOKEN_CACHE_TTL:
-                return access_token
-            del self._cache[cache_key]
+            return cached
 
         from .config import get_settings  # noqa: PLC0415
 
@@ -99,7 +96,7 @@ class MattermostTokenVerifier(TokenVerifier):
                 scopes=[],
                 claims={"mattermost_token": token},
             )
-            self._cache[cache_key] = (access_token, time.monotonic())
+            self._cache[cache_key] = access_token
             return access_token
 
         logger.debug("Mattermost token rejected (status=%d)", response.status_code)

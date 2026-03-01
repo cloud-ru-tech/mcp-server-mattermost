@@ -1,5 +1,6 @@
 """Async HTTP client for Mattermost API v4."""
 
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -925,7 +926,7 @@ class MattermostClient:
             raise FileValidationError(file_path, "Path is not a file")
 
         name = filename or resolved_path.name
-        content = resolved_path.read_bytes()
+        content = await asyncio.to_thread(resolved_path.read_bytes)
 
         return await self._upload_file_with_retry(channel_id, name, content)
 
