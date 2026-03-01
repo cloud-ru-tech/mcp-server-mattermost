@@ -17,6 +17,7 @@ class Settings(BaseSettings):
         MATTERMOST_MAX_RETRIES: Max retry attempts (default: 3)
         MATTERMOST_VERIFY_SSL: Verify SSL certificates (default: true)
         MATTERMOST_LOG_LEVEL: Logging level (default: INFO)
+        MATTERMOST_LOG_FORMAT: Log format, 'json' or 'text' (default: json)
         MATTERMOST_API_VERSION: API version (default: v4)
     """
 

@@ -121,6 +121,8 @@ def test_log_format_invalid_raises(monkeypatch):
 
 
 class TestAllowHttpClientTokens:
+    """Tests for allow_http_client_tokens config field and its model validator."""
+
     def test_token_optional_when_allow_http_client_tokens(self) -> None:
         """No token required when allow_http_client_tokens=True."""
         from mcp_server_mattermost.config import Settings
@@ -143,21 +145,6 @@ class TestAllowHttpClientTokens:
 
         with (
             patch.dict(os.environ, {"MATTERMOST_URL": "http://mm.example.com"}, clear=True),
-            pytest.raises(ValidationError),
+            pytest.raises(ValidationError, match="MATTERMOST_TOKEN is required"),
         ):
             Settings()
-
-    def test_token_not_required_with_flag(self) -> None:
-        """When flag is True, missing token doesn't raise."""
-        from mcp_server_mattermost.config import Settings
-
-        with patch.dict(
-            os.environ,
-            {
-                "MATTERMOST_URL": "http://mm.example.com",
-                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true",
-            },
-            clear=True,
-        ):
-            settings = Settings()  # should not raise
-            assert settings.token is None
