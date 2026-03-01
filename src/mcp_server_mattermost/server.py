@@ -16,6 +16,7 @@ from .middleware import LoggingMiddleware
 
 @lifespan
 async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
+    """Manage application lifespan: setup logging and yield."""
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
     logger.info("Starting Mattermost MCP server")
@@ -38,4 +39,5 @@ mcp.add_middleware(LoggingMiddleware())
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(_request: Request) -> JSONResponse:
+    """Return a simple health check response."""
     return JSONResponse({"status": "healthy", "service": "mcp-server-mattermost"})

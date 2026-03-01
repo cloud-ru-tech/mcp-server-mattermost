@@ -1,4 +1,8 @@
+import os
+from unittest.mock import patch
+
 import pytest
+from pydantic import ValidationError
 
 
 def test_settings_loads_from_env(monkeypatch):
@@ -114,3 +118,46 @@ def test_log_format_invalid_raises(monkeypatch):
 
     with pytest.raises(ValidationError, match="log_format"):
         Settings()
+
+
+class TestAllowHttpClientTokens:
+    def test_token_optional_when_allow_http_client_tokens(self) -> None:
+        """No token required when allow_http_client_tokens=True."""
+        from mcp_server_mattermost.config import Settings
+
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_URL": "http://mm.example.com",
+                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true",
+            },
+            clear=True,
+        ):
+            settings = Settings()
+            assert settings.allow_http_client_tokens is True
+            assert settings.token is None
+
+    def test_token_required_when_not_allow_http_client_tokens(self) -> None:
+        """Token required when allow_http_client_tokens=False (default)."""
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(os.environ, {"MATTERMOST_URL": "http://mm.example.com"}, clear=True),
+            pytest.raises(ValidationError),
+        ):
+            Settings()
+
+    def test_token_not_required_with_flag(self) -> None:
+        """When flag is True, missing token doesn't raise."""
+        from mcp_server_mattermost.config import Settings
+
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_URL": "http://mm.example.com",
+                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true",
+            },
+            clear=True,
+        ):
+            settings = Settings()  # should not raise
+            assert settings.token is None
