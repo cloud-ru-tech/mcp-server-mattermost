@@ -13,7 +13,7 @@ class TestMattermostTokenVerifier:
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
-        verifier = MattermostTokenVerifier(settings)
+        verifier = MattermostTokenVerifier()
 
         with respx.mock:
             respx.get(f"{settings.url}/api/v4/users/me").mock(
@@ -32,7 +32,7 @@ class TestMattermostTokenVerifier:
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
-        verifier = MattermostTokenVerifier(settings)
+        verifier = MattermostTokenVerifier()
 
         with respx.mock:
             respx.get(f"{settings.url}/api/v4/users/me").mock(
@@ -49,7 +49,7 @@ class TestMattermostTokenVerifier:
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
-        verifier = MattermostTokenVerifier(settings)
+        verifier = MattermostTokenVerifier()
 
         with respx.mock:
             respx.get(f"{settings.url}/api/v4/users/me").mock(side_effect=httpx.ConnectError("connection refused"))

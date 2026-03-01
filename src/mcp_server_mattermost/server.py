@@ -1,5 +1,6 @@
 """FastMCP server for Mattermost integration."""
 
+import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -38,15 +39,19 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
 def _create_mcp() -> FastMCP:
     """Create FastMCP instance with optional Mattermost token authentication.
 
-    When ``allow_http_client_tokens`` is True in settings, attaches a
-    ``MattermostTokenVerifier`` that validates bearer tokens against the
-    Mattermost API before allowing tool access.
+    Reads ``MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS`` directly from the environment
+    (without full pydantic validation) so the module can be safely imported
+    before ``MATTERMOST_URL`` and ``MATTERMOST_TOKEN`` are configured.
+    Full settings validation happens inside the lifespan and ``verify_token``.
+
+    When the flag is ``true``, attaches a ``MattermostTokenVerifier`` that
+    validates bearer tokens against the Mattermost API before allowing tool access.
 
     Returns:
         Configured FastMCP server instance
     """
-    settings = get_settings()
-    auth = MattermostTokenVerifier(settings) if settings.allow_http_client_tokens else None
+    allow_http = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "").lower() in ("1", "true", "yes")
+    auth: MattermostTokenVerifier | None = MattermostTokenVerifier() if allow_http else None
     return FastMCP(
         name="Mattermost",
         instructions="MCP server for Mattermost team collaboration platform",
