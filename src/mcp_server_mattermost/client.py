@@ -79,13 +79,15 @@ class MattermostClient:
             channels = await client.get_channels(team_id)
     """
 
-    def __init__(self, settings: Settings) -> None:
-        """Initialize client with settings.
+    def __init__(self, settings: Settings, token: str | None = None) -> None:
+        """Initialize client with settings and optional token override.
 
         Args:
             settings: Application configuration
+            token: Optional token override (e.g. from request); used instead of settings.token when set
         """
         self.settings = settings
+        self._token_override = token
         self._client: httpx.AsyncClient | None = None
         self._current_user_id: str | None = None
 
@@ -101,13 +103,14 @@ class MattermostClient:
         Yields:
             Self with initialized httpx client
         """
-        logger.info("Initializing Mattermost API client")
+        effective_token = (self._token_override or self.settings.token or "").strip()
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if effective_token:
+            headers["Authorization"] = f"Bearer {effective_token}"
+            logger.info("Initializing Mattermost API client")
         async with httpx.AsyncClient(
             base_url=f"{self.settings.url}/api/{self.settings.api_version}",
-            headers={
-                "Authorization": f"Bearer {self.settings.token}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=httpx.Timeout(self.settings.timeout),
             verify=self.settings.verify_ssl,
         ) as client:

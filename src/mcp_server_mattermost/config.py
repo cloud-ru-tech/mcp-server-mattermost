@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,7 +11,8 @@ class Settings(BaseSettings):
 
     Environment variables:
         MATTERMOST_URL: Mattermost server URL (required)
-        MATTERMOST_TOKEN: Bot/user access token (required)
+        MATTERMOST_TOKEN: Bot/user access token (required unless allow_http_client_tokens)
+        MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS: Allow token from Authorization header in HTTP/SSE (default: false)
         MATTERMOST_TIMEOUT: Request timeout in seconds (default: 30)
         MATTERMOST_MAX_RETRIES: Max retry attempts (default: 3)
         MATTERMOST_VERIFY_SSL: Verify SSL certificates (default: true)
@@ -27,7 +28,11 @@ class Settings(BaseSettings):
     )
 
     url: str = Field(description="Mattermost server URL")
-    token: str = Field(description="Bot or user access token")
+    token: str | None = Field(default=None, description="Bot or user access token (required for STDIO)")
+    allow_http_client_tokens: bool = Field(
+        default=False,
+        description="Allow token from Authorization: Bearer in HTTP/SSE; ignored for STDIO",
+    )
     timeout: int = Field(default=30, ge=1, le=300, description="Request timeout in seconds")
     max_retries: int = Field(default=3, ge=0, le=10, description="Maximum retry attempts")
     verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
@@ -62,6 +67,14 @@ class Settings(BaseSettings):
             msg = f"Invalid log format: {v}. Must be one of {valid_formats}"
             raise ValueError(msg)
         return lower
+
+    @model_validator(mode="after")
+    def require_token_unless_http_client_tokens(self) -> "Settings":
+        """Require MATTERMOST_TOKEN when allow_http_client_tokens is False (STDIO always needs it)."""
+        if not self.allow_http_client_tokens and not (self.token and self.token.strip()):
+            msg = "MATTERMOST_TOKEN is required when MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS is false"
+            raise ValueError(msg)
+        return self
 
 
 @lru_cache
