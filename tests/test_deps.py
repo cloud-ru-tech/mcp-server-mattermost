@@ -58,3 +58,16 @@ class TestGetClient:
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
                 assert client._token_override is None
+
+    @pytest.mark.asyncio
+    async def test_no_token_override_when_access_token_missing(
+        self, mock_settings_allow_http: None
+    ) -> None:
+        """When allow_http_client_tokens=True but no AccessToken in context, token_override is None."""
+        from mcp_server_mattermost.client import MattermostClient
+        from mcp_server_mattermost.deps import get_client
+
+        with patch("mcp_server_mattermost.deps.get_access_token", return_value=None):
+            async with get_client() as client:
+                assert isinstance(client, MattermostClient)
+                assert client._token_override is None
