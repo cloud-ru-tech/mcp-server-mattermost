@@ -103,6 +103,26 @@ class TestMattermostClientLifespan:
             assert "Authorization" in client._client.headers
             assert client._client.headers["Authorization"] == "Bearer test-token-12345"
 
+    @pytest.mark.asyncio
+    async def test_lifespan_uses_token_override_in_header(self, mock_settings):
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token="override-token")
+
+        async with client.lifespan():
+            assert client._client.headers["Authorization"] == "Bearer override-token"
+
+    @pytest.mark.asyncio
+    async def test_lifespan_none_override_falls_back_to_settings_token(self, mock_settings):
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token=None)
+
+        async with client.lifespan():
+            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+
 
 class TestMattermostClientResponseHandler:
     """Test response handling and error mapping."""
