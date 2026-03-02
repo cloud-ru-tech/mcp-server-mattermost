@@ -103,6 +103,26 @@ class TestMattermostClientLifespan:
             assert "Authorization" in client._client.headers
             assert client._client.headers["Authorization"] == "Bearer test-token-12345"
 
+    @pytest.mark.asyncio
+    async def test_lifespan_uses_token_override_in_header(self, mock_settings):
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token="override-token")
+
+        async with client.lifespan():
+            assert client._client.headers["Authorization"] == "Bearer override-token"
+
+    @pytest.mark.asyncio
+    async def test_lifespan_none_override_falls_back_to_settings_token(self, mock_settings):
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token=None)
+
+        async with client.lifespan():
+            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+
 
 class TestMattermostClientResponseHandler:
     """Test response handling and error mapping."""
@@ -1387,7 +1407,7 @@ class TestMattermostClientFilesAPI:
 
             assert result["file_infos"][0]["id"] == "file123"
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1415,7 +1435,7 @@ class TestMattermostClientFilesAPI:
 
             assert result["file_infos"][0]["name"] == "custom.txt"
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1446,7 +1466,7 @@ class TestMattermostClientFilesAPI:
             assert params["channel_id"] == "ch123"
             assert params["filename"] == Path(temp_path).name
         finally:
-            Path(temp_path).unlink()
+            Path(temp_path).unlink()  # noqa: ASYNC240 — sync cleanup in test
 
     @pytest.mark.asyncio
     @respx.mock
@@ -1644,7 +1664,7 @@ class TestMattermostClientFilesAPI:
         monkeypatch.chdir(tmp_path)
 
         # Verify path resolution works
-        path = Path("test.txt").resolve(strict=True)
+        path = Path("test.txt").resolve(strict=True)  # noqa: ASYNC240 — sync path check in test
         assert path == test_file
 
 
@@ -2007,3 +2027,48 @@ class TestHttpLoggingHelpers:
             assert extra["request_id"] == "ctx-req-789"
         finally:
             request_id_var.reset(token)
+
+
+class TestTokenOverride:
+    def test_client_accepts_token_override(self, mock_settings: None) -> None:
+        """Token override is stored on client."""
+        from mcp_server_mattermost.client import MattermostClient
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token="override-token-xyz")
+        assert client._token_override == "override-token-xyz"
+
+    def test_client_no_override_by_default(self, mock_settings: None) -> None:
+        """Without override, _token_override is None."""
+        from mcp_server_mattermost.client import MattermostClient
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+        assert client._token_override is None
+
+    @pytest.mark.asyncio
+    async def test_lifespan_uses_override_token_in_headers(self, mock_settings: None) -> None:
+        """When token override is set, Authorization header uses override token."""
+        import httpx
+        import respx
+
+        from mcp_server_mattermost.client import MattermostClient
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token="my-override-token")
+
+        with respx.mock:
+            # Mock any request to verify the Authorization header
+            route = respx.get(f"{settings.url}/api/v4/users/me").mock(
+                return_value=httpx.Response(200, json={"id": "u1"})
+            )
+            async with client.lifespan():
+                # Make a request to trigger the header to be checked
+                response = await client._client.get("/users/me")
+                assert response.status_code == 200
+
+        # Check the Authorization header was set with the override token
+        assert route.calls[0].request.headers["authorization"] == "Bearer my-override-token"

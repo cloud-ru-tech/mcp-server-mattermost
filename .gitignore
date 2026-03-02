@@ -66,3 +66,4 @@ demo/
 
 # MkDocs build output
 site/
+.specs/

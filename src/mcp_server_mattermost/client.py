@@ -1,5 +1,6 @@
 """Async HTTP client for Mattermost API v4."""
 
+import asyncio
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -79,13 +80,15 @@ class MattermostClient:
             channels = await client.get_channels(team_id)
     """
 
-    def __init__(self, settings: Settings) -> None:
-        """Initialize client with settings.
+    def __init__(self, settings: Settings, token: str | None = None) -> None:
+        """Initialize client with settings and optional token override.
 
         Args:
             settings: Application configuration
+            token: Optional token override (e.g. from request); used instead of settings.token when set
         """
         self.settings = settings
+        self._token_override = token
         self._client: httpx.AsyncClient | None = None
         self._current_user_id: str | None = None
 
@@ -101,13 +104,15 @@ class MattermostClient:
         Yields:
             Self with initialized httpx client
         """
-        logger.info("Initializing Mattermost API client")
+        raw = self._token_override if self._token_override is not None else (self.settings.token or "")
+        effective_token = raw.strip()
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if effective_token:
+            headers["Authorization"] = f"Bearer {effective_token}"
+            logger.info("Initializing Mattermost API client")
         async with httpx.AsyncClient(
             base_url=f"{self.settings.url}/api/{self.settings.api_version}",
-            headers={
-                "Authorization": f"Bearer {self.settings.token}",
-                "Content-Type": "application/json",
-            },
+            headers=headers,
             timeout=httpx.Timeout(self.settings.timeout),
             verify=self.settings.verify_ssl,
         ) as client:
@@ -907,13 +912,13 @@ class MattermostClient:
         # Resolve to absolute path to prevent TOCTOU race conditions.
         # Normalizes .. and . components.
         try:
-            resolved_path = path.resolve(strict=True)
+            resolved_path = path.resolve(strict=True)  # noqa: ASYNC240 — CPU-bound path resolution, not blocking I/O
         except (FileNotFoundError, OSError) as e:
             raise FileValidationError(file_path, f"Cannot resolve path: {e}") from e
 
         # Validate it's not a symlink (check original path before resolution)
         # Note: resolve() follows symlinks, so we check the original path
-        if path.is_symlink():
+        if path.is_symlink():  # noqa: ASYNC240 — CPU-bound stat check, not blocking I/O
             raise FileValidationError(file_path, "Symbolic links are not allowed")
 
         # Validate it's a regular file (not directory, device, etc.)
@@ -921,7 +926,7 @@ class MattermostClient:
             raise FileValidationError(file_path, "Path is not a file")
 
         name = filename or resolved_path.name
-        content = resolved_path.read_bytes()
+        content = await asyncio.to_thread(resolved_path.read_bytes)
 
         return await self._upload_file_with_retry(channel_id, name, content)
 

@@ -164,7 +164,7 @@ Once configured, you can ask your AI assistant:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
+| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal access token. MATTERMOST_TOKEN is required only when per-client token authentication (MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS) is not enabled. |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
