@@ -164,12 +164,14 @@ Once configured, you can ask your AI assistant:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
+| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal access token. MATTERMOST_TOKEN is required only when per-client token authentication (MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS) is not enabled. |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
+| `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |
+| `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | No | false | Allow HTTP clients to use their own Mattermost tokens |
 
 ## Docker
 

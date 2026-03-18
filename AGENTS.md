@@ -64,11 +64,13 @@ uv run mcp-server-mattermost
 - `src/mcp_server_mattermost/__init__.py` - Package entry, exports `main()` and `__version__`
 - `src/mcp_server_mattermost/server.py` - FastMCP instance creation, lifespan, FileSystemProvider
 - `src/mcp_server_mattermost/deps.py` - Dependency injection providers (get_client)
+- `src/mcp_server_mattermost/auth.py` - MattermostTokenVerifier for per-client token auth
 - `src/mcp_server_mattermost/client.py` - Async HTTP client with retry logic
 - `src/mcp_server_mattermost/config.py` - Settings via pydantic-settings (env vars prefixed `MATTERMOST_`)
 - `src/mcp_server_mattermost/exceptions.py` - Exception hierarchy (`MattermostMCPError` base)
 - `src/mcp_server_mattermost/logging.py` - Logging setup (stderr per MCP spec)
 - `src/mcp_server_mattermost/middleware.py` - FastMCP middleware for error handling
+- `src/mcp_server_mattermost/enums.py` - Capability and ToolTag enums for tool metadata
 - `src/mcp_server_mattermost/tools/` - MCP tool implementations by category
 - `src/mcp_server_mattermost/models/` - Pydantic models for validation
 
@@ -76,7 +78,7 @@ uv run mcp-server-mattermost
 
 Required environment variables:
 - `MATTERMOST_URL` - Mattermost server URL
-- `MATTERMOST_TOKEN` - Bot or user access token
+- `MATTERMOST_TOKEN` - Bot or user access token (conditional: required unless `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` is enabled)
 
 Optional:
 - `MATTERMOST_TIMEOUT` (default: 30)
@@ -85,6 +87,7 @@ Optional:
 - `MATTERMOST_LOG_LEVEL` (default: INFO)
 - `MATTERMOST_LOG_FORMAT` (default: json) - Log format: 'json' for production, 'text' for development
 - `MATTERMOST_API_VERSION` (default: v4)
+- `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` (default: false) - Allow HTTP clients to use their own Mattermost tokens
 
 ## Testing
 
@@ -223,6 +226,10 @@ client: MattermostClient = Depends(get_client),  # noqa: B008
 The `# noqa: B008` suppresses ruff's flake8-bugbear warning "Do not perform function calls
 in argument defaults". This is intentional — `Depends()` is a FastMCP/FastAPI DI marker,
 not a mutable default. The function call happens at request time, not at function definition.
+
+## Commit Messages
+
+Do not include `Co-Authored-By:` trailers in commit messages.
 
 ## Versioning
 

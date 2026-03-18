@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Per-client token authentication: `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` env var enables
+  HTTP clients to pass their own Mattermost token via `Authorization: Bearer <token>`.
+  The token is validated against the Mattermost API (`GET /api/v4/users/me`) on each
+  connection. When disabled (default), the server uses `MATTERMOST_TOKEN` from environment.
+- `MattermostTokenVerifier` class (`auth.py`): custom FastMCP 3 `TokenVerifier` that
+  validates Mattermost bearer tokens and injects them into the request context.
+
+### Fixed
+- Suppress `KeyboardInterrupt` traceback on server shutdown
+- Added `wsproto` to dependencies (required for WebSocket transport)
+
 ## [0.3.0] - 2026-02-25
 
 ### Changed

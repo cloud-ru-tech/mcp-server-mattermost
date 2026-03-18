@@ -2,7 +2,7 @@
 """Testcontainers setup for Mattermost integration tests."""
 
 from testcontainers.core.container import DockerContainer
-from testcontainers.core.waiting_utils import wait_for_logs
+from testcontainers.core.wait_strategies import LogMessageWaitStrategy
 
 
 class MattermostContainer(DockerContainer):
@@ -45,8 +45,8 @@ class MattermostContainer(DockerContainer):
         Returns:
             Self for method chaining
         """
+        self.waiting_for(LogMessageWaitStrategy("Server is listening").with_startup_timeout(120))
         super().start()
-        wait_for_logs(self, "Server is listening", timeout=120)
         return self
 
     def get_base_url(self) -> str:
