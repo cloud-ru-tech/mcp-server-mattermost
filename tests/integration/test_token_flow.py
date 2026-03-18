@@ -46,37 +46,39 @@ class TestClientTokenFlowIntegration:
         """
         from mcp_server_mattermost.config import get_settings
 
-        # Use monkeypatch (not patch.dict) — it restores env vars on teardown
-        # without the snapshot/restore semantics that can erase vars set by
-        # session-scoped monkeypatch_session.
-        monkeypatch.setenv("MATTERMOST_URL", mattermost_env.url)
+        # Only add the one env var this test needs.  MATTERMOST_URL and
+        # MATTERMOST_TOKEN are already in os.environ via the session-scoped
+        # mattermost_env fixture — do NOT overwrite them.
         monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
+
+        # Clear the lru_cache so the standalone server (running in a separate
+        # thread) picks up ALLOW_HTTP_CLIENT_TOKENS=true from the environment.
+        # After the test, monkeypatch undo removes ALLOW_HTTP_CLIENT_TOKENS,
+        # but we intentionally do NOT clear the cache again — leaving the
+        # (stale) cached settings is safe because get_access_token() returns
+        # None in the in-memory transport used by subsequent tests, so the
+        # allow_http_client_tokens flag has no effect.  Clearing the cache
+        # here would force Settings() re-creation, which fails if env vars
+        # are in a transitional state between monkeypatch undo and the next
+        # test's fixture setup.
         get_settings.cache_clear()
 
+        mcp_server = _create_token_flow_server()
+        asgi_app = mcp_server.http_app(transport="streamable-http")
+
+        server = UvicornTestServer(asgi_app)
+        server.start()
+        assert server.wait_until_ready(), "MCP HTTP server did not start in time"
+
         try:
-            mcp_server = _create_token_flow_server()
-            asgi_app = mcp_server.http_app(transport="streamable-http")
+            from fastmcp import Client
 
-            server = UvicornTestServer(asgi_app)
-            server.start()
-            assert server.wait_until_ready(), "MCP HTTP server did not start in time"
-
-            try:
-                from fastmcp import Client
-
-                mcp_url = f"{server.url}/mcp"
-                async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
-                    result = await client.call_tool("get_me", {})
-            finally:
-                server.stop()
-                server.join(timeout=5.0)
+            mcp_url = f"{server.url}/mcp"
+            async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
+                result = await client.call_tool("get_me", {})
         finally:
-            # Restore settings cache so subsequent tests (test_users, etc.)
-            # get the original settings without ALLOW_HTTP_CLIENT_TOKENS.
-            get_settings.cache_clear()
-
-        # monkeypatch teardown will restore env vars; next get_settings() call
-        # from a subsequent test will reconstruct from clean env.
+            server.stop()
+            server.join(timeout=5.0)
 
         assert result is not None
         data = json.loads(result.content[0].text)
