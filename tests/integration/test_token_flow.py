@@ -1,14 +1,33 @@
-"""Integration test: client bearer token flows through to real Mattermost API."""
+"""Integration test: client bearer token flows through to real Mattermost API.
+
+Uses a standalone FastMCP instance (no FileSystemProvider) to avoid
+``importlib.reload()`` of tool modules, which would corrupt the
+module-level ``mcp`` singleton used by other integration tests.
+"""
 
 import json
 import os
 from unittest.mock import patch
 
 import pytest
-from fastmcp import Client
+from fastmcp import FastMCP
 from fastmcp.client.auth import BearerAuth
 
 from tests.helpers import UvicornTestServer
+
+
+def _create_token_flow_server() -> FastMCP:
+    """Create a minimal FastMCP instance with auth and only the get_me tool.
+
+    Avoids FileSystemProvider to prevent ``importlib.reload()`` of tool
+    modules that would break the module-level ``mcp`` singleton's DI.
+    """
+    from mcp_server_mattermost.auth import MattermostTokenVerifier
+    from mcp_server_mattermost.tools.users import get_me
+
+    server = FastMCP(name="TokenFlowTest", auth=MattermostTokenVerifier())
+    server.add_tool(get_me)
+    return server
 
 
 class TestClientTokenFlowIntegration:
@@ -28,7 +47,6 @@ class TestClientTokenFlowIntegration:
             → User response
         """
         from mcp_server_mattermost.config import get_settings
-        from mcp_server_mattermost.server import _create_mcp
 
         with patch.dict(
             os.environ,
@@ -40,7 +58,7 @@ class TestClientTokenFlowIntegration:
             get_settings.cache_clear()
 
             try:
-                mcp_server = _create_mcp()
+                mcp_server = _create_token_flow_server()
                 asgi_app = mcp_server.http_app(transport="streamable-http")
 
                 server = UvicornTestServer(asgi_app)
@@ -48,6 +66,8 @@ class TestClientTokenFlowIntegration:
                 assert server.wait_until_ready(), "MCP HTTP server did not start in time"
 
                 try:
+                    from fastmcp import Client
+
                     mcp_url = f"{server.url}/mcp"
                     async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
                         result = await client.call_tool("get_me", {})
