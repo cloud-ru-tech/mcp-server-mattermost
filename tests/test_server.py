@@ -75,8 +75,11 @@ class TestMcpAuth:
 
         with patch.dict(
             os.environ,
-            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_TOKEN": "test-token"},
-            clear=True,
+            {
+                "MATTERMOST_URL": "http://mm.example.com",
+                "MATTERMOST_TOKEN": "test-token",
+                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "false",
+            },
         ):
             from mcp_server_mattermost.config import get_settings
 
@@ -97,7 +100,6 @@ class TestMcpAuth:
         with patch.dict(
             os.environ,
             {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true"},
-            clear=True,
         ):
             from mcp_server_mattermost.config import get_settings
 
@@ -120,7 +122,6 @@ class TestMcpAuth:
         with patch.dict(
             os.environ,
             {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": value},
-            clear=True,
         ):
             get_settings.cache_clear()
             from mcp_server_mattermost.server import _create_mcp
