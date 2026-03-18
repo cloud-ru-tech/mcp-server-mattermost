@@ -8,7 +8,7 @@ module-level ``mcp`` singleton used by other integration tests.
 import json
 
 import pytest
-from fastmcp import FastMCP
+from fastmcp import Client, FastMCP
 from fastmcp.client.auth import BearerAuth
 
 from tests.helpers import UvicornTestServer
@@ -28,9 +28,35 @@ def _create_token_flow_server() -> FastMCP:
     return server
 
 
+@pytest.fixture
+def _allow_http_tokens(monkeypatch):
+    """Enable per-client tokens and invalidate settings cache for this test only.
+
+    Restores the original cached settings on teardown so subsequent tests
+    (test_users, etc.) are not affected.
+    """
+    from mcp_server_mattermost.config import get_settings
+
+    # Ensure cache is populated before we clear it (session fixtures
+    # guarantee MATTERMOST_URL and TOKEN are in env).
+    get_settings()
+
+    monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
+    get_settings.cache_clear()
+
+    yield
+
+    # Restore: clear the cache (which holds settings with allow_http=true),
+    # remove the env var (monkeypatch undo handles this), then re-populate
+    # the cache by calling get_settings() — it will reconstruct from the
+    # restored environment which still has MATTERMOST_URL and TOKEN.
+    get_settings.cache_clear()
+
+
 class TestClientTokenFlowIntegration:
     @pytest.mark.asyncio
-    async def test_bearer_token_reaches_real_mattermost(self, mattermost_env, monkeypatch) -> None:
+    @pytest.mark.usefixtures("_allow_http_tokens")
+    async def test_bearer_token_reaches_real_mattermost(self, mattermost_env) -> None:
         """Bearer token from MCP client reaches real Mattermost via full auth chain.
 
         Chain:
@@ -44,25 +70,6 @@ class TestClientTokenFlowIntegration:
             → get_me tool → GET /api/v4/users/me [REAL Mattermost]
             → User response
         """
-        from mcp_server_mattermost.config import get_settings
-
-        # Only add the one env var this test needs.  MATTERMOST_URL and
-        # MATTERMOST_TOKEN are already in os.environ via the session-scoped
-        # mattermost_env fixture — do NOT overwrite them.
-        monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
-
-        # Clear the lru_cache so the standalone server (running in a separate
-        # thread) picks up ALLOW_HTTP_CLIENT_TOKENS=true from the environment.
-        # After the test, monkeypatch undo removes ALLOW_HTTP_CLIENT_TOKENS,
-        # but we intentionally do NOT clear the cache again — leaving the
-        # (stale) cached settings is safe because get_access_token() returns
-        # None in the in-memory transport used by subsequent tests, so the
-        # allow_http_client_tokens flag has no effect.  Clearing the cache
-        # here would force Settings() re-creation, which fails if env vars
-        # are in a transitional state between monkeypatch undo and the next
-        # test's fixture setup.
-        get_settings.cache_clear()
-
         mcp_server = _create_token_flow_server()
         asgi_app = mcp_server.http_app(transport="streamable-http")
 
@@ -71,8 +78,6 @@ class TestClientTokenFlowIntegration:
         assert server.wait_until_ready(), "MCP HTTP server did not start in time"
 
         try:
-            from fastmcp import Client
-
             mcp_url = f"{server.url}/mcp"
             async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
                 result = await client.call_tool("get_me", {})
