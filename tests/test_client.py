@@ -123,6 +123,20 @@ class TestMattermostClientLifespan:
         async with client.lifespan():
             assert client._client.headers["Authorization"] == "Bearer test-token-12345"
 
+    @pytest.mark.asyncio
+    async def test_lifespan_warns_when_no_token(self, mock_settings_allow_http, caplog):
+        """Entering lifespan without a token logs a warning."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings, token=None)
+
+        with caplog.at_level(logging.WARNING, logger="mcp-server-mattermost"):
+            async with client.lifespan():
+                pass
+
+        assert any("without authentication token" in record.message for record in caplog.records)
+
 
 class TestMattermostClientResponseHandler:
     """Test response handling and error mapping."""

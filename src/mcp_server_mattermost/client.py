@@ -110,6 +110,8 @@ class MattermostClient:
         if effective_token:
             headers["Authorization"] = f"Bearer {effective_token}"
             logger.info("Initializing Mattermost API client")
+        else:
+            logger.warning("Initializing Mattermost API client without authentication token")
         async with httpx.AsyncClient(
             base_url=f"{self.settings.url}/api/{self.settings.api_version}",
             headers=headers,
