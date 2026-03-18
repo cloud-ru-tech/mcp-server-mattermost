@@ -53,6 +53,13 @@ This is useful in multi-user environments where each user should act under their
 !!! note
     This feature only applies to HTTP-based transports (SSE, StreamableHTTP). When using stdio transport (e.g., Claude Desktop), the server always uses `MATTERMOST_TOKEN`.
 
+!!! warning "Security Considerations"
+    When enabled, the MCP server forwards any valid Mattermost token to the API.
+    This means any user who can reach the MCP server's HTTP endpoint and has a
+    valid Mattermost account can execute MCP tools under their own identity.
+    Ensure the MCP server is protected by network-level access controls
+    (firewall, VPN, reverse proxy with authentication) in production deployments.
+
 ## Token Permissions
 
 The bot token needs these permissions for full functionality:
