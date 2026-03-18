@@ -127,15 +127,22 @@ class TestMattermostClientLifespan:
     async def test_lifespan_warns_when_no_token(self, mock_settings_allow_http, caplog):
         """Entering lifespan without a token logs a warning."""
         from mcp_server_mattermost.config import get_settings
+        from mcp_server_mattermost.logging import logger as mm_logger
 
         settings = get_settings()
         client = MattermostClient(settings, token=None)
 
-        with caplog.at_level(logging.WARNING, logger="mcp-server-mattermost"):
-            async with client.lifespan():
-                pass
+        # Ensure caplog can capture even if setup_logging() set propagate=False earlier
+        original_propagate = mm_logger.propagate
+        mm_logger.propagate = True
+        try:
+            with caplog.at_level(logging.WARNING, logger="mcp-server-mattermost"):
+                async with client.lifespan():
+                    pass
 
-        assert any("without authentication token" in record.message for record in caplog.records)
+            assert any("without authentication token" in record.message for record in caplog.records)
+        finally:
+            mm_logger.propagate = original_propagate
 
 
 class TestMattermostClientResponseHandler:
