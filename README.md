@@ -170,6 +170,7 @@ Once configured, you can ask your AI assistant:
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
+| `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |
 | `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | No | false | Allow HTTP clients to use their own Mattermost tokens |
 
 ## Docker

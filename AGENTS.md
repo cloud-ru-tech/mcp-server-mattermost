@@ -70,6 +70,7 @@ uv run mcp-server-mattermost
 - `src/mcp_server_mattermost/exceptions.py` - Exception hierarchy (`MattermostMCPError` base)
 - `src/mcp_server_mattermost/logging.py` - Logging setup (stderr per MCP spec)
 - `src/mcp_server_mattermost/middleware.py` - FastMCP middleware for error handling
+- `src/mcp_server_mattermost/enums.py` - Capability and ToolTag enums for tool metadata
 - `src/mcp_server_mattermost/tools/` - MCP tool implementations by category
 - `src/mcp_server_mattermost/models/` - Pydantic models for validation
 
@@ -77,7 +78,7 @@ uv run mcp-server-mattermost
 
 Required environment variables:
 - `MATTERMOST_URL` - Mattermost server URL
-- `MATTERMOST_TOKEN` - Bot or user access token
+- `MATTERMOST_TOKEN` - Bot or user access token (conditional: required unless `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` is enabled)
 
 Optional:
 - `MATTERMOST_TIMEOUT` (default: 30)
@@ -86,6 +87,7 @@ Optional:
 - `MATTERMOST_LOG_LEVEL` (default: INFO)
 - `MATTERMOST_LOG_FORMAT` (default: json) - Log format: 'json' for production, 'text' for development
 - `MATTERMOST_API_VERSION` (default: v4)
+- `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` (default: false) - Allow HTTP clients to use their own Mattermost tokens
 
 ## Testing
 
