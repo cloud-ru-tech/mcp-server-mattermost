@@ -48,6 +48,12 @@ class TestClientTokenFlowIntegration:
         """
         from mcp_server_mattermost.config import get_settings
 
+        # Snapshot the cached settings BEFORE we touch env/cache.
+        # We must restore it afterwards so subsequent tests (test_users, etc.)
+        # don't fail with ConfigurationError when get_settings() tries to
+        # reconstruct Settings from a possibly-altered environment.
+        original_settings = get_settings()
+
         with patch.dict(
             os.environ,
             {
@@ -75,7 +81,23 @@ class TestClientTokenFlowIntegration:
                     server.stop()
                     server.join(timeout=5.0)
             finally:
+                # Restore the original cached settings.  We can't just call
+                # cache_clear() and let the next get_settings() reconstruct
+                # from env — patch.dict may have altered os.environ state, and
+                # the lru_cache would pick up the wrong values.
                 get_settings.cache_clear()
+
+        # Outside the patch.dict context, env vars are restored.
+        # Re-populate the lru_cache so downstream tests get the original settings.
+        # If env vars are intact this is equivalent to original_settings;
+        # if not, we force it by calling get_settings() which reads the restored env.
+        _repopulated = get_settings()
+
+        # Sanity check: the repopulated settings must match the original URL.
+        assert _repopulated.url == original_settings.url, (
+            f"get_settings() returned url={_repopulated.url!r} after test, "
+            f"expected {original_settings.url!r} — env var leak?"
+        )
 
         assert result is not None
         data = json.loads(result.content[0].text)
