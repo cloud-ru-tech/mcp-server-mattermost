@@ -6,8 +6,6 @@ module-level ``mcp`` singleton used by other integration tests.
 """
 
 import json
-import os
-from unittest.mock import patch
 
 import pytest
 from fastmcp import FastMCP
@@ -32,7 +30,7 @@ def _create_token_flow_server() -> FastMCP:
 
 class TestClientTokenFlowIntegration:
     @pytest.mark.asyncio
-    async def test_bearer_token_reaches_real_mattermost(self, mattermost_env) -> None:
+    async def test_bearer_token_reaches_real_mattermost(self, mattermost_env, monkeypatch) -> None:
         """Bearer token from MCP client reaches real Mattermost via full auth chain.
 
         Chain:
@@ -48,56 +46,37 @@ class TestClientTokenFlowIntegration:
         """
         from mcp_server_mattermost.config import get_settings
 
-        # Snapshot the cached settings BEFORE we touch env/cache.
-        # We must restore it afterwards so subsequent tests (test_users, etc.)
-        # don't fail with ConfigurationError when get_settings() tries to
-        # reconstruct Settings from a possibly-altered environment.
-        original_settings = get_settings()
+        # Use monkeypatch (not patch.dict) — it restores env vars on teardown
+        # without the snapshot/restore semantics that can erase vars set by
+        # session-scoped monkeypatch_session.
+        monkeypatch.setenv("MATTERMOST_URL", mattermost_env.url)
+        monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
+        get_settings.cache_clear()
 
-        with patch.dict(
-            os.environ,
-            {
-                "MATTERMOST_URL": mattermost_env.url,
-                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true",
-            },
-        ):
-            get_settings.cache_clear()
+        try:
+            mcp_server = _create_token_flow_server()
+            asgi_app = mcp_server.http_app(transport="streamable-http")
+
+            server = UvicornTestServer(asgi_app)
+            server.start()
+            assert server.wait_until_ready(), "MCP HTTP server did not start in time"
 
             try:
-                mcp_server = _create_token_flow_server()
-                asgi_app = mcp_server.http_app(transport="streamable-http")
+                from fastmcp import Client
 
-                server = UvicornTestServer(asgi_app)
-                server.start()
-                assert server.wait_until_ready(), "MCP HTTP server did not start in time"
-
-                try:
-                    from fastmcp import Client
-
-                    mcp_url = f"{server.url}/mcp"
-                    async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
-                        result = await client.call_tool("get_me", {})
-                finally:
-                    server.stop()
-                    server.join(timeout=5.0)
+                mcp_url = f"{server.url}/mcp"
+                async with Client(mcp_url, auth=BearerAuth(mattermost_env.token)) as client:
+                    result = await client.call_tool("get_me", {})
             finally:
-                # Restore the original cached settings.  We can't just call
-                # cache_clear() and let the next get_settings() reconstruct
-                # from env — patch.dict may have altered os.environ state, and
-                # the lru_cache would pick up the wrong values.
-                get_settings.cache_clear()
+                server.stop()
+                server.join(timeout=5.0)
+        finally:
+            # Restore settings cache so subsequent tests (test_users, etc.)
+            # get the original settings without ALLOW_HTTP_CLIENT_TOKENS.
+            get_settings.cache_clear()
 
-        # Outside the patch.dict context, env vars are restored.
-        # Re-populate the lru_cache so downstream tests get the original settings.
-        # If env vars are intact this is equivalent to original_settings;
-        # if not, we force it by calling get_settings() which reads the restored env.
-        _repopulated = get_settings()
-
-        # Sanity check: the repopulated settings must match the original URL.
-        assert _repopulated.url == original_settings.url, (
-            f"get_settings() returned url={_repopulated.url!r} after test, "
-            f"expected {original_settings.url!r} — env var leak?"
-        )
+        # monkeypatch teardown will restore env vars; next get_settings() call
+        # from a subsequent test will reconstruct from clean env.
 
         assert result is not None
         data = json.loads(result.content[0].text)
