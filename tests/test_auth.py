@@ -61,6 +61,40 @@ class TestMattermostTokenVerifier:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_server_error_returns_none(self, mock_settings: None) -> None:
+        """Server error (500) returns None — verifier is fail-closed for all non-200."""
+        from mcp_server_mattermost.auth import MattermostTokenVerifier
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        verifier = MattermostTokenVerifier()
+
+        with respx.mock:
+            respx.get(f"{settings.url}/api/v4/users/me").mock(
+                return_value=httpx.Response(500, json={"message": "Internal Server Error"})
+            )
+            result = await verifier.verify_token("any-token")
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_forbidden_returns_none(self, mock_settings: None) -> None:
+        """Forbidden (403) returns None — verifier is fail-closed for all non-200."""
+        from mcp_server_mattermost.auth import MattermostTokenVerifier
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        verifier = MattermostTokenVerifier()
+
+        with respx.mock:
+            respx.get(f"{settings.url}/api/v4/users/me").mock(
+                return_value=httpx.Response(403, json={"message": "Forbidden"})
+            )
+            result = await verifier.verify_token("any-token")
+
+        assert result is None
+
+    @pytest.mark.asyncio
     async def test_cached_token_skips_http_call(self, mock_settings: None) -> None:
         """Second verify_token call with same token uses cache, no HTTP request."""
         from mcp_server_mattermost.auth import MattermostTokenVerifier
