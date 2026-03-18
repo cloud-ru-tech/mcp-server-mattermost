@@ -3,6 +3,11 @@
 Uses a standalone FastMCP instance (no FileSystemProvider) to avoid
 ``importlib.reload()`` of tool modules, which would corrupt the
 module-level ``mcp`` singleton used by other integration tests.
+
+Does NOT touch ``get_settings`` cache or environment variables — the
+standalone server's ``MattermostTokenVerifier`` picks up URL and SSL
+settings from the already-cached ``get_settings()`` (populated by the
+session ``mattermost_env`` fixture).
 """
 
 import json
@@ -28,34 +33,8 @@ def _create_token_flow_server() -> FastMCP:
     return server
 
 
-@pytest.fixture
-def _allow_http_tokens(monkeypatch):
-    """Enable per-client tokens and invalidate settings cache for this test only.
-
-    Restores the original cached settings on teardown so subsequent tests
-    (test_users, etc.) are not affected.
-    """
-    from mcp_server_mattermost.config import get_settings
-
-    # Ensure cache is populated before we clear it (session fixtures
-    # guarantee MATTERMOST_URL and TOKEN are in env).
-    get_settings()
-
-    monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
-    get_settings.cache_clear()
-
-    yield
-
-    # Restore: clear the cache (which holds settings with allow_http=true),
-    # remove the env var (monkeypatch undo handles this), then re-populate
-    # the cache by calling get_settings() — it will reconstruct from the
-    # restored environment which still has MATTERMOST_URL and TOKEN.
-    get_settings.cache_clear()
-
-
 class TestClientTokenFlowIntegration:
     @pytest.mark.asyncio
-    @pytest.mark.usefixtures("_allow_http_tokens")
     async def test_bearer_token_reaches_real_mattermost(self, mattermost_env) -> None:
         """Bearer token from MCP client reaches real Mattermost via full auth chain.
 
