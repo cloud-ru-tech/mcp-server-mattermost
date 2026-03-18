@@ -53,6 +53,11 @@ def _create_mcp() -> FastMCP:
     When the flag is ``true``, attaches a ``MattermostTokenVerifier`` that
     validates bearer tokens against the Mattermost API before allowing tool access.
 
+    Warning:
+        This reads ``os.getenv``, not pydantic-settings, so ``.env`` files are
+        not consulted for this variable. It must be set in the actual OS
+        environment (export, Docker -e, systemd Environment=, etc.).
+
     Returns:
         Configured FastMCP server instance
     """
