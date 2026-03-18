@@ -163,6 +163,21 @@ class TestMattermostTokenVerifier:
         await verifier.close()  # Should not raise
 
     @pytest.mark.asyncio
+    async def test_programming_error_propagates(self, mock_settings: None) -> None:
+        """Programming errors (non-HTTP) propagate instead of being swallowed."""
+        from unittest.mock import patch
+
+        from mcp_server_mattermost.auth import MattermostTokenVerifier
+
+        verifier = MattermostTokenVerifier()
+
+        with (
+            patch.object(verifier, "_get_client", side_effect=TypeError("bug in code")),
+            pytest.raises(TypeError, match="bug in code"),
+        ):
+            await verifier.verify_token("any-token")
+
+    @pytest.mark.asyncio
     async def test_concurrent_verify_token(self, mock_settings: None) -> None:
         """Multiple concurrent verify_token calls all return valid results."""
         from mcp_server_mattermost.auth import MattermostTokenVerifier

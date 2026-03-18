@@ -83,7 +83,7 @@ class MattermostTokenVerifier(TokenVerifier):
                 url,
                 headers={"Authorization": f"Bearer {token}"},
             )
-        except Exception as exc:  # noqa: BLE001
+        except httpx.HTTPError as exc:
             logger.warning("Mattermost token verification failed (network error): %s", exc)
             return None
 
