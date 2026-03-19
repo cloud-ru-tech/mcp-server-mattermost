@@ -431,7 +431,10 @@ class MattermostClient:
         page: int = 0,
         per_page: int = 60,
     ) -> list[dict[str, Any]]:
-        """Get public channels in a team.
+        """Get channels the authenticated user belongs to in a team.
+
+        Returns public, private, DM, and group DM channels
+        where the current user is a member.
 
         Args:
             team_id: Team identifier
@@ -442,7 +445,7 @@ class MattermostClient:
             List of channel objects
         """
         result = await self.get(
-            f"/teams/{team_id}/channels",
+            f"/users/me/teams/{team_id}/channels",
             params={"page": page, "per_page": per_page},
         )
         return result if isinstance(result, list) else []

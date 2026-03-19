@@ -831,7 +831,7 @@ class TestMattermostClientChannelsAPI:
         settings = get_settings()
         client = MattermostClient(settings)
 
-        route = respx.get("https://test.mattermost.com/api/v4/teams/team123/channels").mock(
+        route = respx.get("https://test.mattermost.com/api/v4/users/me/teams/team123/channels").mock(
             return_value=httpx.Response(200, json=[{"id": "ch123", "name": "general"}]),
         )
 

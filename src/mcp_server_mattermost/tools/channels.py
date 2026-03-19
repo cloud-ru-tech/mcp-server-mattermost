@@ -23,10 +23,10 @@ async def list_channels(
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = 60,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[Channel]:
-    """List public and private channels in a team.
+    """List channels the authenticated user belongs to in a team.
 
-    Returns channels that the authenticated user has access to.
-    Use this to discover available channels for posting messages.
+    Returns public, private, DM, and group DM channels where you are a member.
+    Use this to discover your available channels for posting messages.
     """
     data = await client.get_channels(
         team_id=team_id,
