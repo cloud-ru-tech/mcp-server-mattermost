@@ -824,8 +824,8 @@ class TestMattermostClientChannelsAPI:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_get_channels(self, mock_settings):
-        """get_channels() should return team's channels."""
+    async def test_get_public_channels(self, mock_settings):
+        """get_public_channels() should return team's public channels."""
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
@@ -836,10 +836,37 @@ class TestMattermostClientChannelsAPI:
         )
 
         async with client.lifespan():
-            result = await client.get_channels("team123", page=0, per_page=60)
+            result = await client.get_public_channels("team123", page=0, per_page=60)
 
         assert result == [{"id": "ch123", "name": "general"}]
         assert route.calls[0].request.url.params["page"] == "0"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_get_my_channels(self, mock_settings):
+        """get_my_channels() should return user's channels in a team."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me/teams/team123/channels").mock(
+            return_value=httpx.Response(
+                200,
+                json=[
+                    {"id": "ch1", "name": "general", "type": "O"},
+                    {"id": "ch2", "name": "secret", "type": "P"},
+                ],
+            ),
+        )
+
+        async with client.lifespan():
+            result = await client.get_my_channels("team123")
+
+        assert len(result) == 2
+        assert result[0]["id"] == "ch1"
+        assert result[1]["type"] == "P"
+        assert route.called
 
     @pytest.mark.asyncio
     @respx.mock

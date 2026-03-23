@@ -425,13 +425,16 @@ class MattermostClient:
 
     # === Channels API ===
 
-    async def get_channels(
+    async def get_public_channels(
         self,
         team_id: str,
         page: int = 0,
         per_page: int = 60,
     ) -> list[dict[str, Any]]:
-        """Get public channels in a team.
+        """Get public channels in a team for discovery.
+
+        Returns all public channels, including ones the user hasn't joined.
+        Results are paginated. Use page/per_page to retrieve all channels.
 
         Args:
             team_id: Team identifier
@@ -445,6 +448,21 @@ class MattermostClient:
             f"/teams/{team_id}/channels",
             params={"page": page, "per_page": per_page},
         )
+        return result if isinstance(result, list) else []
+
+    async def get_my_channels(self, team_id: str) -> list[dict[str, Any]]:
+        """Get all channels the authenticated user belongs to in a team.
+
+        Returns public, private, DM, and group channels.
+        No pagination — API returns all channels at once.
+
+        Args:
+            team_id: Team identifier
+
+        Returns:
+            List of channel objects
+        """
+        result = await self.get(f"/users/me/teams/{team_id}/channels")
         return result if isinstance(result, list) else []
 
     async def get_channel(self, channel_id: str) -> dict[str, Any]:
