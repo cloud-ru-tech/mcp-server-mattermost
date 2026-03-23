@@ -229,7 +229,8 @@ not a mutable default. The function call happens at request time, not at functio
 
 ## Commit Messages
 
-Do not include `Co-Authored-By:` trailers in commit messages.
+Do not include `Co-Authored-By:` trailers for AI agents in commit messages.
+Human contributor co-authorship trailers are welcome.
 
 ## Versioning
 
