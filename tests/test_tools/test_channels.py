@@ -57,14 +57,14 @@ def make_channel_member_data(
     }
 
 
-class TestListChannels:
-    """Tests for list_channels tool."""
+class TestListPublicChannels:
+    """Tests for list_public_channels tool."""
 
-    async def test_list_channels_returns_channels(self, mock_client: AsyncMock) -> None:
+    async def test_list_public_channels_returns_channels(self, mock_client: AsyncMock) -> None:
         """Test successful channel listing returns Channel models."""
-        mock_client.get_channels.return_value = [make_channel_data()]
+        mock_client.get_public_channels.return_value = [make_channel_data()]
 
-        result = await channels.list_channels(
+        result = await channels.list_public_channels(
             team_id="tm1234567890123456789012",
             page=0,
             per_page=60,
@@ -75,11 +75,63 @@ class TestListChannels:
         assert isinstance(result[0], Channel)
         assert result[0].id == "ch1234567890123456789012"
         assert result[0].name == "general"
-        mock_client.get_channels.assert_called_once_with(
+        mock_client.get_public_channels.assert_called_once_with(
             team_id="tm1234567890123456789012",
             page=0,
             per_page=60,
         )
+
+
+class TestListMyChannels:
+    """Tests for list_my_channels tool."""
+
+    async def test_list_my_channels_returns_all_types(self, mock_client: AsyncMock) -> None:
+        """Test returns all channel types when channel_types is None."""
+        mock_client.get_my_channels.return_value = [
+            make_channel_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
+        ]
+
+        result = await channels.list_my_channels(
+            team_id="tm1234567890123456789012",
+            client=mock_client,
+        )
+
+        assert len(result) == 4
+        assert all(isinstance(ch, Channel) for ch in result)
+        mock_client.get_my_channels.assert_called_once_with(team_id="tm1234567890123456789012")
+
+    async def test_list_my_channels_filters_by_type(self, mock_client: AsyncMock) -> None:
+        """Test filters channels when channel_types is specified."""
+        mock_client.get_my_channels.return_value = [
+            make_channel_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
+        ]
+
+        result = await channels.list_my_channels(
+            team_id="tm1234567890123456789012",
+            channel_types=["O", "P"],
+            client=mock_client,
+        )
+
+        assert len(result) == 2
+        types = {ch.type for ch in result}
+        assert types == {"O", "P"}
+
+    async def test_list_my_channels_empty_result(self, mock_client: AsyncMock) -> None:
+        """Test empty list when no channels."""
+        mock_client.get_my_channels.return_value = []
+
+        result = await channels.list_my_channels(
+            team_id="tm1234567890123456789012",
+            client=mock_client,
+        )
+
+        assert result == []
 
 
 class TestGetChannel:
@@ -229,10 +281,10 @@ class TestCreateDirectChannel:
 class TestErrorHandling:
     """Tests for error handling in channel tools."""
 
-    async def test_list_channels_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
+    async def test_list_public_channels_auth_error(self, mock_client_auth_error: AsyncMock) -> None:
         """Test authentication error propagation."""
         with pytest.raises(AuthenticationError):
-            await channels.list_channels(
+            await channels.list_public_channels(
                 team_id="tm1234567890123456789012",
                 client=mock_client_auth_error,
             )
