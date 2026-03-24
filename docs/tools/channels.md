@@ -15,9 +15,9 @@ For channels you are already a member of (including private), use list_my_channe
 
 ### Example prompts
 
-- "Show me all channels in my team"
-- "What channels are available?"
-- "List channels"
+- "Show me all public channels in my team"
+- "What public channels are available to join?"
+- "List public channels"
 
 ### Annotations
 

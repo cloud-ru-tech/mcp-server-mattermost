@@ -122,6 +122,24 @@ class TestListMyChannels:
         types = {ch.type for ch in result}
         assert types == {"O", "P"}
 
+    async def test_list_my_channels_filter_single_type(self, mock_client: AsyncMock) -> None:
+        """Test filters to a single channel type."""
+        mock_client.get_my_channels.return_value = [
+            make_channel_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
+        ]
+
+        result = await channels.list_my_channels(
+            team_id="tm1234567890123456789012",
+            channel_types=["D"],
+            client=mock_client,
+        )
+
+        assert len(result) == 1
+        assert result[0].type == "D"
+
     async def test_list_my_channels_empty_result(self, mock_client: AsyncMock) -> None:
         """Test empty list when no channels."""
         mock_client.get_my_channels.return_value = []
