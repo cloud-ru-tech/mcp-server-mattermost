@@ -103,14 +103,14 @@ def test_json_formatter_extra_fields():
     )
     record.event = "tool_call_start"
     record.request_id = "abc-123"
-    record.tool = "list_channels"
+    record.tool = "list_public_channels"
 
     output = formatter.format(record)
     data = json.loads(output)
 
     assert data["event"] == "tool_call_start"
     assert data["request_id"] == "abc-123"
-    assert data["tool"] == "list_channels"
+    assert data["tool"] == "list_public_channels"
 
 
 def test_json_formatter_valid_json():

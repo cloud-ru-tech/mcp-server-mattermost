@@ -36,7 +36,7 @@ in `meta` — a single word describing what the tool does:
 
 | Capability | Meaning | Example tools |
 |------------|---------|---------------|
-| `read` | Retrieve data, no side effects | `list_public_channels`, `search_messages`, `get_user` |
+| `read` | Retrieve data, no side effects | `list_public_channels`, `list_my_channels`, `search_messages`, `get_user` |
 | `write` | Modify state within existing resources | `post_message`, `add_reaction`, `upload_file` |
 | `create` | Create new top-level entities | `create_channel`, `create_direct_channel` |
 | `delete` | Permanently destroy a resource | `delete_message`, `delete_bookmark` |
@@ -56,7 +56,7 @@ Here's what a client receives from `tools/list` for a read-only tool:
 ```json
 {
   "name": "list_public_channels",
-  "description": "List public and private channels in a team. ...",
+  "description": "List public channels available in a team. ...",
   "inputSchema": {
     "type": "object",
     "properties": {
