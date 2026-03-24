@@ -11,10 +11,10 @@ from tests.integration.utils import cleanup_channel, make_test_name, to_dict
 class TestChannelHappyPath:
     """Basic successful channel operations through MCP protocol."""
 
-    async def test_list_channels_includes_town_square(self, mcp_client, team):
-        """list_channels: returns public channels including town-square."""
+    async def test_list_public_channels_includes_town_square(self, mcp_client, team):
+        """list_public_channels: returns public channels including town-square."""
         result = await mcp_client.call_tool(
-            "list_channels",
+            "list_public_channels",
             {"team_id": team["id"]},
         )
 
@@ -288,19 +288,19 @@ class TestChannelTypeValidation:
 class TestChannelPagination:
     """Channel listing pagination through MCP protocol."""
 
-    async def test_list_channels_per_page_1(self, mcp_client, team):
-        """list_channels: returns 1 item with per_page=1."""
+    async def test_list_public_channels_per_page_1(self, mcp_client, team):
+        """list_public_channels: returns 1 item with per_page=1."""
         result = await mcp_client.call_tool(
-            "list_channels",
+            "list_public_channels",
             {"team_id": team["id"], "per_page": 1},
         )
         channels = to_dict(result)
         assert len(channels) == 1
 
-    async def test_list_channels_page_beyond_data(self, mcp_client, team):
-        """list_channels: returns empty array for page beyond data."""
+    async def test_list_public_channels_page_beyond_data(self, mcp_client, team):
+        """list_public_channels: returns empty array for page beyond data."""
         result = await mcp_client.call_tool(
-            "list_channels",
+            "list_public_channels",
             {"team_id": team["id"], "page": 9999},
         )
         channels = to_dict(result)
@@ -313,19 +313,19 @@ class TestChannelPagination:
             (201, r"validation|per_page|200|max"),
         ],
     )
-    async def test_list_channels_invalid_per_page(self, mcp_client, team, per_page, expected_error):
-        """list_channels: ValidationError for invalid per_page."""
+    async def test_list_public_channels_invalid_per_page(self, mcp_client, team, per_page, expected_error):
+        """list_public_channels: ValidationError for invalid per_page."""
         with pytest.raises(Exception, match=expected_error):
             await mcp_client.call_tool(
-                "list_channels",
+                "list_public_channels",
                 {"team_id": team["id"], "per_page": per_page},
             )
 
-    async def test_list_channels_negative_page(self, mcp_client, team):
-        """list_channels: ValidationError for negative page."""
+    async def test_list_public_channels_negative_page(self, mcp_client, team):
+        """list_public_channels: ValidationError for negative page."""
         with pytest.raises(Exception, match=r"validation|page|negative"):
             await mcp_client.call_tool(
-                "list_channels",
+                "list_public_channels",
                 {"team_id": team["id"], "page": -1},
             )
 
@@ -347,3 +347,133 @@ class TestChannelPermissions:
                 "create_direct_channel",
                 {"user_id_1": bot_user["id"], "user_id_2": fake_id},
             )
+
+
+class TestListMyChannels:
+    """list_my_channels tool tests via MCP protocol."""
+
+    async def test_list_my_channels_includes_town_square(self, mcp_client, team):
+        """list_my_channels: returns town-square (bot is a member)."""
+        result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"]},
+        )
+
+        channels = to_dict(result)
+        channel_names = [ch["name"] for ch in channels]
+        assert "town-square" in channel_names
+
+    async def test_list_my_channels_includes_private_channel(self, mcp_client, team):
+        """list_my_channels: returns private channels; list_public_channels does not."""
+        name = make_test_name()
+        channel_id = None
+
+        try:
+            create_result = await mcp_client.call_tool(
+                "create_channel",
+                {
+                    "team_id": team["id"],
+                    "name": name,
+                    "display_name": f"Private {name}",
+                    "channel_type": "P",
+                },
+            )
+            channel = to_dict(create_result)
+            channel_id = channel["id"]
+
+            # Should appear in list_my_channels
+            my_result = await mcp_client.call_tool(
+                "list_my_channels",
+                {"team_id": team["id"]},
+            )
+            my_channels = to_dict(my_result)
+            my_ids = [ch["id"] for ch in my_channels]
+            assert channel_id in my_ids
+
+            # Should NOT appear in list_public_channels
+            public_result = await mcp_client.call_tool(
+                "list_public_channels",
+                {"team_id": team["id"]},
+            )
+            public_channels = to_dict(public_result)
+            public_ids = [ch["id"] for ch in public_channels]
+            assert channel_id not in public_ids
+        finally:
+            if channel_id:
+                await cleanup_channel(channel_id)
+
+    async def test_list_my_channels_includes_direct_message(self, mcp_client, bot_user, team):
+        """list_my_channels: returns DM channels."""
+        dm_result = await mcp_client.call_tool(
+            "create_direct_channel",
+            {"user_id_1": bot_user["id"], "user_id_2": bot_user["id"]},
+        )
+        dm_channel = to_dict(dm_result)
+
+        my_result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"]},
+        )
+        my_channels = to_dict(my_result)
+        my_ids = [ch["id"] for ch in my_channels]
+        assert dm_channel["id"] in my_ids
+
+    async def test_list_my_channels_filter_excludes_dm(self, mcp_client, bot_user, team):
+        """list_my_channels: channel_types=["O","P"] excludes DMs."""
+        await mcp_client.call_tool(
+            "create_direct_channel",
+            {"user_id_1": bot_user["id"], "user_id_2": bot_user["id"]},
+        )
+
+        result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"], "channel_types": ["O", "P"]},
+        )
+        channels = to_dict(result)
+        types = {ch["type"] for ch in channels}
+        assert "D" not in types
+        assert "G" not in types
+
+    async def test_list_my_channels_filter_only_private(self, mcp_client, team):
+        """list_my_channels: channel_types=["P"] returns only private."""
+        name = make_test_name()
+        channel_id = None
+
+        try:
+            create_result = await mcp_client.call_tool(
+                "create_channel",
+                {
+                    "team_id": team["id"],
+                    "name": name,
+                    "display_name": f"Private {name}",
+                    "channel_type": "P",
+                },
+            )
+            channel = to_dict(create_result)
+            channel_id = channel["id"]
+
+            result = await mcp_client.call_tool(
+                "list_my_channels",
+                {"team_id": team["id"], "channel_types": ["P"]},
+            )
+            channels = to_dict(result)
+            assert all(ch["type"] == "P" for ch in channels)
+            assert any(ch["id"] == channel_id for ch in channels)
+        finally:
+            if channel_id:
+                await cleanup_channel(channel_id)
+
+    async def test_list_my_channels_filter_only_dm(self, mcp_client, bot_user, team):
+        """list_my_channels: channel_types=["D"] returns only DMs."""
+        await mcp_client.call_tool(
+            "create_direct_channel",
+            {"user_id_1": bot_user["id"], "user_id_2": bot_user["id"]},
+        )
+
+        result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"], "channel_types": ["D"]},
+        )
+        channels = to_dict(result)
+        assert len(channels) >= 1
+        assert all(ch["type"] == "D" for ch in channels)
