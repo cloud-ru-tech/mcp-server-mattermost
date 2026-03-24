@@ -130,7 +130,7 @@ class TestLoggingMiddlewareLogging:
 
         mock_context = MagicMock()
         mock_context.fastmcp_context.request_id = "req-123"
-        mock_context.message.name = "list_channels"
+        mock_context.message.name = "list_public_channels"
         mock_context.message.arguments = {"team_id": "team123"}
 
         mock_call_next = AsyncMock(return_value=MagicMock())
@@ -148,7 +148,7 @@ class TestLoggingMiddlewareLogging:
         # Check the first call (tool_call_start)
         first_call_kwargs = info_calls[0][1]["extra"]
         assert first_call_kwargs["event"] == "tool_call_start"
-        assert first_call_kwargs["tool"] == "list_channels"
+        assert first_call_kwargs["tool"] == "list_public_channels"
         assert first_call_kwargs["request_id"] == "req-123"
         assert first_call_kwargs["params"] == {"team_id": "team123"}
 
@@ -161,7 +161,7 @@ class TestLoggingMiddlewareLogging:
 
         mock_context = MagicMock()
         mock_context.fastmcp_context.request_id = "req-123"
-        mock_context.message.name = "list_channels"
+        mock_context.message.name = "list_public_channels"
         mock_context.message.arguments = {}
 
         mock_call_next = AsyncMock(return_value=MagicMock())
@@ -178,7 +178,7 @@ class TestLoggingMiddlewareLogging:
         # Check the second call (tool_call_success)
         success_call_kwargs = mock_logger.info.call_args_list[1][1]["extra"]
         assert success_call_kwargs["event"] == "tool_call_success"
-        assert success_call_kwargs["tool"] == "list_channels"
+        assert success_call_kwargs["tool"] == "list_public_channels"
         assert "duration_ms" in success_call_kwargs
 
     @pytest.mark.asyncio

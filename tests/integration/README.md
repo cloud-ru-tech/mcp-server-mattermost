@@ -49,10 +49,10 @@ uv run pytest tests/integration/test_channels.py -v
 ## Test Example
 
 ```python
-async def test_list_channels(mcp_client, team):
+async def test_list_public_channels(mcp_client, team):
     """Test through MCP protocol."""
     result = await mcp_client.call_tool(
-        "list_channels",
+        "list_public_channels",
         {"team_id": team["id"]},
     )
 
@@ -114,7 +114,9 @@ All test resources use `mcp-test-` prefix for identification and cleanup.
 
 ### Happy Path
 
-- [ ] list_channels: returns public channels including town-square
+- [ ] list_public_channels: returns public channels including town-square
+- [ ] list_my_channels: returns channels the bot is a member of
+- [ ] list_my_channels: filters by channel_types (e.g. only O)
 - [ ] get_channel: returns channel by ID
 - [ ] get_channel_by_name: returns channel by name
 - [ ] create_channel: creates public channel (type=O)
@@ -170,12 +172,12 @@ All test resources use `mcp-test-` prefix for identification and cleanup.
 
 ### Pagination
 
-- [x] list_channels: returns 1 item with per_page=1
-- [ ] list_channels: returns up to 200 items with per_page=200
-- [x] list_channels: returns empty array for page=9999
-- [x] list_channels: ValidationError for per_page=0
-- [x] list_channels: ValidationError for per_page > 200
-- [x] list_channels: ValidationError for negative page
+- [x] list_public_channels: returns 1 item with per_page=1
+- [ ] list_public_channels: returns up to 200 items with per_page=200
+- [x] list_public_channels: returns empty array for page=9999
+- [x] list_public_channels: ValidationError for per_page=0
+- [x] list_public_channels: ValidationError for per_page > 200
+- [x] list_public_channels: ValidationError for negative page
 
 ### Permissions & State
 

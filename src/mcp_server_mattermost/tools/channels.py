@@ -1,6 +1,6 @@
 """Channel management tools."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastmcp.dependencies import Depends
 from fastmcp.tools import tool
@@ -17,22 +17,57 @@ from mcp_server_mattermost.models import Channel, ChannelId, ChannelMember, Chan
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
 )
-async def list_channels(
+async def list_public_channels(
     team_id: TeamId,
     page: Annotated[int, Field(ge=0, description="Page number (0-indexed)")] = 0,
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = 60,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> list[Channel]:
-    """List public and private channels in a team.
+    """List public channels available in a team.
 
-    Returns channels that the authenticated user has access to.
-    Use this to discover available channels for posting messages.
+    Returns all public channels for discovery, including ones you haven't joined.
+    Results are paginated. Use page/per_page to retrieve all channels.
+    Useful for finding channels to join.
+    For channels you are already a member of (including private), use list_my_channels.
     """
-    data = await client.get_channels(
+    data = await client.get_public_channels(
         team_id=team_id,
         page=page,
         per_page=per_page,
     )
+    return [Channel(**item) for item in data]
+
+
+@tool(
+    annotations={"readOnlyHint": True, "idempotentHint": True},
+    tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.READ},
+)
+async def list_my_channels(
+    team_id: TeamId,
+    channel_types: Annotated[
+        list[Literal["O", "P", "D", "G"]] | None,
+        Field(
+            min_length=1,
+            description=(
+                "Channel types to include: O=public, P=private, "
+                "D=direct message, G=group message. "
+                "Omit to return all types."
+            ),
+        ),
+    ] = None,
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> list[Channel]:
+    """List channels you are a member of in a team.
+
+    Returns your channels filtered by type. By default returns all types.
+    Use channel_types to narrow results: ["O", "P"] for workspace channels
+    without DMs, or ["D"] for direct messages only.
+    For discovering public channels you haven't joined yet, use list_public_channels.
+    """
+    data = await client.get_my_channels(team_id=team_id)
+    if channel_types is not None:
+        data = [ch for ch in data if ch.get("type") in channel_types]
     return [Channel(**item) for item in data]
 
 

@@ -6,7 +6,7 @@
 
 Let AI assistants read, search, and post in your Mattermost workspace
 
-36 tools · Channels · Messages · Reactions · Threads · Files · Users
+37 tools · Channels · Messages · Reactions · Threads · Files · Users
 
 [![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io/)
 [![PyPI version](https://badge.fury.io/py/mcp-server-mattermost.svg)](https://pypi.org/project/mcp-server-mattermost/)
@@ -41,11 +41,12 @@ Once configured, you can ask your AI assistant:
 ## Available Tools
 
 <details>
-<summary>Channels (9 tools)</summary>
+<summary>Channels (10 tools)</summary>
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `list_channels` | List channels in a team | `team_id` ✓ |
+| `list_public_channels` | List public channels in a team | `team_id` ✓ |
+| `list_my_channels` | List channels you are a member of | `team_id` ✓ |
 | `get_channel` | Get channel details by ID | `channel_id` ✓ |
 | `get_channel_by_name` | Get channel by name | `team_id`, `channel_name` ✓ |
 | `create_channel` | Create a new channel | `team_id`, `name`, `display_name` ✓ |

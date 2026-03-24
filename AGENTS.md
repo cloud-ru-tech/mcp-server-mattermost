@@ -110,9 +110,9 @@ via in-memory transport — no subprocess, no network overhead, full MCP protoco
 from fastmcp import Client
 from mcp_server_mattermost.server import mcp
 
-async def test_list_channels(mattermost_env):
+async def test_list_public_channels(mattermost_env):
     async with Client(mcp) as client:
-        result = await client.call_tool("list_channels", {"team_id": team_id})
+        result = await client.call_tool("list_public_channels", {"team_id": team_id})
         assert any(ch["name"] == "town-square" for ch in result.data)
 ```
 
@@ -174,7 +174,7 @@ from mcp_server_mattermost.enums import Capability, ToolTag
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
 )
-async def list_channels(...):
+async def list_public_channels(...):
 ```
 
 Classification rules:
@@ -229,7 +229,8 @@ not a mutable default. The function call happens at request time, not at functio
 
 ## Commit Messages
 
-Do not include `Co-Authored-By:` trailers in commit messages.
+Do not include `Co-Authored-By:` trailers for AI agents in commit messages.
+Human contributor co-authorship trailers are welcome.
 
 ## Versioning
 

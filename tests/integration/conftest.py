@@ -259,7 +259,7 @@ def cleanup_orphaned_resources(session_mcp_client_sync, mattermost_env, event_lo
 
     async def cleanup():
         result = await session_mcp_client_sync.call_tool(
-            "list_channels",
+            "list_public_channels",
             {"team_id": mattermost_env.team_id},
         )
         channels = to_dict(result)
