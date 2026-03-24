@@ -1,12 +1,12 @@
 # Tools Overview
 
-MCP Server Mattermost provides 36 tools organized into 7 categories.
+MCP Server Mattermost provides 37 tools organized into 7 categories.
 
 ## Categories
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| [Channels](channels.md) | 9 | List, create, join, manage channels and DMs |
+| [Channels](channels.md) | 10 | List, create, join, manage channels and DMs |
 | [Messages](messages.md) | 5 | Send, search, edit, delete messages |
 | [Reactions & Threads](posts.md) | 6 | Emoji reactions, pins, thread history |
 | [Users](users.md) | 5 | Lookup, search, status |
@@ -25,7 +25,8 @@ to filter tools by agent profile.
 
 | Tool | Capability | Description |
 |------|------------|-------------|
-| `list_channels` | read | List channels in a team |
+| `list_public_channels` | read | List public channels in a team |
+| `list_my_channels` | read | List channels you are a member of |
 | `get_channel` | read | Get channel details by ID |
 | `get_channel_by_name` | read | Get channel by name |
 | `create_channel` | create | Create a new channel |

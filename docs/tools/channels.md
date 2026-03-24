@@ -4,12 +4,14 @@ Tools for managing Mattermost channels: listing, creating, joining, and member m
 
 ---
 
-## list_channels
+## list_public_channels
 
-List public and private channels in a team.
+List public channels available in a team.
 
-Returns channels that the authenticated user has access to.
-Use this to discover available channels for posting messages.
+Returns all public channels for discovery, including ones you haven't joined.
+Results are paginated.
+Useful for finding channels to join.
+For channels you are already a member of (including private), use list_my_channels.
 
 ### Example prompts
 
@@ -40,6 +42,45 @@ Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`.
 ### Mattermost API
 
 [GET /api/v4/teams/{team_id}/channels](https://api.mattermost.com/#tag/channels/operation/GetPublicChannelsForTeam)
+
+---
+
+## list_my_channels
+
+List channels you are a member of in a team.
+
+Returns your channels filtered by type.
+By default returns all types.
+Use channel_types to narrow results.
+
+### Example prompts
+
+- "What channels am I in?"
+- "Show my private channels"
+- "List all my channels in this team"
+
+### Annotations
+
+| Hint | Value |
+|------|-------|
+| `readOnlyHint` | true |
+| `idempotentHint` | true |
+| `capability` | read |
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `team_id` | string | ✓ | — | Team ID (26-character alphanumeric) |
+| `channel_types` | array | — | null | Channel types to include: O (public), P (private), D (direct), G (group). Default null returns all types. |
+
+### Returns
+
+Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`.
+
+### Mattermost API
+
+[GET /api/v4/users/{user_id}/teams/{team_id}/channels](https://api.mattermost.com/#tag/channels/operation/GetChannelsForTeamForUser)
 
 ---
 
