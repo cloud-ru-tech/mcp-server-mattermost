@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+- Renamed `list_channels` tool to `list_public_channels` — same behavior, clearer name
+
 ### Added
+- New `list_my_channels` tool: returns channels the authenticated user belongs to
+  (public, private, DM, group) with optional `channel_types` filter
 - Per-client token authentication: `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` env var enables
   HTTP clients to pass their own Mattermost token via `Authorization: Bearer <token>`.
   The token is validated against the Mattermost API (`GET /api/v4/users/me`) on each
