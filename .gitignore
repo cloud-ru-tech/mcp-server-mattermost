@@ -62,6 +62,7 @@ Thumbs.db
 # Design documents (local only)
 docs/plans/
 docs/lessons/
+docs/superpowers/
 demo/
 
 # MkDocs build output
