@@ -465,6 +465,21 @@ class MattermostClient:
         result = await self.get(f"/users/me/teams/{team_id}/channels")
         return result if isinstance(result, list) else []
 
+    async def get_my_channel_members(self, team_id: str) -> list[dict[str, Any]]:
+        """Get channel membership data for the authenticated user in a team.
+
+        Returns membership records for all channels the user belongs to.
+        No pagination — API returns all members at once.
+
+        Args:
+            team_id: Team identifier
+
+        Returns:
+            List of channel member objects
+        """
+        result = await self.get(f"/users/me/teams/{team_id}/channels/members")
+        return result if isinstance(result, list) else []
+
     async def get_channel(self, channel_id: str) -> dict[str, Any]:
         """Get channel by ID.
 

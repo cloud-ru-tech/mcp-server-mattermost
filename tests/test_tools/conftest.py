@@ -19,6 +19,7 @@ def mock_client_auth_error() -> AsyncMock:
     client = AsyncMock()
     client.get_public_channels.side_effect = AuthenticationError()
     client.get_my_channels.side_effect = AuthenticationError()
+    client.get_my_channel_members.side_effect = AuthenticationError()
     client.get_channel.side_effect = AuthenticationError()
     client.create_post.side_effect = AuthenticationError()
     client.get_me.side_effect = AuthenticationError()
@@ -45,6 +46,7 @@ def mock_client_rate_limited() -> AsyncMock:
     client = AsyncMock()
     client.get_public_channels.side_effect = RateLimitError(retry_after=30)
     client.get_my_channels.side_effect = RateLimitError(retry_after=30)
+    client.get_my_channel_members.side_effect = RateLimitError(retry_after=30)
     client.search_posts.side_effect = RateLimitError(retry_after=30)
     return client
 

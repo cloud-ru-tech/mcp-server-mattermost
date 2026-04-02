@@ -1,5 +1,6 @@
 """Channel management tools."""
 
+import asyncio
 from typing import Annotated, Literal
 
 from fastmcp.dependencies import Depends
@@ -9,7 +10,16 @@ from pydantic import Field
 from mcp_server_mattermost.client import MattermostClient
 from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
-from mcp_server_mattermost.models import Channel, ChannelId, ChannelMember, ChannelName, ChannelType, TeamId, UserId
+from mcp_server_mattermost.models import (
+    Channel,
+    ChannelId,
+    ChannelMember,
+    ChannelName,
+    ChannelType,
+    MyChannel,
+    TeamId,
+    UserId,
+)
 
 
 @tool(
@@ -56,19 +66,45 @@ async def list_my_channels(
             ),
         ),
     ] = None,
+    only_unread: Annotated[  # noqa: FBT002
+        bool,
+        Field(description="Return only channels with unread messages"),
+    ] = False,
     client: MattermostClient = Depends(get_client),  # noqa: B008
-) -> list[Channel]:
+) -> list[MyChannel]:
     """List channels you are a member of in a team.
 
-    Returns your channels filtered by type. By default returns all types.
+    Returns your channels with unread message and mention counts.
     Use channel_types to narrow results: ["O", "P"] for workspace channels
     without DMs, or ["D"] for direct messages only.
+    Use only_unread=True to get only channels with unread messages.
     For discovering public channels you haven't joined yet, use list_public_channels.
     """
-    data = await client.get_my_channels(team_id=team_id)
+    channels_data, members_data = await asyncio.gather(
+        client.get_my_channels(team_id=team_id),
+        client.get_my_channel_members(team_id=team_id),
+    )
+
     if channel_types is not None:
-        data = [ch for ch in data if ch.get("type") in channel_types]
-    return [Channel(**item) for item in data]
+        channels_data = [ch for ch in channels_data if ch.get("type") in channel_types]
+
+    member_lookup = {m["channel_id"]: m for m in members_data}
+
+    result = []
+    for ch in channels_data:
+        member = member_lookup.get(ch["id"])
+        if member:
+            unread = max(0, ch.get("total_msg_count", 0) - member.get("msg_count", 0))
+            mentions = member.get("mention_count", 0)
+        else:
+            unread = 0
+            mentions = 0
+        result.append(MyChannel(**ch, unread_msg_count=unread, mention_count=mentions))
+
+    if only_unread:
+        result = [ch for ch in result if ch.unread_msg_count > 0]
+
+    return result
 
 
 @tool(

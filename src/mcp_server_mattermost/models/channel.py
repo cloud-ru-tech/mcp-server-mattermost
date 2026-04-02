@@ -23,6 +23,13 @@ class Channel(MattermostResponse):
     creator_id: str = Field(description="User ID who created the channel")
 
 
+class MyChannel(Channel):
+    """Channel with unread message counts for the authenticated user."""
+
+    unread_msg_count: int = Field(description="Number of unread messages")
+    mention_count: int = Field(description="Number of unread mentions")
+
+
 class ChannelMember(MattermostResponse):
     """Channel membership information."""
 
