@@ -870,6 +870,33 @@ class TestMattermostClientChannelsAPI:
 
     @pytest.mark.asyncio
     @respx.mock
+    async def test_get_my_channel_members(self, mock_settings):
+        """get_my_channel_members() should return membership data for user's channels."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me/teams/team123/channels/members").mock(
+            return_value=httpx.Response(
+                200,
+                json=[
+                    {"channel_id": "ch1", "user_id": "u1", "msg_count": 10, "mention_count": 2},
+                    {"channel_id": "ch2", "user_id": "u1", "msg_count": 5, "mention_count": 0},
+                ],
+            ),
+        )
+
+        async with client.lifespan():
+            result = await client.get_my_channel_members("team123")
+
+        assert len(result) == 2
+        assert result[0]["channel_id"] == "ch1"
+        assert result[1]["msg_count"] == 5
+        assert route.called
+
+    @pytest.mark.asyncio
+    @respx.mock
     async def test_get_channel(self, mock_settings):
         """get_channel() should return channel by ID."""
         from mcp_server_mattermost.config import get_settings

@@ -477,3 +477,31 @@ class TestListMyChannels:
         channels = to_dict(result)
         assert len(channels) >= 1
         assert all(ch["type"] == "D" for ch in channels)
+
+    async def test_list_my_channels_includes_unread_counts(self, mcp_client, team):
+        """list_my_channels: returns unread_msg_count and mention_count fields."""
+        result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"]},
+        )
+
+        channels = to_dict(result)
+        assert len(channels) >= 1
+        for ch in channels:
+            assert "unread_msg_count" in ch, f"Missing unread_msg_count in channel {ch.get('name')}"
+            assert "mention_count" in ch, f"Missing mention_count in channel {ch.get('name')}"
+            assert isinstance(ch["unread_msg_count"], int)
+            assert isinstance(ch["mention_count"], int)
+            assert ch["unread_msg_count"] >= 0
+            assert ch["mention_count"] >= 0
+
+    async def test_list_my_channels_only_unread(self, mcp_client, team):
+        """list_my_channels: only_unread=True returns only channels with unreads."""
+        result = await mcp_client.call_tool(
+            "list_my_channels",
+            {"team_id": team["id"], "only_unread": True},
+        )
+
+        channels = to_dict(result)
+        for ch in channels:
+            assert ch["unread_msg_count"] > 0, f"Channel {ch.get('name')} has 0 unreads but was returned"

@@ -3,7 +3,7 @@
 from .attachment import Attachment, AttachmentColor, AttachmentField
 from .base import MattermostResponse
 from .bookmark import ChannelBookmark
-from .channel import Channel, ChannelMember
+from .channel import Channel, ChannelMember, MyChannel
 from .common import (
     BookmarkId,
     ChannelId,
@@ -42,6 +42,7 @@ __all__ = [
     "FileUploadResponse",
     "MattermostId",
     "MattermostResponse",
+    "MyChannel",
     "Post",
     "PostId",
     "PostList",
