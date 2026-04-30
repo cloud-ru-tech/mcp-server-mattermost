@@ -165,8 +165,8 @@ Once configured, you can ask your AI assistant:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_AUTH_MODE` | No | `static_token` | Authentication mode: `static_token`, `client_token`, or `oauth_proxy` |
-| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal access token. Required only when `MATTERMOST_AUTH_MODE=static_token`. |
+| `MATTERMOST_AUTH_MODE` | No | `static_token` | Auth mode: `static_token`, `client_token`, or `oauth_proxy` |
+| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal token. Required for `static_token`. |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
@@ -174,13 +174,15 @@ Once configured, you can ask your AI assistant:
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
 | `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |
 | `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | No | false | Deprecated alias for `MATTERMOST_AUTH_MODE=client_token` |
-| `MATTERMOST_OAUTH_CLIENT_ID` | Conditional | — | Mattermost OAuth App client ID. Required when `MATTERMOST_AUTH_MODE=oauth_proxy`. |
-| `MATTERMOST_OAUTH_CLIENT_TYPE` | Conditional | `confidential` | Mattermost OAuth App type: `public` or `confidential`. Used by `oauth_proxy`. |
-| `MATTERMOST_OAUTH_CLIENT_SECRET` | Conditional | — | Mattermost OAuth App secret. Required for confidential OAuth Apps. |
+| `MATTERMOST_OAUTH_CLIENT_ID` | Conditional | — | Mattermost OAuth App ID for `oauth_proxy`. |
+| `MATTERMOST_OAUTH_CLIENT_TYPE` | Conditional | `confidential` | `public` or `confidential` for `oauth_proxy`. |
+| `MATTERMOST_OAUTH_CLIENT_SECRET` | Conditional | — | Required for confidential OAuth Apps. |
 | `MATTERMOST_OAUTH_MCP_PUBLIC_URL` | Conditional | — | Public base URL of this MCP server. Required for `oauth_proxy`. |
 | `MATTERMOST_OAUTH_MATTERMOST_PUBLIC_URL` | No | `MATTERMOST_URL` | Browser-facing Mattermost URL for OAuth redirects. |
 | `MATTERMOST_OAUTH_CALLBACK_PATH` | No | `/oauth/callback/mm` | Callback path registered in the Mattermost OAuth App. |
-| `MATTERMOST_OAUTH_JWT_SIGNING_KEY` | Conditional | — | FastMCP JWT signing key. Required for public OAuth Apps, optional for confidential OAuth Apps. |
+| `MATTERMOST_OAUTH_JWT_SIGNING_KEY` | Conditional | — | Required for public OAuth Apps; optional for confidential. |
+| `MATTERMOST_OAUTH_REQUIRE_CONSENT` | No | true | Show the FastMCP consent screen before redirecting to Mattermost. |
+| `MATTERMOST_OAUTH_FALLBACK_ACCESS_TOKEN_EXPIRY_SECONDS` | No | — | Fallback token TTL. |
 
 ## Docker
 
@@ -229,6 +231,16 @@ Health check: `curl http://localhost:8000/health`
 
 ### HTTP mode with Mattermost OAuth proxy
 
+Register a Mattermost OAuth 2.0 Application first:
+
+| Mattermost field | Production value |
+|------------------|------------------|
+| Is Trusted | Yes |
+| Is Public Client | No |
+| Callback URLs | `https://mcp.example.com/oauth/callback/mm` |
+
+Then run the MCP server:
+
 ```bash
 docker run -d -p 8000:8000 \
   -e MCP_TRANSPORT=http \
@@ -243,14 +255,17 @@ docker run -d -p 8000:8000 \
   legard/mcp-server-mattermost
 ```
 
-Register the Mattermost OAuth App callback URL as:
-
-```text
-https://mcp.example.com/oauth/callback/mm
-```
-
 If your Mattermost login uses Keycloak SSO, users authenticate through Keycloak inside
 the Mattermost OAuth login flow. The MCP server does not need a Keycloak client.
+
+Connect Claude Code with Dynamic Client Registration:
+
+```bash
+claude mcp add --transport http mattermost https://mcp.example.com/mcp
+```
+
+Do not pass `--client-id` for this server; the MCP client registers with the MCP server,
+and the MCP server uses the fixed Mattermost OAuth App upstream.
 
 ### Environment Variables (Docker)
 
