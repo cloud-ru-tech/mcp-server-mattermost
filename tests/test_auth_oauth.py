@@ -1,6 +1,7 @@
 """Tests for Mattermost OAuthProxy construction."""
 
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from fastmcp.server.auth import OAuthProxy
 
@@ -92,7 +93,39 @@ def test_build_public_oauth_proxy_passes_explicit_signing_key() -> None:
         oauth_mcp_public_url="http://localhost:8000",
     )
 
-    with patch("mcp_server_mattermost.auth_oauth.OAuthProxy") as proxy_cls:
+    with patch("mcp_server_mattermost.auth_oauth.MattermostOAuthProxy") as proxy_cls:
         build_mattermost_oauth_proxy(settings)
 
     assert proxy_cls.call_args.kwargs["jwt_signing_key"] == "signing-key-1234567890"
+
+
+def test_mattermost_oauth_proxy_does_not_forward_resource_to_upstream_authorize() -> None:
+    """Mattermost rejects RFC8707 resource indicators on /oauth/authorize."""
+    from mcp_server_mattermost.auth_oauth import build_mattermost_oauth_proxy
+    from mcp_server_mattermost.config import Settings
+
+    settings = Settings(
+        url="https://mattermost.internal",
+        auth_mode="oauth_proxy",
+        oauth_client_type="public",
+        oauth_client_id="mm-client",
+        oauth_jwt_signing_key="signing-key-1234567890",
+        oauth_mcp_public_url="https://mcp.example.com/mattermost",
+        oauth_mattermost_public_url="https://mm.example.com",
+    )
+
+    auth = build_mattermost_oauth_proxy(settings)
+    upstream_url = auth._build_upstream_authorize_url(
+        "txn-id",
+        {
+            "scopes": [],
+            "resource": "https://mcp.example.com/mattermost/mcp",
+            "proxy_code_verifier": "proxy-verifier",
+        },
+    )
+
+    query = parse_qs(urlparse(upstream_url).query)
+
+    assert query["client_id"] == ["mm-client"]
+    assert query["redirect_uri"] == ["https://mcp.example.com/mattermost/oauth/callback/mm"]
+    assert "resource" not in query
