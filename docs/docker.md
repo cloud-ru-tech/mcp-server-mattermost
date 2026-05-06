@@ -56,14 +56,38 @@ Health check endpoint:
 curl http://localhost:8000/health
 ```
 
+## HTTP Mode with Mattermost OAuth Proxy
+
+For production deployments where each user signs in with their own Mattermost
+identity, run with `MATTERMOST_AUTH_MODE=oauth_proxy`:
+
+```bash
+docker run -d -p 8000:8000 \
+  -e MCP_TRANSPORT=http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_AUTH_MODE=oauth_proxy \
+  -e MATTERMOST_URL=https://mattermost.internal \
+  -e MATTERMOST_OAUTH_MATTERMOST_PUBLIC_URL=https://mattermost.example.com \
+  -e MATTERMOST_OAUTH_MCP_PUBLIC_URL=https://mcp.example.com \
+  -e MATTERMOST_OAUTH_CLIENT_ID=your-mattermost-oauth-app-id \
+  -e MATTERMOST_OAUTH_CLIENT_TYPE=confidential \
+  -e MATTERMOST_OAUTH_CLIENT_SECRET=your-mattermost-oauth-app-secret \
+  legard/mcp-server-mattermost
+```
+
+See [Authentication / oauth_proxy](authentication.md#oauth_proxy) for Mattermost
+OAuth App registration, the public-client variant, and MCP client connection.
+
 ## Environment Variables
+
+For authentication-related variables (`MATTERMOST_AUTH_MODE`, `MATTERMOST_TOKEN`,
+all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md#configuration-reference).
 
 ### Mattermost Settings
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_TOKEN` | Yes | — | Bot or personal access token |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |

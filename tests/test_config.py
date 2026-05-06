@@ -148,3 +148,201 @@ class TestAllowHttpClientTokens:
             pytest.raises(ValidationError, match="MATTERMOST_TOKEN is required"),
         ):
             Settings()
+
+
+class TestAuthModeSettings:
+    def test_default_auth_mode_is_static_token(self) -> None:
+        from mcp_server_mattermost.config import AuthMode, Settings
+
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_TOKEN": "static-token"},
+            clear=True,
+        ):
+            settings = Settings()
+
+        assert settings.auth_mode is AuthMode.STATIC_TOKEN
+        assert settings.allow_http_client_tokens is False
+
+    def test_auth_mode_client_token_does_not_require_static_token(self) -> None:
+        from mcp_server_mattermost.config import AuthMode, Settings
+
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_AUTH_MODE": "client_token"},
+            clear=True,
+        ):
+            settings = Settings()
+
+        assert settings.auth_mode is AuthMode.CLIENT_TOKEN
+        assert settings.token is None
+
+    def test_legacy_allow_http_client_tokens_maps_to_client_token(self) -> None:
+        from mcp_server_mattermost.config import AuthMode, Settings
+
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true"},
+            clear=True,
+        ):
+            settings = Settings()
+
+        assert settings.auth_mode is AuthMode.CLIENT_TOKEN
+        assert settings.allow_http_client_tokens is True
+
+    def test_legacy_flag_conflicts_with_explicit_static_token_mode(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MATTERMOST_URL": "http://mm.example.com",
+                    "MATTERMOST_TOKEN": "static-token",
+                    "MATTERMOST_AUTH_MODE": "static_token",
+                    "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "true",
+                },
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS conflicts"),
+        ):
+            Settings()
+
+    def test_static_token_requires_token(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_AUTH_MODE": "static_token"},
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_TOKEN is required when MATTERMOST_AUTH_MODE=static_token"),
+        ):
+            Settings()
+
+    def test_oauth_proxy_public_minimal_valid_settings(self) -> None:
+        from mcp_server_mattermost.config import AuthMode, OAuthClientType, Settings
+
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_URL": "http://mattermost.internal",
+                "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+                "MATTERMOST_OAUTH_CLIENT_ID": "mm-oauth-client",
+                "MATTERMOST_OAUTH_JWT_SIGNING_KEY": "signing-key-1234567890",
+                "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+            },
+            clear=True,
+        ):
+            settings = Settings()
+
+        assert settings.auth_mode is AuthMode.OAUTH_PROXY
+        assert settings.oauth_client_type is OAuthClientType.PUBLIC
+        assert settings.oauth_client_id == "mm-oauth-client"
+        assert settings.oauth_mcp_public_url == "http://localhost:8000"
+        assert settings.oauth_callback_path == "/oauth/callback/mm"
+        assert settings.oauth_allowed_redirect_uris == ["http://localhost:*", "http://127.0.0.1:*"]
+
+    def test_oauth_proxy_requires_client_id(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MATTERMOST_URL": "http://mattermost.internal",
+                    "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                    "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+                    "MATTERMOST_OAUTH_JWT_SIGNING_KEY": "signing-key-1234567890",
+                    "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+                },
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_OAUTH_CLIENT_ID is required"),
+        ):
+            Settings()
+
+    def test_oauth_proxy_public_requires_jwt_signing_key(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MATTERMOST_URL": "http://mattermost.internal",
+                    "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                    "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+                    "MATTERMOST_OAUTH_CLIENT_ID": "mm-oauth-client",
+                    "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+                },
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_OAUTH_JWT_SIGNING_KEY is required for public"),
+        ):
+            Settings()
+
+    def test_oauth_proxy_confidential_requires_secret(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MATTERMOST_URL": "http://mattermost.internal",
+                    "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                    "MATTERMOST_OAUTH_CLIENT_TYPE": "confidential",
+                    "MATTERMOST_OAUTH_CLIENT_ID": "mm-oauth-client",
+                    "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+                },
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_OAUTH_CLIENT_SECRET is required"),
+        ):
+            Settings()
+
+    def test_oauth_proxy_confidential_valid_settings(self) -> None:
+        from mcp_server_mattermost.config import AuthMode, OAuthClientType, Settings
+
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_URL": "http://mattermost.internal",
+                "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                "MATTERMOST_OAUTH_CLIENT_TYPE": "confidential",
+                "MATTERMOST_OAUTH_CLIENT_ID": "mm-oauth-client",
+                "MATTERMOST_OAUTH_CLIENT_SECRET": "mm-secret",
+                "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "https://mcp.example.com",
+                "MATTERMOST_OAUTH_MATTERMOST_PUBLIC_URL": "https://mattermost.example.com",
+            },
+            clear=True,
+        ):
+            settings = Settings()
+
+        assert settings.auth_mode is AuthMode.OAUTH_PROXY
+        assert settings.oauth_client_type is OAuthClientType.CONFIDENTIAL
+        assert settings.oauth_client_secret == "mm-secret"
+        assert settings.oauth_mcp_public_url == "https://mcp.example.com"
+        assert settings.oauth_mattermost_public_url == "https://mattermost.example.com"
+
+    def test_oauth_proxy_callback_path_must_start_with_slash(self) -> None:
+        from mcp_server_mattermost.config import Settings
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "MATTERMOST_URL": "http://mattermost.internal",
+                    "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                    "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+                    "MATTERMOST_OAUTH_CLIENT_ID": "mm-oauth-client",
+                    "MATTERMOST_OAUTH_JWT_SIGNING_KEY": "signing-key-1234567890",
+                    "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+                    "MATTERMOST_OAUTH_CALLBACK_PATH": "oauth/callback/mm",
+                },
+                clear=True,
+            ),
+            pytest.raises(ValidationError, match="MATTERMOST_OAUTH_CALLBACK_PATH must start with '/'"),
+        ):
+            Settings()

@@ -1,9 +1,28 @@
 """Configuration management using Pydantic Settings."""
 
+from enum import Enum
 from functools import lru_cache
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class AuthMode(str, Enum):
+    """Mattermost authentication mode."""
+
+    STATIC_TOKEN = "static_token"  # noqa: S105
+    CLIENT_TOKEN = "client_token"  # noqa: S105
+    OAUTH_PROXY = "oauth_proxy"
+
+
+class OAuthClientType(str, Enum):
+    """Mattermost OAuth application client type."""
+
+    PUBLIC = "public"
+    CONFIDENTIAL = "confidential"
+
+
+_LOCALHOST_PREFIXES = ("http://localhost", "http://127.0.0.1", "http://[::1]")
 
 
 class Settings(BaseSettings):
@@ -11,8 +30,15 @@ class Settings(BaseSettings):
 
     Environment variables:
         MATTERMOST_URL: Mattermost server URL (required)
-        MATTERMOST_TOKEN: Bot/user access token (required unless allow_http_client_tokens)
-        MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS: Allow token from Authorization header in HTTP/SSE (default: false)
+        MATTERMOST_AUTH_MODE: static_token, client_token, or oauth_proxy
+        MATTERMOST_TOKEN: Bot/user access token (required for static_token)
+        MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS: Deprecated alias for MATTERMOST_AUTH_MODE=client_token
+        MATTERMOST_OAUTH_CLIENT_ID: Mattermost OAuth App client ID for oauth_proxy
+        MATTERMOST_OAUTH_CLIENT_TYPE: public or confidential for oauth_proxy
+        MATTERMOST_OAUTH_CLIENT_SECRET: Mattermost OAuth App secret for confidential oauth_proxy
+        MATTERMOST_OAUTH_JWT_SIGNING_KEY: FastMCP JWT signing key for oauth_proxy
+        MATTERMOST_OAUTH_MCP_PUBLIC_URL: Public base URL of this MCP server
+        MATTERMOST_OAUTH_MATTERMOST_PUBLIC_URL: Browser-facing Mattermost URL
         MATTERMOST_TIMEOUT: Request timeout in seconds (default: 30)
         MATTERMOST_MAX_RETRIES: Max retry attempts (default: 3)
         MATTERMOST_VERIFY_SSL: Verify SSL certificates (default: true)
@@ -29,10 +55,11 @@ class Settings(BaseSettings):
     )
 
     url: str = Field(description="Mattermost server URL")
-    token: str | None = Field(default=None, description="Bot or user access token (required for STDIO)")
+    token: str | None = Field(default=None, description="Bot or user access token")
+    auth_mode: AuthMode = Field(default=AuthMode.STATIC_TOKEN, description="Authentication mode")
     allow_http_client_tokens: bool = Field(
         default=False,
-        description="Allow token from Authorization: Bearer in HTTP/SSE; ignored for STDIO",
+        description="Deprecated alias for auth_mode=client_token",
     )
     timeout: int = Field(default=30, ge=1, le=300, description="Request timeout in seconds")
     max_retries: int = Field(default=3, ge=0, le=10, description="Maximum retry attempts")
@@ -41,10 +68,36 @@ class Settings(BaseSettings):
     log_format: str = Field(default="json", description="Log format: 'json' or 'text'")
     api_version: str = Field(default="v4", description="Mattermost API version")
 
-    @field_validator("url")
+    oauth_client_id: str | None = Field(default=None, description="Mattermost OAuth App client ID")
+    oauth_client_type: OAuthClientType = Field(
+        default=OAuthClientType.CONFIDENTIAL,
+        description="Mattermost OAuth App client type",
+    )
+    oauth_client_secret: str | None = Field(default=None, description="Mattermost OAuth App client secret")
+    oauth_callback_path: str = Field(default="/oauth/callback/mm", description="OAuth callback path")
+    oauth_jwt_signing_key: str | None = Field(default=None, description="FastMCP JWT signing key")
+    oauth_mcp_public_url: str | None = Field(default=None, description="Public base URL of this MCP server")
+    oauth_mattermost_public_url: str | None = Field(
+        default=None,
+        description="Browser-facing Mattermost URL for OAuth redirects",
+    )
+    oauth_allowed_redirect_uris: list[str] = Field(
+        default_factory=lambda: ["http://localhost:*", "http://127.0.0.1:*"],
+        description="Allowed MCP client redirect URI patterns",
+    )
+    oauth_require_consent: bool = Field(default=True, description="Require FastMCP consent screen")
+    oauth_fallback_access_token_expiry_seconds: int | None = Field(
+        default=None,
+        ge=1,
+        description="Fallback access token TTL when Mattermost omits expires_in",
+    )
+
+    @field_validator("url", "oauth_mcp_public_url", "oauth_mattermost_public_url")
     @classmethod
-    def validate_url(cls, v: str) -> str:
+    def validate_url(cls, v: str | None) -> str | None:
         """Remove trailing slash."""
+        if v is None:
+            return v
         return v.rstrip("/")
 
     @field_validator("log_level")
@@ -69,13 +122,57 @@ class Settings(BaseSettings):
             raise ValueError(msg)
         return lower
 
-    @model_validator(mode="after")
-    def require_token_unless_http_client_tokens(self) -> "Settings":
-        """Require MATTERMOST_TOKEN when allow_http_client_tokens is False (STDIO always needs it)."""
-        if not self.allow_http_client_tokens and not (self.token and self.token.strip()):
-            msg = "MATTERMOST_TOKEN is required when MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS is false"
+    @field_validator("oauth_callback_path")
+    @classmethod
+    def validate_oauth_callback_path(cls, v: str) -> str:
+        """Ensure OAuth callback path is absolute."""
+        if not v.startswith("/"):
+            msg = "MATTERMOST_OAUTH_CALLBACK_PATH must start with '/'"
             raise ValueError(msg)
+        return v
+
+    @model_validator(mode="after")
+    def validate_auth_configuration(self) -> "Settings":
+        """Validate mode-specific authentication settings."""
+        if self.allow_http_client_tokens:
+            if "auth_mode" not in self.model_fields_set:
+                self.auth_mode = AuthMode.CLIENT_TOKEN
+            elif self.auth_mode is not AuthMode.CLIENT_TOKEN:
+                msg = "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS conflicts with MATTERMOST_AUTH_MODE"
+                raise ValueError(msg)
+
+        if self.auth_mode is AuthMode.STATIC_TOKEN and not (self.token and self.token.strip()):
+            msg = "MATTERMOST_TOKEN is required when MATTERMOST_AUTH_MODE=static_token"
+            raise ValueError(msg)
+
+        if self.auth_mode is AuthMode.OAUTH_PROXY:
+            self._validate_oauth_proxy()
+
         return self
+
+    def _validate_oauth_proxy(self) -> None:
+        """Validate oauth_proxy-specific settings."""
+        if not self.oauth_mcp_public_url:
+            msg = "MATTERMOST_OAUTH_MCP_PUBLIC_URL is required when MATTERMOST_AUTH_MODE=oauth_proxy"
+            raise ValueError(msg)
+        if not self.oauth_client_id:
+            msg = "MATTERMOST_OAUTH_CLIENT_ID is required when MATTERMOST_AUTH_MODE=oauth_proxy"
+            raise ValueError(msg)
+        if self.oauth_client_type is OAuthClientType.PUBLIC and not (
+            self.oauth_jwt_signing_key and self.oauth_jwt_signing_key.strip()
+        ):
+            msg = "MATTERMOST_OAUTH_JWT_SIGNING_KEY is required for public OAuth clients"
+            raise ValueError(msg)
+        if self.oauth_client_type is OAuthClientType.CONFIDENTIAL and not (
+            self.oauth_client_secret and self.oauth_client_secret.strip()
+        ):
+            msg = "MATTERMOST_OAUTH_CLIENT_SECRET is required for confidential OAuth clients"
+            raise ValueError(msg)
+        if not self.oauth_mcp_public_url.startswith("https://") and not self.oauth_mcp_public_url.startswith(
+            _LOCALHOST_PREFIXES
+        ):
+            msg = "MATTERMOST_OAUTH_MCP_PUBLIC_URL must use HTTPS unless it is localhost"
+            raise ValueError(msg)
 
 
 @lru_cache

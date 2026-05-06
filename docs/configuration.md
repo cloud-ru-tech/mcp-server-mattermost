@@ -2,17 +2,14 @@
 
 All configuration is done via environment variables with the `MATTERMOST_` prefix.
 
+For authentication-related variables (`MATTERMOST_AUTH_MODE`, `MATTERMOST_TOKEN`,
+all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
+
 ## Required Variables
 
 | Variable | Description |
 |----------|-------------|
 | `MATTERMOST_URL` | Mattermost server URL (e.g., `https://mattermost.example.com`) |
-
-## Conditional Variables
-
-| Variable | Description |
-|----------|-------------|
-| `MATTERMOST_TOKEN` | Bot or personal access token. MATTERMOST_TOKEN is required only when per-client token authentication (MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS) is not enabled. |
 
 ## Optional Variables
 
@@ -24,7 +21,6 @@ All configuration is done via environment variables with the `MATTERMOST_` prefi
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
 | `MATTERMOST_API_VERSION` | v4 | Mattermost API version |
-| `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | false | Allow HTTP clients to authenticate with their own Mattermost tokens |
 
 ## Environment File
 
@@ -36,40 +32,3 @@ MATTERMOST_TOKEN=your-token-here
 MATTERMOST_TIMEOUT=60
 MATTERMOST_LOG_LEVEL=DEBUG
 ```
-
-## Per-Client Token Authentication
-
-By default, the server uses the `MATTERMOST_TOKEN` environment variable for all API requests. When `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` is set to `true`, HTTP clients (e.g., over SSE transport) can pass their own Mattermost token via the `Authorization: Bearer <token>` header.
-
-**How it works:**
-
-1. The client sends a bearer token in the `Authorization` header
-2. The server validates the token by calling `GET /api/v4/users/me` on the Mattermost server
-3. If valid, the client's token is used for all subsequent API requests in that session
-4. If invalid, the server responds with `401 Unauthorized`
-
-This is useful in multi-user environments where each user should act under their own Mattermost identity rather than a shared bot account.
-
-!!! note
-    This feature only applies to HTTP-based transports (SSE, StreamableHTTP). When using stdio transport (e.g., Claude Desktop), the server always uses `MATTERMOST_TOKEN`.
-
-!!! warning "Security Considerations"
-    When enabled, the MCP server forwards any valid Mattermost token to the API.
-    This means any user who can reach the MCP server's HTTP endpoint and has a
-    valid Mattermost account can execute MCP tools under their own identity.
-    Ensure the MCP server is protected by network-level access controls
-    (firewall, VPN, reverse proxy with authentication) in production deployments.
-
-## Token Permissions
-
-The bot token needs these permissions for full functionality:
-
-| Permission | Required For |
-|------------|--------------|
-| `create_post` | Sending messages |
-| `read_channel` | Reading channel messages |
-| `manage_channel_members` | Adding users to channels |
-| `create_direct_channel` | Creating DM channels |
-| `upload_files` | File uploads |
-
-For read-only usage, only `read_channel` permission is needed.

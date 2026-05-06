@@ -25,11 +25,11 @@ def mock_settings(monkeypatch):
 
 @pytest.fixture
 def mock_settings_allow_http(monkeypatch):
-    """Set env vars with allow_http_client_tokens=True (no MATTERMOST_TOKEN required)."""
+    """Set env vars with auth_mode=client_token (no MATTERMOST_TOKEN required)."""
     from mcp_server_mattermost.config import get_settings
 
     get_settings.cache_clear()
     monkeypatch.setenv("MATTERMOST_URL", "http://mattermost.example.com")
-    monkeypatch.setenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "true")
+    monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
     yield
     get_settings.cache_clear()

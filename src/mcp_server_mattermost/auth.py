@@ -18,7 +18,8 @@ class MattermostTokenVerifier(TokenVerifier):
     """Validates bearer tokens by calling Mattermost /api/v4/users/me.
 
     Implements FastMCP TokenVerifier ABC. Used as ``auth=`` parameter on
-    the FastMCP server when ``allow_http_client_tokens=True``.
+    the FastMCP server for client-token mode and as the upstream token
+    validator for OAuth proxy mode.
 
     Settings are loaded lazily (on first call to ``verify_token``) so that
     this class can be instantiated at module import time without requiring
@@ -95,7 +96,12 @@ class MattermostTokenVerifier(TokenVerifier):
                 token=token,
                 client_id=user_id,
                 scopes=[],
-                claims={"mattermost_token": token},
+                claims={
+                    "mattermost_token": token,
+                    "mattermost_user_id": user_id,
+                    "mattermost_username": user.get("username"),
+                    "mattermost_email": user.get("email"),
+                },
             )
             self._cache[cache_key] = access_token
             return access_token

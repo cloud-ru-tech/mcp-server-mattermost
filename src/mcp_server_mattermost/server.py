@@ -1,23 +1,18 @@
 """FastMCP server for Mattermost integration."""
 
-import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 from fastmcp import FastMCP
 from fastmcp.server.lifespan import lifespan
 from fastmcp.server.providers import FileSystemProvider
-from pydantic import TypeAdapter
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from .auth import MattermostTokenVerifier
+from .auth_factory import build_auth_provider_from_env
 from .config import get_settings
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
-
-
-_ALLOW_HTTP_CLIENT_TOKENS_ADAPTER: TypeAdapter[bool] = TypeAdapter(bool)
 
 
 @lifespan
@@ -43,27 +38,15 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
 
 
 def _create_mcp() -> FastMCP:
-    """Create FastMCP instance with optional Mattermost token authentication.
+    """Create FastMCP instance with configured authentication.
 
-    Reads ``MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS`` directly from the environment
-    (without full pydantic validation) so the module can be safely imported
-    before ``MATTERMOST_URL`` and ``MATTERMOST_TOKEN`` are configured.
-    Full settings validation happens inside the lifespan and ``verify_token``.
-
-    When the flag is ``true``, attaches a ``MattermostTokenVerifier`` that
-    validates bearer tokens against the Mattermost API before allowing tool access.
-
-    Warning:
-        This reads ``os.getenv``, not pydantic-settings, so ``.env`` files are
-        not consulted for this variable. It must be set in the actual OS
-        environment (export, Docker -e, systemd Environment=, etc.).
+    Settings are loaded through pydantic-settings so auth mode selection is
+    validated consistently across stdio and HTTP transports.
 
     Returns:
         Configured FastMCP server instance
     """
-    raw = os.getenv("MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS", "false")
-    allow_http = _ALLOW_HTTP_CLIENT_TOKENS_ADAPTER.validate_python(raw)
-    auth: MattermostTokenVerifier | None = MattermostTokenVerifier() if allow_http else None
+    auth = build_auth_provider_from_env()
     return FastMCP(
         name="Mattermost",
         instructions="MCP server for Mattermost team collaboration platform",

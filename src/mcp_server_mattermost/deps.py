@@ -6,22 +6,27 @@ from contextlib import asynccontextmanager
 from fastmcp.server.dependencies import get_access_token
 
 from .client import MattermostClient
-from .config import get_settings
+from .config import AuthMode, get_settings
+from .exceptions import AuthenticationError
+
+
+def _get_mattermost_token_from_auth_context() -> str:
+    """Return Mattermost token from FastMCP auth context.
+
+    Raises:
+        AuthenticationError: If no validated Mattermost token is available.
+    """
+    access_token = get_access_token()
+    token = access_token.claims.get("mattermost_token") if access_token is not None else None
+    if not isinstance(token, str) or not token.strip():
+        msg = "Mattermost token is required for this auth mode"
+        raise AuthenticationError(msg)
+    return token
 
 
 @asynccontextmanager
 async def get_client() -> AsyncIterator[MattermostClient]:
     """Provide Mattermost client with automatic lifecycle management.
-
-    Token selection logic:
-        - STDIO transport: ``get_access_token()`` returns ``None``; falls back to
-          ``settings.token`` (``MATTERMOST_TOKEN`` env var).
-        - HTTP transport with ``allow_http_client_tokens=True``: FastMCP validates
-          the bearer token via ``MattermostTokenVerifier`` before this runs;
-          ``get_access_token()`` returns the validated ``AccessToken`` whose
-          ``claims["mattermost_token"]`` holds the original Mattermost token.
-        - HTTP transport with ``allow_http_client_tokens=False``: flag is ``False``,
-          so the access token is ignored; ``settings.token`` is used.
 
     Yields:
         MattermostClient ready for API calls
@@ -29,10 +34,8 @@ async def get_client() -> AsyncIterator[MattermostClient]:
     settings = get_settings()
     token: str | None = None
 
-    if settings.allow_http_client_tokens:
-        access_token = get_access_token()
-        if access_token is not None:
-            token = access_token.claims.get("mattermost_token")
+    if settings.auth_mode in {AuthMode.CLIENT_TOKEN, AuthMode.OAUTH_PROXY}:
+        token = _get_mattermost_token_from_auth_context()
 
     client = MattermostClient(settings, token=token)
     async with client.lifespan():

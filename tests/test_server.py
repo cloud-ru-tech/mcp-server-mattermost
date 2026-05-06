@@ -66,10 +66,10 @@ class TestServerIntegration:
 
 
 class TestMcpAuth:
-    """Tests for conditional MattermostTokenVerifier auth on the FastMCP instance."""
+    """Tests for conditional auth provider on the FastMCP instance."""
 
-    def test_create_mcp_no_auth(self, clean_env: None) -> None:
-        """Without allow_http_client_tokens, _create_mcp() returns instance with auth=None."""
+    def test_create_mcp_static_token_no_auth(self, clean_env: None) -> None:
+        """static_token mode returns instance with auth=None."""
         import os
         from unittest.mock import patch
 
@@ -78,7 +78,7 @@ class TestMcpAuth:
             {
                 "MATTERMOST_URL": "http://mm.example.com",
                 "MATTERMOST_TOKEN": "test-token",
-                "MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS": "false",
+                "MATTERMOST_AUTH_MODE": "static_token",
             },
         ):
             from mcp_server_mattermost.config import get_settings
@@ -90,8 +90,28 @@ class TestMcpAuth:
             assert instance.auth is None
             get_settings.cache_clear()
 
-    def test_create_mcp_with_auth(self, clean_env: None) -> None:
-        """With allow_http_client_tokens=True, _create_mcp() attaches MattermostTokenVerifier."""
+    def test_create_mcp_client_token_auth(self, clean_env: None) -> None:
+        """client_token mode attaches MattermostTokenVerifier."""
+        import os
+        from unittest.mock import patch
+
+        from mcp_server_mattermost.auth import MattermostTokenVerifier
+
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_URL": "http://mm.example.com", "MATTERMOST_AUTH_MODE": "client_token"},
+        ):
+            from mcp_server_mattermost.config import get_settings
+
+            get_settings.cache_clear()
+            from mcp_server_mattermost.server import _create_mcp
+
+            instance = _create_mcp()
+            assert isinstance(instance.auth, MattermostTokenVerifier)
+            get_settings.cache_clear()
+
+    def test_create_mcp_legacy_allow_http_client_tokens_auth(self, clean_env: None) -> None:
+        """Legacy allow_http_client_tokens flag still attaches MattermostTokenVerifier."""
         import os
         from unittest.mock import patch
 
@@ -111,8 +131,8 @@ class TestMcpAuth:
             get_settings.cache_clear()
 
     @pytest.mark.parametrize("value", ["1", "true", "yes", "on", "t", "y", "TRUE", "On", "YES"])
-    def test_create_mcp_with_auth_truthy_values(self, clean_env: None, value: str) -> None:
-        """All pydantic-compatible truthy values enable auth."""
+    def test_create_mcp_legacy_truthy_values(self, clean_env: None, value: str) -> None:
+        """All pydantic-compatible legacy truthy values enable auth."""
         import os
         from unittest.mock import patch
 
@@ -128,4 +148,32 @@ class TestMcpAuth:
 
             instance = _create_mcp()
             assert isinstance(instance.auth, MattermostTokenVerifier), f"Expected auth for value={value!r}"
+            get_settings.cache_clear()
+
+    def test_create_mcp_oauth_proxy_auth(self, clean_env: None) -> None:
+        """oauth_proxy mode attaches OAuthProxy."""
+        import os
+        from unittest.mock import patch
+
+        from fastmcp.server.auth import OAuthProxy
+
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_URL": "http://mattermost.internal",
+                "MATTERMOST_AUTH_MODE": "oauth_proxy",
+                "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+                "MATTERMOST_OAUTH_CLIENT_ID": "mm-client",
+                "MATTERMOST_OAUTH_JWT_SIGNING_KEY": "signing-key-1234567890",
+                "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+                "MATTERMOST_OAUTH_REQUIRE_CONSENT": "false",
+            },
+        ):
+            from mcp_server_mattermost.config import get_settings
+
+            get_settings.cache_clear()
+            from mcp_server_mattermost.server import _create_mcp
+
+            instance = _create_mcp()
+            assert isinstance(instance.auth, OAuthProxy)
             get_settings.cache_clear()

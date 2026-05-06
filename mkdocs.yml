@@ -29,6 +29,7 @@ nav:
   - Home: index.md
   - Quick Start: quickstart.md
   - Configuration: configuration.md
+  - Authentication: authentication.md
   - Docker: docker.md
   - Examples: examples.md
   - Best Practices: best-practices.md

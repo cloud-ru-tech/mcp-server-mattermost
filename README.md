@@ -165,14 +165,18 @@ Once configured, you can ask your AI assistant:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
-| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal access token. MATTERMOST_TOKEN is required only when per-client token authentication (MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS) is not enabled. |
+| `MATTERMOST_AUTH_MODE` | No | `static_token` | Auth mode: `static_token`, `client_token`, or `oauth_proxy` |
+| `MATTERMOST_TOKEN` | Conditional | — | Bot or personal token. Required for `static_token`. |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
 | `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |
-| `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` | No | false | Allow HTTP clients to use their own Mattermost tokens |
+
+For `client_token` and `oauth_proxy` modes — including Mattermost OAuth App
+registration, all `MATTERMOST_OAUTH_*` settings, and MCP client connection — see
+[Authentication](docs/authentication.md).
 
 ## Docker
 
@@ -218,6 +222,44 @@ docker run -d -p 8000:8000 \
 ```
 
 Health check: `curl http://localhost:8000/health`
+
+### HTTP mode with Mattermost OAuth proxy
+
+Register a Mattermost OAuth 2.0 Application first:
+
+| Mattermost field | Production value |
+|------------------|------------------|
+| Is Trusted | Yes |
+| Is Public Client | No |
+| Callback URLs | `https://mcp.example.com/oauth/callback/mm` |
+
+Then run the MCP server:
+
+```bash
+docker run -d -p 8000:8000 \
+  -e MCP_TRANSPORT=http \
+  -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_AUTH_MODE=oauth_proxy \
+  -e MATTERMOST_URL=https://mattermost.internal \
+  -e MATTERMOST_OAUTH_MATTERMOST_PUBLIC_URL=https://mattermost.example.com \
+  -e MATTERMOST_OAUTH_MCP_PUBLIC_URL=https://mcp.example.com \
+  -e MATTERMOST_OAUTH_CLIENT_ID=your-mattermost-oauth-app-id \
+  -e MATTERMOST_OAUTH_CLIENT_TYPE=confidential \
+  -e MATTERMOST_OAUTH_CLIENT_SECRET=your-mattermost-oauth-app-secret \
+  legard/mcp-server-mattermost
+```
+
+If your Mattermost login uses Keycloak SSO, users authenticate through Keycloak inside
+the Mattermost OAuth login flow. The MCP server does not need a Keycloak client.
+
+Connect Claude Code with Dynamic Client Registration:
+
+```bash
+claude mcp add --transport http mattermost https://mcp.example.com/mcp
+```
+
+Do not pass `--client-id` for this server; the MCP client registers with the MCP server,
+and the MCP server uses the fixed Mattermost OAuth App upstream.
 
 ### Environment Variables (Docker)
 

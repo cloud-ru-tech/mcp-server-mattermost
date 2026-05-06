@@ -7,6 +7,9 @@ Get up and running in 2 minutes.
 - Mattermost server with API access
 - Bot account or personal access token
 
+For HTTP deployments where each user signs in with their own Mattermost identity,
+see [Authentication](authentication.md) for `client_token` and `oauth_proxy` modes.
+
 ## Install
 
 === "uvx (recommended)"
@@ -125,6 +128,7 @@ The Mattermost tools are now available in your conversations.
 
 ## Next Steps
 
+- [Authentication](authentication.md) — auth modes, OAuth proxy setup, Mattermost OAuth App registration
 - [Configuration](configuration.md) — timeouts, retries, SSL options
 - [Docker](docker.md) — container deployment and HTTP mode
 - [Tools Reference](tools/index.md) — all 36 available tools

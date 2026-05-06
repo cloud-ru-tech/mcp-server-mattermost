@@ -20,7 +20,6 @@ from _pytest.monkeypatch import MonkeyPatch
 from fastmcp import Client
 
 from mcp_server_mattermost.config import get_settings
-from mcp_server_mattermost.server import mcp
 
 from .utils import cleanup_channel, make_test_name, setup_docker_host, to_dict
 
@@ -150,6 +149,8 @@ async def mcp_client(mattermost_env):
     - MattermostClient HTTP logic
     - Real Mattermost API
     """
+    from mcp_server_mattermost.server import mcp
+
     async with Client(mcp) as client:
         yield client
 
@@ -161,6 +162,8 @@ def session_mcp_client_sync(mattermost_env, event_loop):
     Uses a more robust pattern that properly handles exceptions during cleanup.
     """
     import warnings
+
+    from mcp_server_mattermost.server import mcp
 
     client = None
     cleanup_exc = None
