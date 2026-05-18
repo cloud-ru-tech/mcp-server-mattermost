@@ -46,7 +46,7 @@ Once configured, you can ask your AI assistant:
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `list_public_channels` | List public channels in a team | `team_id` ✓ |
-| `list_my_channels` | List channels you are a member of | `team_id` ✓ |
+| `list_my_channels` | List your channels with unread counts | `team_id` ✓ |
 | `get_channel` | Get channel details by ID | `channel_id` ✓ |
 | `get_channel_by_name` | Get channel by name | `team_id`, `channel_name` ✓ |
 | `create_channel` | Create a new channel | `team_id`, `name`, `display_name` ✓ |

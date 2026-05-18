@@ -1,6 +1,5 @@
 """Channel management tools."""
 
-import asyncio
 from typing import Annotated, Literal
 
 from fastmcp.dependencies import Depends
@@ -16,7 +15,7 @@ from mcp_server_mattermost.models import (
     ChannelMember,
     ChannelName,
     ChannelType,
-    MyChannel,
+    ChannelWithUnreads,
     TeamId,
     UserId,
 )
@@ -71,39 +70,24 @@ async def list_my_channels(
         Field(description="Return only channels with unread messages"),
     ] = False,
     client: MattermostClient = Depends(get_client),  # noqa: B008
-) -> list[MyChannel]:
+) -> list[ChannelWithUnreads]:
     """List channels you are a member of in a team.
 
-    Returns your channels with unread message and mention counts.
+    Returns your channels with unread message and mention counts. Unread counts
+    include replies in threads — they match the channel badge in Mattermost when
+    Collapsed Reply Threads is disabled. Channels without a membership record
+    report 0 for both counters.
     Use channel_types to narrow results: ["O", "P"] for workspace channels
     without DMs, or ["D"] for direct messages only.
     Use only_unread=True to get only channels with unread messages.
     For discovering public channels you haven't joined yet, use list_public_channels.
     """
-    channels_data, members_data = await asyncio.gather(
-        client.get_my_channels(team_id=team_id),
-        client.get_my_channel_members(team_id=team_id),
-    )
-
+    data = await client.get_my_channels_with_unreads(team_id=team_id)
     if channel_types is not None:
-        channels_data = [ch for ch in channels_data if ch.get("type") in channel_types]
-
-    member_lookup = {m["channel_id"]: m for m in members_data}
-
-    result = []
-    for ch in channels_data:
-        member = member_lookup.get(ch["id"])
-        if member:
-            unread = max(0, ch.get("total_msg_count", 0) - member.get("msg_count", 0))
-            mentions = member.get("mention_count", 0)
-        else:
-            unread = 0
-            mentions = 0
-        result.append(MyChannel(**ch, unread_msg_count=unread, mention_count=mentions))
-
+        data = [ch for ch in data if ch.get("type") in channel_types]
+    result = [ChannelWithUnreads.model_validate(ch) for ch in data]
     if only_unread:
         result = [ch for ch in result if ch.unread_msg_count > 0]
-
     return result
 
 

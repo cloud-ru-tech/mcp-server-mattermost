@@ -148,6 +148,26 @@ structured release notes — grouped by category, each with its own color:
 
 ---
 
+## Morning Catch-Up
+
+> "What did I miss? Give me a rundown of my unread channels."
+
+The AI pulls every channel with unread messages, prioritizes the ones where
+you were @-mentioned, and reads the most urgent threads to hand you a single
+catch-up digest:
+
+**Tools used:**
+
+1. `list_my_channels` — `only_unread=true` returns only channels with unread messages
+2. `get_channel_messages` — read recent messages from the high-priority channels
+
+Each channel arrives with `unread_msg_count` and `mention_count`. The AI uses
+those to triage — channels where you were @-mentioned surface first, the rest
+are ranked by how much you missed. Nothing is posted to Mattermost; the digest
+stays in your conversation with the AI.
+
+---
+
 ## Daily Channel Digest
 
 > "Catch me up on #backend — what happened while I was away?"

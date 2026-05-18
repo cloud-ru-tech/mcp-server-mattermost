@@ -166,6 +166,7 @@ Post deployment status report:
 
 ### More Ideas
 
+- **Morning catch-up** — list channels with unread messages and mentions, deliver a prioritized digest of what you missed
 - **Standup rollup** — collect morning updates from #standup, compile a summary for the manager
 - **On-call handoff** — summarize incidents and alerts from the shift, post handoff notes for the next rotation
 - **Support triage** — find unanswered questions in #support, compile report with age and author
