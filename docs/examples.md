@@ -161,10 +161,12 @@ catch-up digest:
 1. `list_my_channels` — `only_unread=true` returns only channels with unread messages
 2. `get_channel_messages` — read recent messages from the high-priority channels
 
-Each channel arrives with `unread_msg_count` and `mention_count`. The AI uses
-those to triage — channels where you were @-mentioned surface first, the rest
-are ranked by how much you missed. Nothing is posted to Mattermost; the digest
-stays in your conversation with the AI.
+Each channel arrives with `unread_msg_count` and `mention_count`, plus
+`unread_msg_count_root` and `mention_count_root` — the root counters count only
+top-level posts, so the AI can separate brand-new discussions from replies in
+existing threads. The AI uses those to triage — channels where you were
+@-mentioned surface first, the rest are ranked by how much you missed. Nothing
+is posted to Mattermost; the digest stays in your conversation with the AI.
 
 ---
 

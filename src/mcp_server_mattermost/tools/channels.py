@@ -73,10 +73,12 @@ async def list_my_channels(
 ) -> list[ChannelWithUnreads]:
     """List channels you are a member of in a team.
 
-    Returns your channels with unread message and mention counts. Unread counts
-    include replies in threads — they match the channel badge in Mattermost when
-    Collapsed Reply Threads is disabled. Channels without a membership record
-    report 0 for both counters.
+    Returns your channels with unread counters for the authenticated user. Two
+    counter pairs are provided: unread_msg_count / mention_count count thread
+    replies too (the channel badge with Collapsed Reply Threads off), while
+    unread_msg_count_root / mention_count_root count only root posts (the badge
+    with Collapsed Reply Threads on). Channels without a membership record
+    report 0 for all four counters.
     Use channel_types to narrow results: ["O", "P"] for workspace channels
     without DMs, or ["D"] for direct messages only.
     Use only_unread=True to get only channels with unread messages.

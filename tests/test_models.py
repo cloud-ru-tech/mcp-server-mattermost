@@ -584,6 +584,20 @@ class TestChannelBookmarkModel:
         assert bookmark.emoji == "bookmark"
 
 
+class TestChannelWithUnreadsModel:
+    """Tests for the ChannelWithUnreads response model."""
+
+    def test_schema_advertises_all_unread_counters(self):
+        """All four unread counter fields appear in the tool output schema."""
+        from mcp_server_mattermost.models import ChannelWithUnreads
+
+        properties = ChannelWithUnreads.model_json_schema()["properties"]
+        assert "unread_msg_count" in properties
+        assert "mention_count" in properties
+        assert "unread_msg_count_root" in properties
+        assert "mention_count_root" in properties
+
+
 class TestModelsExports:
     """Tests for models package exports."""
 

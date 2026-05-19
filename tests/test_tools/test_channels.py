@@ -89,16 +89,40 @@ class TestListMyChannels:
         """Test returns all channel types when channel_types is None."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
-                channel_id="ch_o00000000000000000000", name="public", type="O", unread_msg_count=0, mention_count=0
+                channel_id="ch_o00000000000000000000",
+                name="public",
+                type="O",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_p00000000000000000000", name="private", type="P", unread_msg_count=0, mention_count=0
+                channel_id="ch_p00000000000000000000",
+                name="private",
+                type="P",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_d00000000000000000000", name="dm", type="D", unread_msg_count=0, mention_count=0
+                channel_id="ch_d00000000000000000000",
+                name="dm",
+                type="D",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_g00000000000000000000", name="group", type="G", unread_msg_count=0, mention_count=0
+                channel_id="ch_g00000000000000000000",
+                name="group",
+                type="G",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
         ]
 
@@ -115,16 +139,40 @@ class TestListMyChannels:
         """Test filters channels when channel_types is specified."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
-                channel_id="ch_o00000000000000000000", name="public", type="O", unread_msg_count=0, mention_count=0
+                channel_id="ch_o00000000000000000000",
+                name="public",
+                type="O",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_p00000000000000000000", name="private", type="P", unread_msg_count=0, mention_count=0
+                channel_id="ch_p00000000000000000000",
+                name="private",
+                type="P",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_d00000000000000000000", name="dm", type="D", unread_msg_count=0, mention_count=0
+                channel_id="ch_d00000000000000000000",
+                name="dm",
+                type="D",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_g00000000000000000000", name="group", type="G", unread_msg_count=0, mention_count=0
+                channel_id="ch_g00000000000000000000",
+                name="group",
+                type="G",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
         ]
 
@@ -141,16 +189,40 @@ class TestListMyChannels:
         """Test filters to a single channel type."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
-                channel_id="ch_o00000000000000000000", name="public", type="O", unread_msg_count=0, mention_count=0
+                channel_id="ch_o00000000000000000000",
+                name="public",
+                type="O",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_p00000000000000000000", name="private", type="P", unread_msg_count=0, mention_count=0
+                channel_id="ch_p00000000000000000000",
+                name="private",
+                type="P",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_d00000000000000000000", name="dm", type="D", unread_msg_count=0, mention_count=0
+                channel_id="ch_d00000000000000000000",
+                name="dm",
+                type="D",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
             make_channel_data(
-                channel_id="ch_g00000000000000000000", name="group", type="G", unread_msg_count=0, mention_count=0
+                channel_id="ch_g00000000000000000000",
+                name="group",
+                type="G",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
         ]
 
@@ -175,10 +247,15 @@ class TestListMyChannels:
         assert result == []
 
     async def test_list_my_channels_exposes_unread_fields(self, mock_client: AsyncMock) -> None:
-        """Test enriched unread_msg_count and mention_count reach the response model."""
+        """Test enriched unread counters — root and non-root — reach the response model."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
-                channel_id="ch_a00000000000000000000", name="active", unread_msg_count=5, mention_count=3
+                channel_id="ch_a00000000000000000000",
+                name="active",
+                unread_msg_count=5,
+                mention_count=3,
+                unread_msg_count_root=2,
+                mention_count_root=1,
             ),
         ]
 
@@ -190,16 +267,35 @@ class TestListMyChannels:
         assert len(result) == 1
         assert result[0].unread_msg_count == 5
         assert result[0].mention_count == 3
+        assert result[0].unread_msg_count_root == 2
+        assert result[0].mention_count_root == 1
 
     async def test_list_my_channels_only_unread_filters(self, mock_client: AsyncMock) -> None:
         """Test only_unread=True returns only channels with unread messages."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
-                channel_id="ch_a00000000000000000000", name="unread", unread_msg_count=10, mention_count=0
+                channel_id="ch_a00000000000000000000",
+                name="unread",
+                unread_msg_count=10,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
-            make_channel_data(channel_id="ch_b00000000000000000000", name="read", unread_msg_count=0, mention_count=0),
             make_channel_data(
-                channel_id="ch_c00000000000000000000", name="also-unread", unread_msg_count=5, mention_count=1
+                channel_id="ch_b00000000000000000000",
+                name="read",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
+            ),
+            make_channel_data(
+                channel_id="ch_c00000000000000000000",
+                name="also-unread",
+                unread_msg_count=5,
+                mention_count=1,
+                unread_msg_count_root=0,
+                mention_count_root=0,
             ),
         ]
 
@@ -215,7 +311,14 @@ class TestListMyChannels:
     async def test_list_my_channels_only_unread_empty_when_all_read(self, mock_client: AsyncMock) -> None:
         """Test only_unread=True returns empty list when all channels are read."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(channel_id="ch_a00000000000000000000", name="read", unread_msg_count=0, mention_count=0),
+            make_channel_data(
+                channel_id="ch_a00000000000000000000",
+                name="read",
+                unread_msg_count=0,
+                mention_count=0,
+                unread_msg_count_root=0,
+                mention_count_root=0,
+            ),
         ]
 
         result = await channels.list_my_channels(

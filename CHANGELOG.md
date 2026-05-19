@@ -12,9 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with unread messages.
 
 ### Changed
-- `list_my_channels` now returns `unread_msg_count` and `mention_count` for each
-  channel. Unread counters use non-root semantics — replies in threads are
-  counted, matching the channel badge when Collapsed Reply Threads is off.
+- `list_my_channels` now returns four unread counters for each channel:
+  `unread_msg_count` / `mention_count` use non-root semantics — replies in
+  threads are counted, matching the channel badge when Collapsed Reply Threads
+  is off; `unread_msg_count_root` / `mention_count_root` count only root posts,
+  matching the badge when Collapsed Reply Threads is on.
 
 ## [0.4.0] - 2026-03-24
 

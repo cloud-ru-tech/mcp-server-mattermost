@@ -26,15 +26,22 @@ class Channel(MattermostResponse):
 class ChannelWithUnreads(Channel):
     """Channel enriched with unread counters for the authenticated user.
 
-    Unread counters use Mattermost non-root semantics — replies inside threads
-    are counted as channel messages. This matches the channel unread badge for
-    users who have Collapsed Reply Threads (CRT) disabled. For users with CRT
-    enabled, these counters include unread thread replies that their channel
-    badge omits.
+    Two counter pairs cover both Mattermost reading modes:
+
+    - ``unread_msg_count`` / ``mention_count`` use non-root semantics — replies
+      inside threads count as channel messages. They match the channel unread
+      badge when Collapsed Reply Threads (CRT) is disabled.
+    - ``unread_msg_count_root`` / ``mention_count_root`` count only root posts,
+      ignoring thread replies. They match the channel unread badge when CRT is
+      enabled.
+
+    Channels without a membership record report 0 for all four counters.
     """
 
     unread_msg_count: int = Field(description="Unread messages, including replies in threads")
     mention_count: int = Field(description="Unread @-mentions, including those in thread replies")
+    unread_msg_count_root: int = Field(description="Unread root messages, excluding replies in threads")
+    mention_count_root: int = Field(description="Unread @-mentions in root messages, excluding thread replies")
 
 
 class ChannelMember(MattermostResponse):

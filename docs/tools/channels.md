@@ -49,8 +49,9 @@ Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`.
 
 List channels you are a member of in a team.
 
-Returns your channels with unread message and mention counts.
-Unread counts include replies in threads — they match the channel badge in Mattermost when Collapsed Reply Threads is disabled.
+Returns your channels with unread counters for the authenticated user.
+`unread_msg_count` / `mention_count` count thread replies too (the channel badge with Collapsed Reply Threads off).
+`unread_msg_count_root` / `mention_count_root` count only root posts (the badge with Collapsed Reply Threads on).
 Use `channel_types` to narrow results.
 Use `only_unread` to return only channels with unread messages.
 For discovering public channels you haven't joined yet, use list_public_channels.
@@ -80,10 +81,14 @@ For discovering public channels you haven't joined yet, use list_public_channels
 ### Returns
 
 Array of channel objects with `id`, `name`, `display_name`, `type`, `purpose`,
-`total_msg_count`, plus `unread_msg_count` and `mention_count` for the
-authenticated user. Unread counters use non-root semantics (thread replies are
-counted): they match the channel unread badge when Collapsed Reply Threads is
-off, and overcount when it is on.
+`total_msg_count`, plus four unread counters for the authenticated user:
+
+- `unread_msg_count` / `mention_count` — non-root semantics: thread replies are
+  counted. Match the channel unread badge when Collapsed Reply Threads is off.
+- `unread_msg_count_root` / `mention_count_root` — root posts only, excluding
+  thread replies. Match the channel unread badge when Collapsed Reply Threads is on.
+
+Channels without a membership record report 0 for all four counters.
 
 ### Mattermost API
 

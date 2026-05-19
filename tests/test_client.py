@@ -881,9 +881,9 @@ class TestMattermostClientChannelsAPI:
             return_value=httpx.Response(
                 200,
                 json=[
-                    {"id": "ch1", "name": "active", "type": "O", "total_msg_count": 100},
-                    {"id": "ch2", "name": "read", "type": "O", "total_msg_count": 50},
-                    {"id": "ch3", "name": "orphan", "type": "O", "total_msg_count": 30},
+                    {"id": "ch1", "name": "active", "type": "O", "total_msg_count": 100, "total_msg_count_root": 40},
+                    {"id": "ch2", "name": "read", "type": "O", "total_msg_count": 50, "total_msg_count_root": 20},
+                    {"id": "ch3", "name": "orphan", "type": "O", "total_msg_count": 30, "total_msg_count_root": 12},
                 ],
             ),
         )
@@ -891,8 +891,20 @@ class TestMattermostClientChannelsAPI:
             return_value=httpx.Response(
                 200,
                 json=[
-                    {"channel_id": "ch1", "msg_count": 95, "mention_count": 3},
-                    {"channel_id": "ch2", "msg_count": 50, "mention_count": 0},
+                    {
+                        "channel_id": "ch1",
+                        "msg_count": 95,
+                        "mention_count": 3,
+                        "msg_count_root": 38,
+                        "mention_count_root": 1,
+                    },
+                    {
+                        "channel_id": "ch2",
+                        "msg_count": 50,
+                        "mention_count": 0,
+                        "msg_count_root": 20,
+                        "mention_count_root": 0,
+                    },
                 ],
             ),
         )
@@ -903,18 +915,26 @@ class TestMattermostClientChannelsAPI:
         assert channels_route.called
         assert members_route.called
         by_id = {ch["id"]: ch for ch in result}
+        # ch1: non-root 100-95=5, root 40-38=2 — distinct numbers prove the pairs compute independently
         assert by_id["ch1"]["unread_msg_count"] == 5
         assert by_id["ch1"]["mention_count"] == 3
+        assert by_id["ch1"]["unread_msg_count_root"] == 2
+        assert by_id["ch1"]["mention_count_root"] == 1
+        # ch2: fully read on both lenses
         assert by_id["ch2"]["unread_msg_count"] == 0
         assert by_id["ch2"]["mention_count"] == 0
-        # ch3 has no membership record → counters default to 0
+        assert by_id["ch2"]["unread_msg_count_root"] == 0
+        assert by_id["ch2"]["mention_count_root"] == 0
+        # ch3 has no membership record → all four counters default to 0
         assert by_id["ch3"]["unread_msg_count"] == 0
         assert by_id["ch3"]["mention_count"] == 0
+        assert by_id["ch3"]["unread_msg_count_root"] == 0
+        assert by_id["ch3"]["mention_count_root"] == 0
 
     @pytest.mark.asyncio
     @respx.mock
     async def test_get_my_channels_with_unreads_clamps_negative(self, mock_settings):
-        """get_my_channels_with_unreads() clamps unread to 0 when msg_count exceeds total."""
+        """get_my_channels_with_unreads() clamps unread to 0 when seen count exceeds total."""
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
@@ -923,13 +943,21 @@ class TestMattermostClientChannelsAPI:
         respx.get("https://test.mattermost.com/api/v4/users/me/teams/team123/channels").mock(
             return_value=httpx.Response(
                 200,
-                json=[{"id": "ch1", "name": "skewed", "type": "O", "total_msg_count": 10}],
+                json=[{"id": "ch1", "name": "skewed", "type": "O", "total_msg_count": 10, "total_msg_count_root": 4}],
             ),
         )
         respx.get("https://test.mattermost.com/api/v4/users/me/teams/team123/channels/members").mock(
             return_value=httpx.Response(
                 200,
-                json=[{"channel_id": "ch1", "msg_count": 15, "mention_count": 0}],
+                json=[
+                    {
+                        "channel_id": "ch1",
+                        "msg_count": 15,
+                        "mention_count": 0,
+                        "msg_count_root": 9,
+                        "mention_count_root": 0,
+                    }
+                ],
             ),
         )
 
@@ -938,11 +966,13 @@ class TestMattermostClientChannelsAPI:
 
         assert result[0]["unread_msg_count"] == 0
         assert result[0]["mention_count"] == 0
+        assert result[0]["unread_msg_count_root"] == 0
+        assert result[0]["mention_count_root"] == 0
 
     @pytest.mark.asyncio
     @respx.mock
     async def test_get_my_channels_with_unreads_handles_non_list_members(self, mock_settings):
-        """get_my_channels_with_unreads() defaults counters to 0 when memberships are not a list."""
+        """get_my_channels_with_unreads() defaults all counters to 0 when memberships are not a list."""
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
@@ -952,8 +982,8 @@ class TestMattermostClientChannelsAPI:
             return_value=httpx.Response(
                 200,
                 json=[
-                    {"id": "ch1", "name": "active", "type": "O", "total_msg_count": 100},
-                    {"id": "ch2", "name": "read", "type": "O", "total_msg_count": 50},
+                    {"id": "ch1", "name": "active", "type": "O", "total_msg_count": 100, "total_msg_count_root": 40},
+                    {"id": "ch2", "name": "read", "type": "O", "total_msg_count": 50, "total_msg_count_root": 20},
                 ],
             ),
         )
@@ -967,6 +997,8 @@ class TestMattermostClientChannelsAPI:
         for channel in result:
             assert channel["unread_msg_count"] == 0
             assert channel["mention_count"] == 0
+            assert channel["unread_msg_count_root"] == 0
+            assert channel["mention_count_root"] == 0
 
     @pytest.mark.asyncio
     @respx.mock
