@@ -26,7 +26,7 @@ to filter tools by agent profile.
 | Tool | Capability | Description |
 |------|------------|-------------|
 | `list_public_channels` | read | List public channels in a team |
-| `list_my_channels` | read | List channels you are a member of |
+| `list_my_channels` | read | List your channels with unread counts |
 | `get_channel` | read | Get channel details by ID |
 | `get_channel_by_name` | read | Get channel by name |
 | `create_channel` | create | Create a new channel |

@@ -153,8 +153,8 @@ structured release notes — grouped by category, each with its own color:
 > "What did I miss? Give me a rundown of my unread channels."
 
 The AI pulls every channel with unread messages, prioritizes the ones where
-you were @-mentioned, and reads the most urgent threads to hand you a single
-catch-up digest:
+you were @-mentioned, and reads the most urgent conversations to hand you a
+single catch-up digest:
 
 **Tools used:**
 
