@@ -266,3 +266,50 @@ class TestErrorHandling:
                 terms="test",
                 client=mock_client_rate_limited,
             )
+
+
+class TestGetChannelMessagesValidation:
+    """Tests for get_channel_messages mode-exclusivity validation."""
+
+    async def test_rejects_unread_only_with_since(self, mock_settings) -> None:
+        """unread_only=True with since=... must raise — modes are mutually exclusive."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        async with Client(mcp) as client:
+            with pytest.raises(Exception) as exc_info:
+                await client.call_tool(
+                    "get_channel_messages",
+                    {"channel_id": "ch123456789012345678901234", "unread_only": True, "since": 1716620000000},
+                )
+        msg = str(exc_info.value).lower()
+        assert "mutually exclusive" in msg or "cannot use both" in msg
+
+    async def test_rejects_unread_only_with_pagination(self, mock_settings) -> None:
+        """unread_only=True with non-default page must raise."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        async with Client(mcp) as client:
+            with pytest.raises(Exception) as exc_info:
+                await client.call_tool(
+                    "get_channel_messages",
+                    {"channel_id": "ch123456789012345678901234", "unread_only": True, "page": 2},
+                )
+        msg = str(exc_info.value).lower()
+        assert "page" in msg or "mutually exclusive" in msg or "pagination" in msg
+
+    async def test_rejects_since_in_seconds(self, mock_settings) -> None:
+        """since must be Unix milliseconds — values below 10^12 are rejected."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        async with Client(mcp) as client:
+            with pytest.raises(Exception):  # noqa: B017
+                await client.call_tool(
+                    "get_channel_messages",
+                    {"channel_id": "ch123456789012345678901234", "since": 1716620000},  # seconds not ms
+                )
