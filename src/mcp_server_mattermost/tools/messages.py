@@ -105,7 +105,7 @@ async def get_channel_messages(  # noqa: PLR0913
     ] = None,
     page: Annotated[int, Field(ge=0, description="Page number (0-indexed)")] = 0,
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = _DEFAULT_PER_PAGE,
-    limit_before: Annotated[  # noqa: ARG001
+    limit_before: Annotated[
         int,
         Field(
             ge=0,
@@ -113,7 +113,7 @@ async def get_channel_messages(  # noqa: PLR0913
             description="In unread_only mode: read context posts before the first unread (max 200)",
         ),
     ] = 0,
-    limit_after: Annotated[  # noqa: ARG001
+    limit_after: Annotated[
         int,
         Field(
             ge=0,
@@ -121,7 +121,7 @@ async def get_channel_messages(  # noqa: PLR0913
             description="In unread_only mode: unread posts to return (max 200)",
         ),
     ] = _DEFAULT_PER_PAGE,
-    collapsed_threads: Annotated[  # noqa: FBT002, ARG001
+    collapsed_threads: Annotated[  # noqa: FBT002
         bool,
         Field(
             description=(
@@ -165,9 +165,30 @@ async def get_channel_messages(  # noqa: PLR0913
           In ``since`` mode, switch to ``unread_only=True`` for deterministic results.
     """
     _validate_get_channel_messages_mode(unread_only=unread_only, since=since, page=page, per_page=per_page)
-    # Routing to unread_only / since branches is implemented in Task 5.
-    data = await client.get_posts(channel_id=channel_id, page=page, per_page=per_page)
-    return PostList(**data)
+
+    if unread_only:
+        data = await client.get_channel_posts_unread(
+            channel_id=channel_id,
+            limit_before=limit_before,
+            limit_after=limit_after,
+            collapsed_threads=collapsed_threads,
+        )
+        cap = max(1, limit_before + limit_after)
+    elif since is not None:
+        data = await client.get_posts_since(
+            channel_id=channel_id,
+            since=since,
+            collapsed_threads=collapsed_threads,
+        )
+        cap = 1000
+    else:
+        data = await client.get_posts(channel_id=channel_id, page=page, per_page=per_page)
+        cap = per_page
+
+    post_list = PostList(**data)
+    if len(post_list.order) >= cap:
+        post_list = post_list.model_copy(update={"truncated": True})
+    return post_list
 
 
 @tool(
