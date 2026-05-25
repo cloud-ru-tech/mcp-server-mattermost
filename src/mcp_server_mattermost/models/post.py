@@ -29,13 +29,22 @@ class PostList(MattermostResponse):
     """Response from get_posts and search_posts endpoints.
 
     Posts are returned as a dict keyed by ID for fast lookup.
-    Use `order` to iterate in display order (newest first).
+    Use ``order`` to iterate in display order (newest first).
+
+    ``truncated`` is set by the tool layer when the underlying Mattermost endpoint
+    hit a response cap (e.g. 1000 for ``?since=``, ``limit_after`` for
+    ``/posts/unread``). When ``truncated`` is True, the response is incomplete —
+    more posts exist beyond this batch.
     """
 
     order: list[str] = Field(description="Post IDs in display order")
     posts: dict[str, Post] = Field(description="Map of post ID to Post object")
     next_post_id: str = Field(default="", description="Next post ID for pagination")
     prev_post_id: str = Field(default="", description="Previous post ID for pagination")
+    truncated: bool = Field(
+        default=False,
+        description="True when the response hit a Mattermost response cap — more posts exist beyond this batch",
+    )
 
 
 class Reaction(MattermostResponse):

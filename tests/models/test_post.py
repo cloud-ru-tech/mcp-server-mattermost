@@ -117,3 +117,15 @@ def test_reaction_parses():
 
     reaction = Reaction(**data)
     assert reaction.emoji_name == "thumbsup"
+
+
+def test_post_list_truncated_default_false() -> None:
+    """truncated defaults to False — most responses are complete."""
+    pl = PostList(order=[], posts={})
+    assert pl.truncated is False
+
+
+def test_post_list_truncated_can_be_set() -> None:
+    """Tools may set truncated=True after detecting a cap hit."""
+    pl = PostList(order=[], posts={}, truncated=True)
+    assert pl.truncated is True
