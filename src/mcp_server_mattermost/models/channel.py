@@ -55,12 +55,20 @@ class ChannelWithUnreads(Channel):
 
 
 class ChannelMember(MattermostResponse):
-    """Channel membership information."""
+    """Channel membership information.
+
+    `msg_count` / `mention_count` use non-root semantics (replies inside threads count
+    as channel messages); `msg_count_root` / `mention_count_root` count only top-level
+    posts. Both pairs are returned by Mattermost and consumed by
+    `client.get_my_channels_with_unreads` to compute the per-channel unread counters.
+    """
 
     channel_id: str = Field(description="Channel identifier")
     user_id: str = Field(description="User identifier")
     roles: str = Field(description="Space-separated role names")
     last_viewed_at: int = Field(description="Last viewed timestamp")
-    msg_count: int = Field(description="Messages seen count")
-    mention_count: int = Field(description="Unread mentions count")
+    msg_count: int = Field(description="Messages seen count, including replies in threads")
+    mention_count: int = Field(description="Unread @-mentions count, including thread replies")
+    msg_count_root: int = Field(description="Root messages seen count, excluding thread replies")
+    mention_count_root: int = Field(description="Unread root @-mentions count, excluding thread replies")
     last_update_at: int = Field(description="Last update timestamp")

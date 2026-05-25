@@ -633,6 +633,25 @@ class TestChannelWithUnreadsModel:
         assert channel.last_viewed_at == 1716620000000
 
 
+class TestChannelMemberModel:
+    """Tests for the ChannelMember response model."""
+
+    def test_schema_advertises_both_counter_pairs(self):
+        """ChannelMember exposes both non-root and root counter pairs.
+
+        The root pair (msg_count_root / mention_count_root) is what feeds the
+        per-channel root-unread computation in get_my_channels_with_unreads; without it
+        the consumer would have to read raw dict keys and lose type safety.
+        """
+        from mcp_server_mattermost.models import ChannelMember
+
+        properties = ChannelMember.model_json_schema()["properties"]
+        assert "msg_count" in properties
+        assert "mention_count" in properties
+        assert "msg_count_root" in properties
+        assert "mention_count_root" in properties
+
+
 class TestModelsExports:
     """Tests for models package exports."""
 

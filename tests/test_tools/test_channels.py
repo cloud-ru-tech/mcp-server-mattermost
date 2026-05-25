@@ -16,9 +16,9 @@ def make_channel_data(
 ) -> dict:
     """Create full channel mock data.
 
-    All fields required per Go source. Includes `last_viewed_at=0` so the dict can be
-    validated as either Channel or ChannelWithUnreads (the latter requires the field);
-    callers using the Channel projection ignore the extra key via extra="allow".
+    All fields required per Go source. For ChannelWithUnreads tests, use
+    `make_channel_with_unreads_data` instead — it adds the unread counters and
+    `last_viewed_at` with sensible defaults.
     """
     return {
         "id": channel_id,
@@ -34,9 +34,35 @@ def make_channel_data(
         "last_post_at": 0,
         "total_msg_count": 0,
         "creator_id": "",
-        "last_viewed_at": 0,
         **overrides,
     }
+
+
+def make_channel_with_unreads_data(  # noqa: PLR0913 — explicit kwargs aid IDE autocomplete in tests
+    channel_id: str = "ch1234567890123456789012",
+    name: str = "general",
+    unread_msg_count: int = 0,
+    mention_count: int = 0,
+    unread_msg_count_root: int = 0,
+    mention_count_root: int = 0,
+    last_viewed_at: int = 0,
+    **overrides,
+) -> dict:
+    """Create full channel mock data with unread state for ChannelWithUnreads tests.
+
+    Wraps `make_channel_data` and defaults the four unread counters plus
+    `last_viewed_at` to 0. Override any field via kwargs.
+    """
+    return make_channel_data(
+        channel_id=channel_id,
+        name=name,
+        unread_msg_count=unread_msg_count,
+        mention_count=mention_count,
+        unread_msg_count_root=unread_msg_count_root,
+        mention_count_root=mention_count_root,
+        last_viewed_at=last_viewed_at,
+        **overrides,
+    )
 
 
 def make_channel_member_data(
@@ -46,7 +72,8 @@ def make_channel_member_data(
 ) -> dict:
     """Create full channel member mock data.
 
-    All fields required per Go source.
+    All fields required per Go source, including the root-only counter pair
+    (`msg_count_root`, `mention_count_root`) that ChannelMember now exposes.
     """
     return {
         "channel_id": channel_id,
@@ -55,6 +82,8 @@ def make_channel_member_data(
         "last_viewed_at": 0,
         "msg_count": 0,
         "mention_count": 0,
+        "msg_count_root": 0,
+        "mention_count_root": 0,
         "last_update_at": 0,
         **overrides,
     }
@@ -91,42 +120,10 @@ class TestListMyChannels:
     async def test_list_my_channels_returns_all_types(self, mock_client: AsyncMock) -> None:
         """Test returns all channel types when channel_types is None."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
-                channel_id="ch_o00000000000000000000",
-                name="public",
-                type="O",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_p00000000000000000000",
-                name="private",
-                type="P",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_d00000000000000000000",
-                name="dm",
-                type="D",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_g00000000000000000000",
-                name="group",
-                type="G",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
+            make_channel_with_unreads_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_with_unreads_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_with_unreads_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_with_unreads_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
         ]
 
         result = await channels.list_my_channels(
@@ -141,42 +138,10 @@ class TestListMyChannels:
     async def test_list_my_channels_filters_by_type(self, mock_client: AsyncMock) -> None:
         """Test filters channels when channel_types is specified."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
-                channel_id="ch_o00000000000000000000",
-                name="public",
-                type="O",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_p00000000000000000000",
-                name="private",
-                type="P",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_d00000000000000000000",
-                name="dm",
-                type="D",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_g00000000000000000000",
-                name="group",
-                type="G",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
+            make_channel_with_unreads_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_with_unreads_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_with_unreads_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_with_unreads_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
         ]
 
         result = await channels.list_my_channels(
@@ -191,42 +156,10 @@ class TestListMyChannels:
     async def test_list_my_channels_filters_single_type(self, mock_client: AsyncMock) -> None:
         """Test filters to a single channel type."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
-                channel_id="ch_o00000000000000000000",
-                name="public",
-                type="O",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_p00000000000000000000",
-                name="private",
-                type="P",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_d00000000000000000000",
-                name="dm",
-                type="D",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_g00000000000000000000",
-                name="group",
-                type="G",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
+            make_channel_with_unreads_data(channel_id="ch_o00000000000000000000", name="public", type="O"),
+            make_channel_with_unreads_data(channel_id="ch_p00000000000000000000", name="private", type="P"),
+            make_channel_with_unreads_data(channel_id="ch_d00000000000000000000", name="dm", type="D"),
+            make_channel_with_unreads_data(channel_id="ch_g00000000000000000000", name="group", type="G"),
         ]
 
         result = await channels.list_my_channels(
@@ -252,7 +185,7 @@ class TestListMyChannels:
     async def test_list_my_channels_exposes_unread_fields(self, mock_client: AsyncMock) -> None:
         """Test enriched unread counters — root and non-root — and last_viewed_at reach the response model."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
+            make_channel_with_unreads_data(
                 channel_id="ch_a00000000000000000000",
                 name="active",
                 unread_msg_count=5,
@@ -278,29 +211,13 @@ class TestListMyChannels:
     async def test_list_my_channels_only_unread_filters(self, mock_client: AsyncMock) -> None:
         """Test only_unread=True returns only channels with unread messages."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
-                channel_id="ch_a00000000000000000000",
-                name="unread",
-                unread_msg_count=10,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
-                channel_id="ch_b00000000000000000000",
-                name="read",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
-            make_channel_data(
+            make_channel_with_unreads_data(channel_id="ch_a00000000000000000000", name="unread", unread_msg_count=10),
+            make_channel_with_unreads_data(channel_id="ch_b00000000000000000000", name="read"),
+            make_channel_with_unreads_data(
                 channel_id="ch_c00000000000000000000",
                 name="also-unread",
                 unread_msg_count=5,
                 mention_count=1,
-                unread_msg_count_root=0,
-                mention_count_root=0,
             ),
         ]
 
@@ -316,14 +233,7 @@ class TestListMyChannels:
     async def test_list_my_channels_only_unread_empty_when_all_read(self, mock_client: AsyncMock) -> None:
         """Test only_unread=True returns empty list when all channels are read."""
         mock_client.get_my_channels_with_unreads.return_value = [
-            make_channel_data(
-                channel_id="ch_a00000000000000000000",
-                name="read",
-                unread_msg_count=0,
-                mention_count=0,
-                unread_msg_count_root=0,
-                mention_count_root=0,
-            ),
+            make_channel_with_unreads_data(channel_id="ch_a00000000000000000000", name="read"),
         ]
 
         result = await channels.list_my_channels(
@@ -333,6 +243,39 @@ class TestListMyChannels:
         )
 
         assert result == []
+
+    async def test_list_my_channels_only_unread_with_channel_types(self, mock_client: AsyncMock) -> None:
+        """Test only_unread=True and channel_types combine as an intersection.
+
+        Inputs mix all four channel types and both read states. The request restricts
+        to workspace channels (O, P) AND unread; channels failing either filter must
+        drop out.
+        """
+        mock_client.get_my_channels_with_unreads.return_value = [
+            make_channel_with_unreads_data(
+                channel_id="ch_o00000000000000000000", name="public-unread", type="O", unread_msg_count=5
+            ),
+            make_channel_with_unreads_data(channel_id="ch_o00000000000000000001", name="public-read", type="O"),
+            make_channel_with_unreads_data(
+                channel_id="ch_p00000000000000000000", name="private-unread", type="P", unread_msg_count=3
+            ),
+            make_channel_with_unreads_data(
+                channel_id="ch_d00000000000000000000", name="dm-unread", type="D", unread_msg_count=10
+            ),
+            make_channel_with_unreads_data(
+                channel_id="ch_g00000000000000000000", name="group-unread", type="G", unread_msg_count=2
+            ),
+        ]
+
+        result = await channels.list_my_channels(
+            team_id="tm1234567890123456789012",
+            channel_types=["O", "P"],
+            only_unread=True,
+            client=mock_client,
+        )
+
+        # Wrong type (D/G) AND wrong state (public-read) must both drop out.
+        assert {ch.name for ch in result} == {"public-unread", "private-unread"}
 
 
 class TestGetChannel:

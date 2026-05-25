@@ -64,6 +64,8 @@ def test_channel_member_parses():
         "last_viewed_at": 1706400000000,
         "msg_count": 10,
         "mention_count": 2,
+        "msg_count_root": 8,
+        "mention_count_root": 1,
         "last_update_at": 1706400000000,
     }
 
@@ -71,6 +73,8 @@ def test_channel_member_parses():
     assert member.channel_id == "ch123"
     assert member.user_id == "user456"
     assert member.mention_count == 2
+    assert member.msg_count_root == 8
+    assert member.mention_count_root == 1
 
 
 def test_channel_generates_json_schema():
