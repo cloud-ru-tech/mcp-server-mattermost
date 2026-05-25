@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `get_channel_messages` now supports two new mutually-exclusive modes:
+  - `unread_only=True` — fetches the user's unread window via Mattermost's
+    `/users/me/channels/{id}/posts/unread` endpoint, with `limit_before` /
+    `limit_after` bounds and a `collapsed_threads` flag for CRT-on users.
+  - `since=<unix_ms>` — fetches posts modified after a timestamp via `?since=`,
+    suitable for incremental sync.
+- `PostList` now exposes `truncated: bool` — `True` when the response hit Mattermost's
+  response cap (`1000` for `?since=`, `limit_before + limit_after` for `/posts/unread`,
+  `per_page` for default pagination).
+- `docs/examples.md` — restored "Morning Catch-Up" example, now end-to-end with the new
+  unread-window flow.
 - `list_my_channels` accepts an `only_unread` filter to return only channels
   with unread messages.
 
