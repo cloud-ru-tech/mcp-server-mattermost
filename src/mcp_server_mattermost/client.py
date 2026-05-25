@@ -705,6 +705,40 @@ class MattermostClient:
         )
         return result if isinstance(result, dict) else {}
 
+    async def get_posts_since(
+        self,
+        channel_id: str,
+        since: int,
+        *,
+        collapsed_threads: bool = False,
+    ) -> dict[str, Any]:
+        """Get posts in a channel modified after a given timestamp.
+
+        Uses ``GET /channels/{id}/posts?since=<ms>``. Filters by
+        ``Posts.UpdateAt > since``, so edits of older posts and threads with new replies
+        are included. Context root posts for new replies are auto-included in ``posts``
+        but NOT in ``order`` (server-side behavior).
+
+        Per Mattermost spec, ``since`` is mutually exclusive with ``page``/``per_page``;
+        this method does not accept them. Server hard-caps the response at 1000 posts
+        without a deterministic ORDER BY; check ``len(result['order'])`` to detect
+        truncation.
+
+        Args:
+            channel_id: Channel identifier.
+            since: Unix timestamp in milliseconds.
+            collapsed_threads: True if the user has CRT enabled — tells Mattermost to
+                return CRT-aware data (default False; team operates with CRT off).
+
+        Returns:
+            Dict with 'posts' (id->post) and 'order' (list of root post ids).
+        """
+        params: dict[str, Any] = {"since": since}
+        if collapsed_threads:
+            params["collapsedThreads"] = "true"
+        result = await self.get(f"/channels/{channel_id}/posts", params=params)
+        return result if isinstance(result, dict) else {}
+
     async def create_post(
         self,
         channel_id: str,
