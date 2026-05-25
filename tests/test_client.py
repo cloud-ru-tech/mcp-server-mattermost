@@ -1214,6 +1214,47 @@ class TestMattermostClientMessagesAPI:
 
     @pytest.mark.asyncio
     @respx.mock
+    async def test_get_channel_posts_unread_passes_limits(self, mock_settings):
+        """get_channel_posts_unread must call /users/me/channels/{id}/posts/unread with limits."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+        route = respx.get("https://test.mattermost.com/api/v4/users/me/channels/ch1/posts/unread").mock(
+            return_value=httpx.Response(200, json={"order": [], "posts": {}})
+        )
+        async with client.lifespan():
+            await client.get_channel_posts_unread(
+                channel_id="ch1",
+                limit_before=10,
+                limit_after=100,
+            )
+        assert route.called
+        assert route.calls[0].request.url.params["limit_before"] == "10"
+        assert route.calls[0].request.url.params["limit_after"] == "100"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_get_channel_posts_unread_with_collapsed_threads(self, mock_settings):
+        """collapsed_threads=True must propagate as collapsedThreads query param."""
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+        route = respx.get("https://test.mattermost.com/api/v4/users/me/channels/ch1/posts/unread").mock(
+            return_value=httpx.Response(200, json={"order": [], "posts": {}})
+        )
+        async with client.lifespan():
+            await client.get_channel_posts_unread(
+                channel_id="ch1",
+                limit_before=0,
+                limit_after=60,
+                collapsed_threads=True,
+            )
+        assert route.calls[0].request.url.params["collapsedThreads"] == "true"
+
+    @pytest.mark.asyncio
+    @respx.mock
     async def test_create_post(self, mock_settings):
         """create_post() should create a new post."""
         import json

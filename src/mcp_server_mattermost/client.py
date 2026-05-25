@@ -739,6 +739,44 @@ class MattermostClient:
         result = await self.get(f"/channels/{channel_id}/posts", params=params)
         return result if isinstance(result, dict) else {}
 
+    async def get_channel_posts_unread(
+        self,
+        channel_id: str,
+        limit_before: int = 0,
+        limit_after: int = 60,
+        *,
+        collapsed_threads: bool = False,
+    ) -> dict[str, Any]:
+        """Get a window of unread posts around the authenticated user's read marker.
+
+        Uses ``GET /users/me/channels/{id}/posts/unread``. Returns a window around the
+        oldest unread post, sorted reverse-chronologically. Unlike ``?since=``, edits of
+        older read posts do not surface here — only what's actually unread plus optional
+        context posts before the read marker.
+
+        Args:
+            channel_id: Channel identifier.
+            limit_before: How many read posts to include as context before the first
+                unread (0..200, default 0).
+            limit_after: How many unread posts to return (0..200, default 60).
+            collapsed_threads: True if the user has CRT enabled (default False).
+
+        Returns:
+            Dict with 'posts' and 'order'. Response size is capped at
+            ``limit_before + limit_after``.
+        """
+        params: dict[str, Any] = {
+            "limit_before": limit_before,
+            "limit_after": limit_after,
+        }
+        if collapsed_threads:
+            params["collapsedThreads"] = "true"
+        result = await self.get(
+            f"/users/me/channels/{channel_id}/posts/unread",
+            params=params,
+        )
+        return result if isinstance(result, dict) else {}
+
     async def create_post(
         self,
         channel_id: str,
