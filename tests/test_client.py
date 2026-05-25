@@ -897,6 +897,7 @@ class TestMattermostClientChannelsAPI:
                         "mention_count": 3,
                         "msg_count_root": 38,
                         "mention_count_root": 1,
+                        "last_viewed_at": 1716620000000,
                     },
                     {
                         "channel_id": "ch2",
@@ -904,6 +905,7 @@ class TestMattermostClientChannelsAPI:
                         "mention_count": 0,
                         "msg_count_root": 20,
                         "mention_count_root": 0,
+                        "last_viewed_at": 1716700000000,
                     },
                 ],
             ),
@@ -920,16 +922,19 @@ class TestMattermostClientChannelsAPI:
         assert by_id["ch1"]["mention_count"] == 3
         assert by_id["ch1"]["unread_msg_count_root"] == 2
         assert by_id["ch1"]["mention_count_root"] == 1
+        assert by_id["ch1"]["last_viewed_at"] == 1716620000000
         # ch2: fully read on both lenses
         assert by_id["ch2"]["unread_msg_count"] == 0
         assert by_id["ch2"]["mention_count"] == 0
         assert by_id["ch2"]["unread_msg_count_root"] == 0
         assert by_id["ch2"]["mention_count_root"] == 0
-        # ch3 has no membership record → all four counters default to 0
+        assert by_id["ch2"]["last_viewed_at"] == 1716700000000
+        # ch3 has no membership record → all four counters and last_viewed_at default to 0
         assert by_id["ch3"]["unread_msg_count"] == 0
         assert by_id["ch3"]["mention_count"] == 0
         assert by_id["ch3"]["unread_msg_count_root"] == 0
         assert by_id["ch3"]["mention_count_root"] == 0
+        assert by_id["ch3"]["last_viewed_at"] == 0
 
     @pytest.mark.asyncio
     @respx.mock

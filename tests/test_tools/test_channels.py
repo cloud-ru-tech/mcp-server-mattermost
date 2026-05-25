@@ -16,7 +16,9 @@ def make_channel_data(
 ) -> dict:
     """Create full channel mock data.
 
-    All fields required per Go source.
+    All fields required per Go source. Includes `last_viewed_at=0` so the dict can be
+    validated as either Channel or ChannelWithUnreads (the latter requires the field);
+    callers using the Channel projection ignore the extra key via extra="allow".
     """
     return {
         "id": channel_id,
@@ -32,6 +34,7 @@ def make_channel_data(
         "last_post_at": 0,
         "total_msg_count": 0,
         "creator_id": "",
+        "last_viewed_at": 0,
         **overrides,
     }
 
@@ -247,7 +250,7 @@ class TestListMyChannels:
         assert result == []
 
     async def test_list_my_channels_exposes_unread_fields(self, mock_client: AsyncMock) -> None:
-        """Test enriched unread counters — root and non-root — reach the response model."""
+        """Test enriched unread counters — root and non-root — and last_viewed_at reach the response model."""
         mock_client.get_my_channels_with_unreads.return_value = [
             make_channel_data(
                 channel_id="ch_a00000000000000000000",
@@ -256,6 +259,7 @@ class TestListMyChannels:
                 mention_count=3,
                 unread_msg_count_root=2,
                 mention_count_root=1,
+                last_viewed_at=1716620000000,
             ),
         ]
 
@@ -269,6 +273,7 @@ class TestListMyChannels:
         assert result[0].mention_count == 3
         assert result[0].unread_msg_count_root == 2
         assert result[0].mention_count_root == 1
+        assert result[0].last_viewed_at == 1716620000000
 
     async def test_list_my_channels_only_unread_filters(self, mock_client: AsyncMock) -> None:
         """Test only_unread=True returns only channels with unread messages."""

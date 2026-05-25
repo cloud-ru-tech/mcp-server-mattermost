@@ -597,6 +597,41 @@ class TestChannelWithUnreadsModel:
         assert "unread_msg_count_root" in properties
         assert "mention_count_root" in properties
 
+    def test_schema_includes_last_viewed_at(self):
+        """last_viewed_at is exposed so agents can use it as the read marker."""
+        from mcp_server_mattermost.models import ChannelWithUnreads
+
+        properties = ChannelWithUnreads.model_json_schema()["properties"]
+        assert "last_viewed_at" in properties
+
+    def test_last_viewed_at_round_trips(self):
+        """last_viewed_at flows through model_validate as a Unix ms integer."""
+        from mcp_server_mattermost.models import ChannelWithUnreads
+
+        channel = ChannelWithUnreads.model_validate(
+            {
+                "id": "ch1",
+                "create_at": 1,
+                "update_at": 1,
+                "delete_at": 0,
+                "team_id": "team1",
+                "type": "O",
+                "display_name": "general",
+                "name": "general",
+                "header": "",
+                "purpose": "",
+                "last_post_at": 1,
+                "total_msg_count": 100,
+                "creator_id": "u1",
+                "unread_msg_count": 5,
+                "mention_count": 1,
+                "unread_msg_count_root": 3,
+                "mention_count_root": 1,
+                "last_viewed_at": 1716620000000,
+            }
+        )
+        assert channel.last_viewed_at == 1716620000000
+
 
 class TestModelsExports:
     """Tests for models package exports."""

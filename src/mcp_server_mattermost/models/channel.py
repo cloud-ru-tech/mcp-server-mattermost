@@ -24,7 +24,7 @@ class Channel(MattermostResponse):
 
 
 class ChannelWithUnreads(Channel):
-    """Channel enriched with unread counters for the authenticated user.
+    """Channel enriched with unread counters and the read marker for the authenticated user.
 
     Two counter pairs cover both Mattermost reading modes:
 
@@ -35,13 +35,23 @@ class ChannelWithUnreads(Channel):
       ignoring thread replies. They match the channel unread badge when CRT is
       enabled.
 
-    Channels without a membership record report 0 for all four counters.
+    ``last_viewed_at`` is the user's last-read marker for this channel — the
+    timestamp through which the user has read posts.
+
+    Channels without a membership record report 0 for all four counters and
+    ``last_viewed_at``.
     """
 
     unread_msg_count: int = Field(description="Unread messages, including replies in threads")
     mention_count: int = Field(description="Unread @-mentions, including those in thread replies")
     unread_msg_count_root: int = Field(description="Unread root messages, excluding replies in threads")
     mention_count_root: int = Field(description="Unread @-mentions in root messages, excluding thread replies")
+    last_viewed_at: int = Field(
+        description=(
+            "User's last-read marker for this channel (Unix ms). Through this timestamp "
+            "the user has read the channel. 0 when no membership record exists."
+        )
+    )
 
 
 class ChannelMember(MattermostResponse):

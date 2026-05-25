@@ -466,24 +466,26 @@ class MattermostClient:
         return result if isinstance(result, list) else []
 
     async def get_my_channels_with_unreads(self, team_id: str) -> list[dict[str, Any]]:
-        """Get the authenticated user's channels enriched with unread counters.
+        """Get the authenticated user's channels enriched with unread counters and read marker.
 
         Fetches the user's channels and channel memberships concurrently, then
-        merges them — each channel dict gets four counters: `unread_msg_count`,
-        `mention_count`, `unread_msg_count_root`, and `mention_count_root`.
+        merges them — each channel dict gets four counters (`unread_msg_count`,
+        `mention_count`, `unread_msg_count_root`, `mention_count_root`) and the
+        `last_viewed_at` read marker.
 
         The non-root counters count thread replies as channel messages
         (`unread_msg_count = max(0, channel.total_msg_count - member.msg_count)`);
         the `_root` counters count only top-level posts
         (`unread_msg_count_root = max(0, channel.total_msg_count_root - member.msg_count_root)`).
-        Channels without a matching membership record default all four counters to 0.
+        Channels without a matching membership record default all four counters
+        and `last_viewed_at` to 0.
 
         Args:
             team_id: Team identifier
 
         Returns:
             List of channel objects, each with `unread_msg_count`, `mention_count`,
-            `unread_msg_count_root`, and `mention_count_root`
+            `unread_msg_count_root`, `mention_count_root`, and `last_viewed_at`
         """
         channels_result, members_result = await asyncio.gather(
             self.get_my_channels(team_id=team_id),
@@ -498,6 +500,7 @@ class MattermostClient:
                 channel["mention_count"] = 0
                 channel["unread_msg_count_root"] = 0
                 channel["mention_count_root"] = 0
+                channel["last_viewed_at"] = 0
             else:
                 channel["unread_msg_count"] = max(0, channel.get("total_msg_count", 0) - member.get("msg_count", 0))
                 channel["mention_count"] = member.get("mention_count", 0)
@@ -505,6 +508,7 @@ class MattermostClient:
                     0, channel.get("total_msg_count_root", 0) - member.get("msg_count_root", 0)
                 )
                 channel["mention_count_root"] = member.get("mention_count_root", 0)
+                channel["last_viewed_at"] = member.get("last_viewed_at", 0)
         return channels
 
     async def get_channel(self, channel_id: str) -> dict[str, Any]:
