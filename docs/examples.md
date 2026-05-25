@@ -148,6 +148,31 @@ structured release notes — grouped by category, each with its own color:
 
 ---
 
+## Morning Catch-Up
+
+> "What did I miss? Give me a rundown of my unread channels."
+
+The AI lists every channel with unread messages, then for each one fetches the precise
+unread window — not just the last N posts. It uses `last_viewed_at` as the read marker
+and `unread_only=true` for deterministic ordering:
+
+**Tools used:**
+
+1. `list_my_channels` — `only_unread=true` returns only channels with unread messages,
+   each enriched with `unread_msg_count`, `mention_count`, `unread_msg_count_root`,
+   `mention_count_root`, and `last_viewed_at`.
+2. `get_channel_messages` — `unread_only=true` fetches the unread window for each
+   channel via Mattermost's `/posts/unread` endpoint. The AI passes `limit_after=200`
+   to retrieve up to 200 unread posts per channel; if `truncated` comes back True, more
+   exists beyond the window.
+
+The AI prioritizes channels by `mention_count` first, then by total unreads. For each
+channel it groups the returned posts by `root_id` to surface threads alongside their root
+context posts (which Mattermost auto-includes). Nothing is posted to Mattermost; the
+digest stays in your conversation with the AI.
+
+---
+
 ## Daily Channel Digest
 
 > "Catch me up on #backend — what happened while I was away?"
