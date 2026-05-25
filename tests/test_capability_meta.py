@@ -16,6 +16,7 @@ EXPECTED_CAPABILITIES: dict[str, Capability] = {
     "create_channel": Capability.CREATE,
     "join_channel": Capability.WRITE,
     "leave_channel": Capability.WRITE,
+    "mark_channel_viewed": Capability.WRITE,
     "get_channel_members": Capability.READ,
     "add_user_to_channel": Capability.WRITE,
     "create_direct_channel": Capability.CREATE,
@@ -181,7 +182,7 @@ class TestCapabilityCounts:
 
     def test_expected_tool_count(self):
         """Total tool count matches expectations."""
-        assert len(EXPECTED_CAPABILITIES) == 37
+        assert len(EXPECTED_CAPABILITIES) == 38
 
     def test_capability_distribution(self):
         """Capability distribution matches design."""
@@ -189,6 +190,6 @@ class TestCapabilityCounts:
         for cap in EXPECTED_CAPABILITIES.values():
             counts[cap] = counts.get(cap, 0) + 1
         assert counts[Capability.READ] == 20
-        assert counts[Capability.WRITE] == 13
+        assert counts[Capability.WRITE] == 14
         assert counts[Capability.CREATE] == 2
         assert counts[Capability.DELETE] == 2

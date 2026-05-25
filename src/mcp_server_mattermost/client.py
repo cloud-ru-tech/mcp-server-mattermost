@@ -639,6 +639,23 @@ class MattermostClient:
         user_id = await self._get_current_user_id()
         await self.delete(f"/channels/{channel_id}/members/{user_id}")
 
+    async def view_channel(self, channel_id: str) -> None:
+        """Mark a channel as viewed for the authenticated user.
+
+        Calls ``POST /channels/members/me/view`` with ``{"channel_id": ...}`` in the
+        body. Mattermost resets the channel-member counters (``msg_count =
+        total_msg_count``, ``mention_count = 0``) and updates ``last_viewed_at`` to the
+        current server time.
+
+        Args:
+            channel_id: Channel to mark as viewed.
+        """
+        await self._request(
+            "POST",
+            "/channels/members/me/view",
+            json={"channel_id": channel_id},
+        )
+
     async def get_channel_members(
         self,
         channel_id: str,

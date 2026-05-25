@@ -213,6 +213,47 @@ async def leave_channel(
 
 
 @tool(
+    annotations={"destructiveHint": False},
+    tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
+    meta={"capability": Capability.WRITE},
+)
+async def mark_channel_viewed(
+    channel_id: ChannelId,
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> None:
+    """Mark a channel as viewed for the authenticated user.
+
+    Resets the channel-member unread counters
+    (``msg_count = total_msg_count``, ``mention_count = 0``) and advances
+    ``last_viewed_at`` to the current server time.
+
+    WHEN TO USE:
+      - The user explicitly asks to mark a channel as read
+        ("clear the unread badge on #releases").
+      - A bot-monitoring loop where THIS agent owns the read state for
+        the authenticated account: after processing posts from
+        ``get_channel_messages(unread_only=True)``, advance the marker so
+        the next poll only returns truly new posts.
+
+    DO NOT CALL automatically after fetching unread posts via
+    ``get_channel_messages(unread_only=True)``. Doing so destroys the
+    user's unread badge in the Mattermost UI, which they may still rely
+    on as a "still need to handle" reminder outside of this AI session.
+
+    At-least-once delivery (bot loops): capture ``last_viewed_at`` from
+    ``list_my_channels`` BEFORE the unread fetch. On the next cycle, pass
+    that captured timestamp as ``get_channel_messages(since=...)`` instead
+    of relying on ``unread_only=True`` — this re-fetches anything written
+    in the race window between fetch and mark.
+
+    Not idempotent: each call advances ``last_viewed_at`` to a new ``now()``,
+    and any posts arriving between two consecutive calls are silently
+    marked as viewed by the second call.
+    """
+    await client.view_channel(channel_id=channel_id)
+
+
+@tool(
     annotations={"readOnlyHint": True, "idempotentHint": True},
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL, ToolTag.USER},
     meta={"capability": Capability.READ},

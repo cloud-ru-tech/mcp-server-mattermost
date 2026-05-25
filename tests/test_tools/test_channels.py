@@ -448,3 +448,19 @@ class TestErrorHandling:
                 channel_id="ch1234567890123456789012",
                 client=mock_client_not_found,
             )
+
+
+class TestMarkChannelViewed:
+    """Tests for mark_channel_viewed tool."""
+
+    async def test_mark_channel_viewed_delegates_to_client(self, mock_client: AsyncMock) -> None:
+        """Tool calls client.view_channel with the channel_id and returns None."""
+        mock_client.view_channel.return_value = None
+
+        result = await channels.mark_channel_viewed(
+            channel_id="ch1234567890123456789012",
+            client=mock_client,
+        )
+
+        assert result is None
+        mock_client.view_channel.assert_called_once_with(channel_id="ch1234567890123456789012")

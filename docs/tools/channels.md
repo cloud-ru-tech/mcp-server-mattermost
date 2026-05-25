@@ -287,6 +287,57 @@ None
 
 ---
 
+## mark_channel_viewed
+
+Mark a channel as viewed for the authenticated user.
+
+Resets the channel-member unread counters (msg_count = total_msg_count,
+mention_count = 0) and advances `last_viewed_at` to the current server time.
+
+**When to use:**
+
+- The user explicitly asks to mark a channel as read.
+- A bot-monitoring loop where the agent owns the read state for the authenticated
+  account, after processing posts fetched via `get_channel_messages(unread_only=true)`.
+
+**Do not call** automatically after fetching unread posts. The user may still rely on
+the Mattermost UI unread badge as a "still need to handle" reminder outside of the AI
+session.
+
+### Example prompts
+
+- "Mark the engineering channel as read"
+- "I've processed everything in #releases — clear the unread badge"
+
+### Annotations
+
+| Hint | Value |
+|------|-------|
+| `readOnlyHint` | false |
+| `destructiveHint` | false |
+| `idempotentHint` | false |
+| `capability` | write |
+
+Not idempotent: each call advances `last_viewed_at` to the current server time, and any
+posts arriving between two consecutive calls are silently marked as viewed by the
+second call.
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `channel_id` | string | ✓ | — | Channel ID (26-character alphanumeric) |
+
+### Returns
+
+None.
+
+### Mattermost API
+
+[POST /api/v4/channels/members/{user_id}/view](https://api.mattermost.com/#tag/channels/operation/ViewChannel)
+
+---
+
 ## get_channel_members
 
 Get members of a channel.

@@ -13,6 +13,7 @@ for _tool in (
     "create_channel",
     "join_channel",
     "leave_channel",
+    "mark_channel_viewed",
     "get_channel_members",
     "add_user_to_channel",
     "create_direct_channel",
@@ -82,7 +83,7 @@ class TestToolCount:
     """Verify expected number of tools are registered."""
 
     async def test_total_tool_count(self, all_tools):
-        assert len(all_tools) == 37, f"Expected 37 tools, got {len(all_tools)}: {list(all_tools.keys())}"
+        assert len(all_tools) == 38, f"Expected 38 tools, got {len(all_tools)}: {list(all_tools.keys())}"
 
     async def test_no_unexpected_tools(self, all_tools):
         """Catch new tools not in _TOOL_TO_MODULE."""

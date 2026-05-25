@@ -1151,6 +1151,31 @@ class TestMattermostClientChannelsAPI:
 
         assert result == {"channel_id": "ch123", "user_id": "user456"}
 
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_view_channel_marks_channel_viewed(self, mock_settings):
+        """view_channel POSTs /channels/members/me/view with {"channel_id": ...}."""
+        import json
+
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        route = respx.post(
+            "https://test.mattermost.com/api/v4/channels/members/me/view",
+        ).mock(
+            return_value=httpx.Response(
+                200,
+                json={"status": "OK", "last_viewed_at_times": {"ch1": 1716620000000}},
+            )
+        )
+        async with client.lifespan():
+            await client.view_channel(channel_id="ch1")
+        assert route.called
+        body = json.loads(route.calls[0].request.content)
+        assert body == {"channel_id": "ch1"}
+
 
 class TestMattermostClientMessagesAPI:
     """Test Messages/Posts API methods."""

@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unread-window flow.
 - `list_my_channels` accepts an `only_unread` filter to return only channels
   with unread messages.
+- `mark_channel_viewed(channel_id)` — new tool that marks a channel as viewed
+  for the authenticated user. Resets the channel-member unread counters and
+  advances `last_viewed_at`. Documented usage: explicit user intent or a
+  bot-monitoring loop that owns the read state.
 
 ### Changed
 - `list_my_channels` now returns four unread counters for each channel:
