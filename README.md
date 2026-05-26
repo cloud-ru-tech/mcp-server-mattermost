@@ -6,7 +6,7 @@
 
 Let AI assistants read, search, and post in your Mattermost workspace
 
-37 tools · Channels · Messages · Reactions · Threads · Files · Users
+38 tools · Channels · Messages · Reactions · Threads · Files · Users
 
 [![MCP Server](https://img.shields.io/badge/MCP-Server-blue)](https://modelcontextprotocol.io/)
 [![PyPI version](https://badge.fury.io/py/mcp-server-mattermost.svg)](https://pypi.org/project/mcp-server-mattermost/)
@@ -32,6 +32,8 @@ Let AI assistants read, search, and post in your Mattermost workspace
 Once configured, you can ask your AI assistant:
 
 - "List all channels and find where the deployment discussion is happening"
+- "What did I miss in #engineering since yesterday morning?"
+- "Show me my unread channels and summarize the threads I was mentioned in"
 - "Send a build status alert to #engineering with a red attachment"
 - "Search for messages about the outage last week and summarize"
 - "Summarize this thread and post the key decisions"
@@ -41,17 +43,18 @@ Once configured, you can ask your AI assistant:
 ## Available Tools
 
 <details>
-<summary>Channels (10 tools)</summary>
+<summary>Channels (11 tools)</summary>
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `list_public_channels` | List public channels in a team | `team_id` ✓ |
-| `list_my_channels` | List your channels with unread counts | `team_id` ✓ |
+| `list_my_channels` | List your channels with unread counts | `team_id` ✓, `only_unread` |
 | `get_channel` | Get channel details by ID | `channel_id` ✓ |
 | `get_channel_by_name` | Get channel by name | `team_id`, `channel_name` ✓ |
 | `create_channel` | Create a new channel | `team_id`, `name`, `display_name` ✓ |
 | `join_channel` | Join a public channel | `channel_id` ✓ |
 | `leave_channel` | Leave a channel | `channel_id` ✓ |
+| `mark_channel_viewed` | Mark a channel as viewed (reset unread counters) | `channel_id` ✓ |
 | `get_channel_members` | List channel members | `channel_id` ✓ |
 | `add_user_to_channel` | Add user to channel | `channel_id`, `user_id` ✓ |
 | `create_direct_channel` | Create DM channel | `user_id_1`, `user_id_2` ✓ |
@@ -64,7 +67,7 @@ Once configured, you can ask your AI assistant:
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `post_message` | Send a message to a channel | `channel_id`, `message` ✓, `attachments` |
-| `get_channel_messages` | Get recent messages | `channel_id` ✓ |
+| `get_channel_messages` | Get messages: recent, unread window, or `since` timestamp | `channel_id` ✓, `unread_only`, `since` |
 | `search_messages` | Search messages by term | `team_id`, `terms` ✓ |
 | `update_message` | Edit a message | `post_id`, `message` ✓, `attachments` |
 | `delete_message` | Delete a message | `post_id` ✓ |

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-26
+
 ### Added
 - `get_channel_messages` now supports two new mutually-exclusive modes:
   - `unread_only=True` — fetches the user's unread window via Mattermost's
