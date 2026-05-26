@@ -69,16 +69,27 @@ Post object with `id`, `channel_id`, `message`, `create_at`, `user_id`.
 
 ## get_channel_messages
 
-Get recent messages from a channel.
+Read messages from a channel — either the most recent batch, the user's unread window, or messages modified after a given timestamp.
 
-Returns messages in reverse chronological order (newest first).
-Use for reading channel conversation history.
-For searching messages by keywords across channels, use search_messages instead.
+Three mutually-exclusive modes:
+
+- **Default** — paginated reverse-chronological history. The default behaviour
+  for "show me the channel".
+- **`unread_only=True`** — the user's unread window via `/posts/unread`. Returns
+  up to `limit_after` unread posts plus `limit_before` context posts.
+  Deterministic ordering; edits of older posts do not appear.
+- **`since=<ms>`** — posts with `update_at > since`, ordered by `create_at`.
+  Includes edits of older posts. Intended for incremental sync where the
+  caller tracks its own watermark, not for direct human use.
+
+For keyword search across channels, use `search_messages`.
+To read a thread in full, use `get_thread`.
 
 ### Example prompts
 
 - "Show me the last 10 messages in #general"
-- "What's the recent conversation in engineering?"
+- "What's new in #engineering?"
+- "Catch me up on #releases — what did I miss?"
 - "Read the channel history"
 
 ### Annotations
@@ -93,17 +104,52 @@ For searching messages by keywords across channels, use search_messages instead.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `channel_id` | string | ✓ | — | Channel ID |
-| `page` | integer | — | 0 | Page number (0-indexed) |
-| `per_page` | integer | — | 60 | Results per page (1-200) |
+| `channel_id` | string | ✓ | — | Channel ID (26-character alphanumeric) |
+| `unread_only` | boolean | — | false | Use the unread-window mode. Mutually exclusive with `since` and pagination. |
+| `since` | integer | — | — | Unix timestamp in milliseconds (≥ 10¹²). Returns posts with `update_at > since`. Mutually exclusive with `unread_only` and pagination. |
+| `page` | integer | — | 0 | Page number, 0-indexed. Default mode only. |
+| `per_page` | integer | — | 60 | Page size, 1–200. Default mode only. |
+| `limit_before` | integer | — | 0 | Context posts before the first unread, 0–200. `unread_only` mode only. |
+| `limit_after` | integer | — | 60 | Unread posts to return, 0–200. `unread_only` mode only. |
+| `collapsed_threads` | boolean | — | false | Set true if [CRT][crt-end-user] is enabled. Valid only with `unread_only` or `since`. Team default is CRT off. |
 
 ### Returns
 
-Object with `posts` (map of post objects) and `order` (array of post IDs).
+Object with:
+
+- `posts` — map of post objects keyed by post ID.
+- `order` — array of post IDs in reverse-chronological order.
+- `truncated` — boolean. True when the response hit the per-mode cap and more
+  posts likely exist beyond this batch (default: `len(order) >= per_page`;
+  `unread_only`: `>= limit_before + limit_after`; `since`: `>= 1000`, the
+  server hard-cap).
+
+### Behavior notes
+
+- **Collapsed Reply Threads (CRT)** changes how unread counts and thread
+  replies surface. With CRT off (team default), `unread_msg_count` from
+  `list_my_channels` and this tool's response in any mode both count thread
+  replies. With CRT on, pass `collapsed_threads=true` and fetch full threads
+  via `get_thread` when needed. See the [end-user overview][crt-end-user] for
+  what CRT does in the UI, and the [administrator guide][crt-admin] for how
+  it is enabled on a server.
+- `since` mode is the only one that surfaces edits of older posts. A post
+  with `create_at <= since AND update_at > since` is an edit; filter by
+  `create_at` if you only want new messages.
+- `since` mode is capped at 1000 posts server-side. When the cap is hit
+  (`truncated=true`), the returned posts are not guaranteed to be
+  consecutive — there can be gaps between them and posts not in the
+  response. Prefer `unread_only=true` for a deterministic windowed read.
+- For watermark-based sync, read `ChannelWithUnreads.last_viewed_at` from
+  `list_my_channels` and pass it as `since`.
+
+[crt-end-user]: https://docs.mattermost.com/end-user-guide/collaborate/organize-conversations.html
+[crt-admin]: https://support.mattermost.com/hc/en-us/articles/6880701948564-Administrator-s-guide-to-enabling-Collapsed-Reply-Threads
 
 ### Mattermost API
 
-[GET /api/v4/channels/{channel_id}/posts](https://api.mattermost.com/#tag/posts/operation/GetPostsForChannel)
+- [GET /api/v4/channels/{channel_id}/posts](https://api.mattermost.com/#tag/posts/operation/GetPostsForChannel) — default and `since` modes.
+- [GET /api/v4/users/{user_id}/channels/{channel_id}/posts/unread](https://api.mattermost.com/#tag/posts/operation/GetPostsAroundLastUnread) — `unread_only` mode.
 
 ---
 

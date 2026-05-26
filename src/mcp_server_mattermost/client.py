@@ -737,9 +737,10 @@ class MattermostClient:
         but NOT in ``order`` (server-side behavior).
 
         Per Mattermost spec, ``since`` is mutually exclusive with ``page``/``per_page``;
-        this method does not accept them. Server hard-caps the response at 1000 posts
-        without a deterministic ORDER BY; check ``len(result['order'])`` to detect
-        truncation.
+        this method does not accept them. Posts are ordered by ``create_at`` and the
+        server caps the response at 1000 posts; when the cap is hit, the returned
+        posts are not guaranteed to be consecutive (gaps are possible). Check
+        ``len(result['order'])`` to detect truncation.
 
         Args:
             channel_id: Channel identifier.

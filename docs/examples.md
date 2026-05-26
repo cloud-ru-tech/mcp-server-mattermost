@@ -173,6 +173,92 @@ digest stays in your conversation with the AI.
 
 ---
 
+## Bot Monitor Loop
+
+> "Watch a set of channels and react to new messages on a schedule, without re-processing what's already handled."
+
+A bot account polls Mattermost on an interval and processes new posts. Two patterns,
+pick the one that matches your reliability requirements.
+
+### Pattern A — simple (recommended for most bots)
+
+Use `unread_only` to fetch new posts, then `mark_channel_viewed` to advance the read
+marker. Mattermost handles the bookkeeping; the bot stays stateless.
+
+**Tools used:**
+
+1. `list_my_channels(only_unread=True)` — channels with new messages.
+2. `get_channel_messages(channel_id, unread_only=True)` — the unread window.
+3. `mark_channel_viewed(channel_id)` — clear unread after processing.
+
+**Loop:**
+
+```python
+for ch in list_my_channels(team_id, only_unread=True):
+    if ch.last_viewed_at == 0:
+        mark_channel_viewed(ch.id)        # one-time bootstrap on a fresh channel
+        continue
+    posts = get_channel_messages(ch.id, unread_only=True, limit_after=200)
+    handle(posts)
+    mark_channel_viewed(ch.id)
+```
+
+**Trade-offs:**
+
+- Best fit for a dedicated bot account (no human shares the unread badge).
+- A post that arrives between `get_channel_messages` and `mark_channel_viewed`
+  is marked as viewed without being handled. For most bots this race window
+  is too small to matter; on very busy channels or when no message can be
+  lost, use Pattern B.
+
+### Pattern B — at-least-once (when losses are unacceptable)
+
+Use `since` with a watermark stored outside Mattermost. The bot processes everything
+modified after the watermark, deduplicates by `post.id`, and advances the watermark
+only after a successful handler.
+
+**Tools used:**
+
+1. `list_my_channels` — discover channels.
+2. `get_channel_messages(channel_id, since=watermark)` — everything new or edited
+   since the last successful run.
+
+**Loop:**
+
+```python
+# Persistent across restarts — file, Redis, DB.
+watermarks: dict[ChannelId, int]
+processed: set[PostId]
+
+for ch in list_my_channels(team_id):
+    last_seen = watermarks.get(ch.id, 0)
+    result = get_channel_messages(ch.id, since=last_seen)
+    for post in result.posts.values():
+        if post.id in processed:
+            continue
+        if post.delete_at != 0:
+            continue                       # skip tombstones from deleted posts
+        handle(post)
+        processed.add(post.id)
+    if result.posts:
+        watermarks[ch.id] = max(p.update_at for p in result.posts.values())
+```
+
+**When to choose this:**
+
+- A missed message is a real problem (alert handling, audit trail, etc.).
+- The bot shares an account with a human — Pattern A would clear their unread badge.
+- The bot needs to see edits and deletions of older posts, not just new ones.
+
+**Things to know:**
+
+- `since` returns up to 1000 posts; on `result.truncated == True` poll more often
+  or step the watermark forward in smaller windows.
+- System posts (`type` starts with `"system_"`) and edits of older posts come back
+  too — filter or process them based on what the bot is for.
+
+---
+
 ## Daily Channel Digest
 
 > "Catch me up on #backend — what happened while I was away?"

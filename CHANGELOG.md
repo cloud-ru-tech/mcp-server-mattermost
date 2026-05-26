@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   response cap (`1000` for `?since=`, `limit_before + limit_after` for `/posts/unread`,
   `per_page` for default pagination).
 - `docs/examples.md` — restored "Morning Catch-Up" example, now end-to-end with the new
-  unread-window flow.
+  unread-window flow, and added a "Bot Monitor Loop" recipe with two patterns
+  (simple `unread_only` + `mark_channel_viewed`, and at-least-once `since` + watermark).
 - `list_my_channels` accepts an `only_unread` filter to return only channels
   with unread messages.
 - `mark_channel_viewed(channel_id)` — new tool that marks a channel as viewed
@@ -32,6 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   threads are counted, matching the channel badge when Collapsed Reply Threads
   is off; `unread_msg_count_root` / `mention_count_root` count only root posts,
   matching the badge when Collapsed Reply Threads is on.
+- `get_channel_messages`: tightened `limit_after` validation to `1-200`
+  (Mattermost rejects `limit_after=0` with HTTP 400; the previous `ge=0` bound
+  surfaced an unclear server error).
+- Clarified docstrings for `get_channel_messages` and `mark_channel_viewed`:
+  tombstones / system posts / cascade `update_at` behavior; corrected the
+  description of `last_viewed_at` advancement (set to the channel's current
+  `last_post_at`, not wall-clock `now()`); pointed bot-loop authors at the new
+  recipe in `docs/examples.md`.
 
 ## [0.4.0] - 2026-03-24
 

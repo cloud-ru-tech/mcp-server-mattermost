@@ -62,6 +62,7 @@ def _validate_get_channel_messages_mode(
     since: int | None,
     page: int,
     per_page: int,
+    collapsed_threads: bool,  # noqa: FBT001
 ) -> None:
     """Raise ValueError if multiple read modes are combined.
 
@@ -69,6 +70,10 @@ def _validate_get_channel_messages_mode(
       - unread_only=True            -> /posts/unread
       - since=<ms>                  -> /posts?since=
       - default (page/per_page)     -> /posts?page=&per_page=
+
+    ``collapsed_threads`` is a CRT-aware flag accepted only by the unread and
+    since endpoints; the default /posts endpoint does not accept it, so
+    ``collapsed_threads=True`` is rejected in default mode.
     """
     if unread_only and since is not None:
         msg = "unread_only=True and since=... are mutually exclusive — pick one mode"
@@ -77,6 +82,12 @@ def _validate_get_channel_messages_mode(
     if (unread_only or since is not None) and pagination_explicit:
         msg = (
             "page/per_page cannot be combined with unread_only or since — pagination is only meaningful in default mode"
+        )
+        raise ValueError(msg)
+    if collapsed_threads and not unread_only and since is None:
+        msg = (
+            "collapsed_threads=True requires unread_only=True or since=<ms> — "
+            "the default /posts endpoint does not support CRT-aware queries"
         )
         raise ValueError(msg)
 
@@ -116,9 +127,9 @@ async def get_channel_messages(  # noqa: PLR0913
     limit_after: Annotated[
         int,
         Field(
-            ge=0,
+            ge=1,
             le=200,
-            description="In unread_only mode: unread posts to return (max 200)",
+            description="In unread_only mode: unread posts to return (1-200)",
         ),
     ] = _DEFAULT_PER_PAGE,
     collapsed_threads: Annotated[  # noqa: FBT002
@@ -126,7 +137,9 @@ async def get_channel_messages(  # noqa: PLR0913
         Field(
             description=(
                 "Set True only if the user has CRT (Collapsed Reply Threads) enabled. "
-                "Team default is CRT off — leave False unless you know otherwise."
+                "Team default is CRT off — leave False unless you know otherwise. "
+                "Requires unread_only=True or since=<ms>; the default /posts endpoint "
+                "rejects CRT-aware queries."
             ),
         ),
     ] = False,
@@ -144,27 +157,38 @@ async def get_channel_messages(  # noqa: PLR0913
       "show me what's new".
     - **``since=<ms>``:** posts with ``update_at > since`` via ``?since=``. Includes
       edits of older posts and thread replies. Use for incremental sync where the agent
-      tracks its own watermark. Server hard-caps at 1000 posts without a deterministic
-      order — check ``truncated`` on the response.
+      tracks its own watermark. Posts are ordered by ``create_at``; the server caps the
+      response at 1000 posts, and when the cap is hit, returned posts are not guaranteed
+      to be consecutive (gaps are possible) — check ``truncated`` on the response.
 
     Returns messages in reverse chronological order.
     For searching messages by keywords across channels, use search_messages instead.
     To read all messages in a thread, use get_thread.
 
     Notes for agents:
-        - When CRT is OFF (team default), ``unread_msg_count`` from list_my_channels
-          covers both root posts and thread replies; this tool's response in any mode
-          also covers both.
-        - When CRT is ON, ``unread_msg_count`` in list_my_channels excludes thread
-          replies. Pass ``collapsed_threads=True`` and fetch full threads via get_thread
-          when needed.
-        - In ``since`` mode, edits of older posts (``create_at <= since AND
-          update_at > since``) appear in the response. Filter by ``create_at > since``
-          if you only want newly-created messages.
-        - If ``response.truncated`` is True, more posts exist beyond this batch.
-          In ``since`` mode, switch to ``unread_only=True`` for deterministic results.
+        - CRT-aware counters: with CRT off (team default), ``unread_msg_count``
+          from list_my_channels counts thread replies; with CRT on it doesn't.
+          The ``_root`` variants always count only root posts. Set
+          ``collapsed_threads=True`` (with ``unread_only`` or ``since``) when
+          the user has CRT on.
+        - ``since`` includes edits and deletions of older posts. Filter by
+          ``create_at > since`` for new posts only; check ``delete_at == 0``
+          to skip tombstones. System posts (``type`` starts with ``"system_"``)
+          appear in both modes but are not counted in ``unread_msg_count``.
+        - On a never-viewed channel ``last_viewed_at`` may be 0, in which case
+          ``unread_only`` returns an empty ``order``. Call ``mark_channel_viewed``
+          once after the channel has at least one post to bootstrap.
+        - ``truncated=True`` means more posts exist beyond this batch. Increase
+          ``limit_after`` (up to 200), narrow the ``since`` window, or use one of
+          the bot-loop patterns in docs/examples.md ("Bot Monitor Loop").
     """
-    _validate_get_channel_messages_mode(unread_only=unread_only, since=since, page=page, per_page=per_page)
+    _validate_get_channel_messages_mode(
+        unread_only=unread_only,
+        since=since,
+        page=page,
+        per_page=per_page,
+        collapsed_threads=collapsed_threads,
+    )
 
     if unread_only:
         data = await client.get_channel_posts_unread(

@@ -91,6 +91,7 @@ class TestGetChannelMessages:
 
         assert isinstance(result, PostList)
         assert "ps1" in result.posts
+        assert result.truncated is False
 
 
 class TestSearchMessages:
@@ -316,6 +317,41 @@ class TestGetChannelMessagesValidation:
                     {"channel_id": "ch123456789012345678901234", "since": 1716620000},  # seconds not ms
                 )
 
+    async def test_rejects_collapsed_threads_with_default_mode(self, mock_settings) -> None:
+        """collapsed_threads=True without unread_only or since must raise."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        async with Client(mcp) as client:
+            with pytest.raises(Exception) as exc_info:
+                await client.call_tool(
+                    "get_channel_messages",
+                    {"channel_id": "ch123456789012345678901234", "collapsed_threads": True},
+                )
+        msg = str(exc_info.value).lower()
+        assert "collapsed_threads" in msg or "crt" in msg
+
+    @pytest.mark.asyncio
+    async def test_rejects_limit_after_zero(self, mock_settings) -> None:
+        """limit_after=0 must be rejected at validation; Mattermost API returns HTTP 400 for it."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        async with Client(mcp) as client:
+            with pytest.raises(Exception) as exc_info:
+                await client.call_tool(
+                    "get_channel_messages",
+                    {
+                        "channel_id": "ch123456789012345678901234",
+                        "unread_only": True,
+                        "limit_after": 0,
+                    },
+                )
+        msg = str(exc_info.value).lower()
+        assert "limit_after" in msg or "greater" in msg or "ge" in msg
+
 
 def _post_fixture(**overrides) -> dict:  # type: ignore[type-arg]
     base = {
@@ -440,6 +476,25 @@ class TestGetChannelMessagesRouting:
             result = await client.call_tool(
                 "get_channel_messages",
                 {"channel_id": "ch123456789012345678901234", "since": 1716620000000},
+            )
+        assert result.structured_content["truncated"] is True
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_truncated_when_default_hits_per_page(self, mock_settings) -> None:
+        """truncated=True when default-mode response has len(order) >= per_page."""
+        from fastmcp import Client
+
+        from mcp_server_mattermost.server import mcp
+
+        posts = {f"p{i}": _post_fixture(id=f"p{i}", channel_id="ch123456789012345678901234") for i in range(3)}
+        respx.get("https://test.mattermost.com/api/v4/channels/ch123456789012345678901234/posts").mock(
+            return_value=httpx.Response(200, json={"order": list(posts), "posts": posts})
+        )
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "get_channel_messages",
+                {"channel_id": "ch123456789012345678901234", "per_page": 3},
             )
         assert result.structured_content["truncated"] is True
 
