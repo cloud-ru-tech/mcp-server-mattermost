@@ -37,12 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Mattermost rejects `limit_after=0` with HTTP 400; the previous `ge=0` bound
   surfaced an unclear server error).
 - Rewrote `get_channel_messages` and `mark_channel_viewed` docstrings to be
-  self-contained for agent consumption: mode-selection guidance up front,
-  inline bot-loop pattern (no external references), and explicit notes on
-  tombstones, system posts, cascade `update_at`, the `last_viewed_at == 0`
-  bootstrap quirk, and admin no-op on non-member channels. Corrected the
-  description of `last_viewed_at` advancement (set to the channel's current
-  `last_post_at`, not wall-clock `now()`).
+  self-contained and compact: intent → mode mapping up front, footgun-only
+  notes (`last_viewed_at == 0` bootstrap quirk, `since`-mode tombstones,
+  `truncated` semantics), implementation detail moved to Field descriptions
+  to keep agent context budget small.
 
 ## [0.4.0] - 2026-03-24
 

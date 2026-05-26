@@ -221,43 +221,15 @@ async def mark_channel_viewed(
     channel_id: ChannelId,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> None:
-    """Mark a channel as viewed for the authenticated user.
+    """Mark a channel as read for the authenticated user.
 
-    Resets the channel-member unread counters (``unread_msg_count`` and
-    ``mention_count`` go to 0) and sets ``last_viewed_at`` to the channel's
-    current ``last_post_at``. After this call, ``unread_msg_count`` from
-    ``list_my_channels`` returns 0 for the channel, and
-    ``get_channel_messages(unread_only=True)`` returns an empty window until
-    new posts arrive.
+    Clears unread counters and advances ``last_viewed_at``. Use when the user
+    asks to clear unreads, when a bot has processed
+    ``get_channel_messages(unread_only=True)`` and needs to advance read state
+    for the next poll, or as a one-shot bootstrap on a channel with
+    ``last_viewed_at == 0`` so ``unread_only`` queries return posts.
 
-    WHEN TO USE:
-      - The user explicitly asks to clear an unread badge — "mark #releases
-        as read", "clear my unreads on this channel".
-      - A dedicated bot account that owns its read state, polling on an
-        interval. Typical loop:
-          1. ``list_my_channels(only_unread=True)`` → channels with new posts
-          2. ``get_channel_messages(channel_id, unread_only=True)`` → fetch
-          3. process the posts
-          4. ``mark_channel_viewed(channel_id)`` → advance the read marker
-        This is at-most-once delivery: a post arriving between steps 2 and 4
-        is silently marked as viewed without being handled. For at-least-once
-        delivery, use ``get_channel_messages(channel_id, since=<watermark>)``
-        with a watermark stored outside Mattermost, and skip this call.
-      - One-shot bootstrap on a channel where ``last_viewed_at == 0`` (never
-        viewed by this account) so subsequent ``unread_only`` queries work.
-
-    DO NOT call automatically when the account is shared with a human — it
-    clears their unread badge in the Mattermost UI, removing a "still needs
-    attention" signal they may rely on outside this session.
-
-    Behavior to know:
-      - The new ``last_viewed_at`` equals the channel's current
-        ``last_post_at`` at the time of the call, not wall-clock ``now()``.
-        On a channel with no new posts since the previous call, this is
-        effectively a no-op (idempotent).
-      - When the caller is not a member of the channel, an admin token
-        returns HTTP 200 but Mattermost silently ignores the request — no
-        membership is created and no counters reset.
+    Do NOT call on accounts shared with humans — it clears their UI badge.
     """
     await client.view_channel(channel_id=channel_id)
 
