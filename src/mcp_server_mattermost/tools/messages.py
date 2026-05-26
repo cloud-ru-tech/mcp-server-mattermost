@@ -145,42 +145,63 @@ async def get_channel_messages(  # noqa: PLR0913
     ] = False,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> PostList:
-    """Get messages from a channel — recent, unread window, or modified since a timestamp.
+    """Get messages from a channel — recent history, the user's unread window, or posts changed since a watermark.
 
-    Three mutually-exclusive modes:
+    Three mutually-exclusive modes. Pick by user intent:
 
-    - **Default (page/per_page):** last ``per_page`` messages, reverse-chronological.
-      Suitable for "show me recent messages".
-    - **``unread_only=True``:** the user's unread window via ``/posts/unread``.
-      Returns up to ``limit_after`` unread posts plus ``limit_before`` context posts.
-      Deterministic ordering; edits of older posts do not appear. Preferred mode for
-      "show me what's new".
-    - **``since=<ms>``:** posts with ``update_at > since`` via ``?since=``. Includes
-      edits of older posts and thread replies. Use for incremental sync where the agent
-      tracks its own watermark. Posts are ordered by ``create_at``; the server caps the
-      response at 1000 posts, and when the cap is hit, returned posts are not guaranteed
-      to be consecutive (gaps are possible) — check ``truncated`` on the response.
+      - "Show me the last N messages" / "what's in this channel" → default
+        (page, per_page).
+      - "What did I miss" / "catch me up" → unread_only=True.
+      - "Sync everything modified since <ms>" → since=<unix_ms>.
 
-    Returns messages in reverse chronological order.
-    For searching messages by keywords across channels, use search_messages instead.
-    To read all messages in a thread, use get_thread.
+    Mode behavior:
 
-    Notes for agents:
-        - CRT-aware counters: with CRT off (team default), ``unread_msg_count``
-          from list_my_channels counts thread replies; with CRT on it doesn't.
-          The ``_root`` variants always count only root posts. Set
-          ``collapsed_threads=True`` (with ``unread_only`` or ``since``) when
-          the user has CRT on.
-        - ``since`` includes edits and deletions of older posts. Filter by
-          ``create_at > since`` for new posts only; check ``delete_at == 0``
-          to skip tombstones. System posts (``type`` starts with ``"system_"``)
-          appear in both modes but are not counted in ``unread_msg_count``.
-        - On a never-viewed channel ``last_viewed_at`` may be 0, in which case
-          ``unread_only`` returns an empty ``order``. Call ``mark_channel_viewed``
-          once after the channel has at least one post to bootstrap.
-        - ``truncated=True`` means more posts exist beyond this batch. Increase
-          ``limit_after`` (up to 200), narrow the ``since`` window, or use one of
-          the bot-loop patterns in docs/examples.md ("Bot Monitor Loop").
+    - **Default** (page, per_page): the most recent posts in reverse-chronological
+      order. ``truncated=True`` when the page is full and more posts likely exist;
+      paginate with ``page+1``.
+
+    - **unread_only=True** (with limit_before, limit_after): the user's unread
+      window, anchored at Mattermost's read marker ``last_viewed_at``. Returns up
+      to ``limit_after`` unread posts plus ``limit_before`` already-read posts as
+      context. Edits of older posts are NOT included. Deleted posts are excluded.
+      On a never-viewed channel (``last_viewed_at == 0``) ``order`` comes back
+      empty even when ``unread_msg_count > 0`` — call ``mark_channel_viewed`` once
+      after the channel has at least one post to bootstrap.
+
+    - **since=<unix_ms>**: posts with ``update_at > since``, ordered by
+      ``create_at``. Use when the caller tracks its own watermark, or when edits
+      and deletes of older posts also matter. Includes:
+          * edits of older posts (``create_at <= since AND update_at > since``);
+          * tombstones for deletions (``delete_at != 0``, empty ``message``,
+            ``props.deleteBy`` set);
+          * cascade updates — a root post's ``update_at`` advances when any reply
+            in its thread is edited or deleted, even if the root itself didn't
+            change.
+      Filter by ``create_at > since`` for newly-created posts only; check
+      ``delete_at == 0`` for live messages only. The server caps the response at
+      1000 posts; when ``truncated=True`` the returned posts may not be
+      contiguous (gaps possible) — step ``since`` forward in smaller windows.
+
+    Returns an object with:
+      - ``order``: list of post IDs in reverse-chronological order;
+      - ``posts``: dict of post objects keyed by ID — may contain more entries
+        than ``order`` (e.g. root posts referenced by thread replies);
+      - ``truncated``: True when the per-mode cap was hit.
+
+    Cross-mode notes:
+      - System posts (``type`` starts with ``"system_"`` — channel joins, adds,
+        topic changes) appear in ``unread_only`` and ``since`` responses but are
+        NOT counted in ``unread_msg_count`` from ``list_my_channels``. Filter on
+        the prefix to skip them when only user content matters.
+      - Collapsed Reply Threads (CRT): with CRT off (team default),
+        ``unread_msg_count`` from ``list_my_channels`` counts thread replies too.
+        With CRT on, set ``collapsed_threads=True`` (valid only with
+        ``unread_only`` or ``since``) so the response matches the root-only
+        counter; use ``get_thread`` to fetch full threads when reply context is
+        needed.
+
+    For keyword search across channels, use ``search_messages`` instead.
+    To read every message in a thread, use ``get_thread``.
     """
     _validate_get_channel_messages_mode(
         unread_only=unread_only,
