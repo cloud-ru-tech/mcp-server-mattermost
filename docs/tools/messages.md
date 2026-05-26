@@ -110,7 +110,7 @@ To read a thread in full, use `get_thread`.
 | `page` | integer | — | 0 | Page number, 0-indexed. Default mode only. |
 | `per_page` | integer | — | 60 | Page size, 1–200. Default mode only. |
 | `limit_before` | integer | — | 0 | Context posts before the first unread, 0–200. `unread_only` mode only. |
-| `limit_after` | integer | — | 60 | Unread posts to return, 0–200. `unread_only` mode only. |
+| `limit_after` | integer | — | 60 | Unread posts to return, 1–200. `unread_only` mode only. |
 | `collapsed_threads` | boolean | — | false | Set true if [CRT][crt-end-user] is enabled. Valid only with `unread_only` or `since`. Team default is CRT off. |
 
 ### Returns
