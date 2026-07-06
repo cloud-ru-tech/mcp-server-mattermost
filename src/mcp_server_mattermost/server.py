@@ -13,6 +13,7 @@ from .auth_factory import build_auth_provider_from_env
 from .config import get_settings
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
+from .tls import install_extra_ca_certs
 
 
 @lifespan
@@ -46,6 +47,7 @@ def _create_mcp() -> FastMCP:
     Returns:
         Configured FastMCP server instance
     """
+    install_extra_ca_certs(get_settings())
     auth = build_auth_provider_from_env()
     return FastMCP(
         name="Mattermost",

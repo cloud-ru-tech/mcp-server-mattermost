@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `MATTERMOST_EXTRA_CA_CERTS` — path to a PEM file with additional CA
+  certificates (corporate/private CAs). Unlike `SSL_CERT_FILE` /
+  `REQUESTS_CA_BUNDLE`, which *replace* the trust store, the extra CAs are
+  appended to the default bundle, so publicly-signed hosts keep working. The
+  combined bundle applies to all outgoing HTTPS requests, including the OAuth
+  proxy's token exchange with the identity provider.
+
 ## [0.5.0] - 2026-05-26
 
 ### Added

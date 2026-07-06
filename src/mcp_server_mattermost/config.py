@@ -2,6 +2,7 @@
 
 from enum import Enum
 from functools import lru_cache
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator, model_validator
@@ -49,6 +50,7 @@ class Settings(BaseSettings):
         MATTERMOST_TIMEOUT: Request timeout in seconds (default: 30)
         MATTERMOST_MAX_RETRIES: Max retry attempts (default: 3)
         MATTERMOST_VERIFY_SSL: Verify SSL certificates (default: true)
+        MATTERMOST_EXTRA_CA_CERTS: Path to PEM file with additional trusted CAs
         MATTERMOST_LOG_LEVEL: Logging level (default: INFO)
         MATTERMOST_LOG_FORMAT: Log format, 'json' or 'text' (default: json)
         MATTERMOST_API_VERSION: API version (default: v4)
@@ -71,6 +73,13 @@ class Settings(BaseSettings):
     timeout: int = Field(default=30, ge=1, le=300, description="Request timeout in seconds")
     max_retries: int = Field(default=3, ge=0, le=10, description="Maximum retry attempts")
     verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
+    extra_ca_certs: str | None = Field(
+        default=None,
+        description=(
+            "Path to a PEM file with additional CA certificates appended to "
+            "the default trust store (corporate/private CAs)"
+        ),
+    )
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format: 'json' or 'text'")
     api_version: str = Field(default="v4", description="Mattermost API version")
@@ -106,6 +115,17 @@ class Settings(BaseSettings):
         if v is None:
             return v
         return v.rstrip("/")
+
+    @field_validator("extra_ca_certs")
+    @classmethod
+    def validate_extra_ca_certs(cls, v: str | None) -> str | None:
+        """Ensure the extra CA bundle exists when configured."""
+        if v is None or not v.strip():
+            return None
+        if not Path(v).is_file():
+            msg = f"MATTERMOST_EXTRA_CA_CERTS file not found: {v}"
+            raise ValueError(msg)
+        return v
 
     @field_validator("log_level")
     @classmethod
