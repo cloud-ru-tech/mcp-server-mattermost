@@ -173,6 +173,7 @@ Once configured, you can ask your AI assistant:
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
+| `MATTERMOST_EXTRA_CA_CERTS` | No | — | Path to extra PEM CAs appended to the default trust store |
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
 | `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |

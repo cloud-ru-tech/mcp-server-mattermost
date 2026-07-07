@@ -18,7 +18,7 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 | `MATTERMOST_TIMEOUT` | 30 | Request timeout in seconds (1-300) |
 | `MATTERMOST_MAX_RETRIES` | 3 | Maximum retry attempts for failed requests (0-10) |
 | `MATTERMOST_VERIFY_SSL` | true | Verify SSL certificates |
-| `MATTERMOST_EXTRA_CA_CERTS` | — | Path to a PEM file with additional CA certificates (corporate/private CAs) appended to the default trust store for all outgoing HTTPS requests |
+| `MATTERMOST_EXTRA_CA_CERTS` | — | Path to extra PEM CAs appended to the default trust store |
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
 | `MATTERMOST_API_VERSION` | v4 | Mattermost API version |

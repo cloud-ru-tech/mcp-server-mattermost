@@ -91,8 +91,21 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md#configuration-
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |
+| `MATTERMOST_EXTRA_CA_CERTS` | No | — | Path to mounted PEM CAs appended to the default trust store |
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log format: `json` or `text` |
+
+For private or corporate CAs, mount the PEM bundle and point
+`MATTERMOST_EXTRA_CA_CERTS` at the in-container path:
+
+```bash
+docker run -i --rm \
+  -v /etc/ssl/certs/corporate-ca.pem:/certs/corporate-ca.pem:ro \
+  -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_TOKEN=your-token \
+  -e MATTERMOST_EXTRA_CA_CERTS=/certs/corporate-ca.pem \
+  legard/mcp-server-mattermost
+```
 
 ### Transport Settings
 
