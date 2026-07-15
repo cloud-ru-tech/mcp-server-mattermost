@@ -1,0 +1,7 @@
+# SCA exceptions policy.
+# Every entry MUST have a comment with: CVE id, reason
+# (false positive / not exploitable in our context), and a review date.
+# Never disable the SCA gate itself; suppress individual findings only.
+#
+# Format:
+# CVE-YYYY-NNNNN  # reason; review by YYYY-MM-DD

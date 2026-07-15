@@ -39,3 +39,38 @@ jobs:
 
       - name: Run tests with coverage
         run: uv run pytest --cov=mcp_server_mattermost --cov-report=xml
+
+  sca:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scan uv.lock for known vulnerabilities
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: fs
+          scan-ref: uv.lock
+          scanners: vuln
+          format: table
+          exit-code: "1"
+
+      - name: Generate SARIF report
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          scan-type: fs
+          scan-ref: uv.lock
+          scanners: vuln
+          format: sarif
+          output: trivy-sca.sarif
+          exit-code: "0"
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('trivy-sca.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-sca.sarif
