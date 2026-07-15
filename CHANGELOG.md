@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,
+  missing consent check in OAuth proxy callback) and includes later
+  redirect-URI/SSRF/DNS-rebinding hardening; dependency floor raised to
+  `fastmcp>=3.4,<4`.
+- Added blocking SCA gate: Trivy scans `uv.lock` on every PR and push to main
+  (fails on any known vulnerability); Docker images are scanned before push
+  (fails on fixable HIGH/CRITICAL findings). Exceptions only via `.trivyignore`
+  with a documented reason and review date.
+
 ## [0.5.1] - 2026-07-07
 
 ### Added
