@@ -18,11 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`,
   `pytest`, `pygments`, `pymdown-extensions`.
 - Added a blocking SCA gate: Trivy scans `uv.lock` on every PR and push to
-  main and fails on any *fixable* vulnerability (all severities); vulnerabilities
-  with no fix available are reported to the Security tab but do not block.
-  Every published image architecture (amd64, arm64) is built and scanned
-  before the manifest is pushed (fails on fixable HIGH/CRITICAL). Exceptions
-  only via `.trivyignore` with a documented reason and review date.
+  main and fails on *fixable* HIGH/CRITICAL vulnerabilities, matching the
+  per-architecture image scan. Fixable LOW/MEDIUM are reported (CI log, plus
+  the Security tab on main) but do not block; vulnerabilities with no fix
+  available are reported but never block. Every published image architecture
+  (amd64, arm64) is built and scanned before the manifest is pushed (fails on
+  fixable HIGH/CRITICAL). Exceptions only via `.trivyignore` with a documented
+  reason and review date.
 
 ## [0.5.1] - 2026-07-07
 
