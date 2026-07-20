@@ -86,7 +86,7 @@ jobs:
 
       - name: Upload Trivy scan results
         if: always() && hashFiles('trivy-*.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-${{ steps.arch.outputs.label }}.sarif
           category: trivy-image-${{ steps.arch.outputs.label }}
