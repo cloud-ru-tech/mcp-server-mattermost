@@ -8,11 +8,98 @@ env:
   IMAGE_NAME: legard/mcp-server-mattermost
 
 jobs:
-  build-and-push:
+  scan:
+    # Build and vulnerability-scan EVERY published architecture before the
+    # publish job runs (it has `needs: scan`), so a fixable HIGH/CRITICAL in any
+    # arch blocks the release even if absent from the other architecture.
+    # Note: build-and-push rebuilds the image rather than pushing this scanned
+    # artifact, so the published image matches what was scanned only insofar as
+    # the inputs (Dockerfile, uv.lock, base image, GHA cache) are unchanged
+    # between the two jobs.
     runs-on: ubuntu-latest
     permissions:
       contents: read
       security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Derive arch label
+        id: arch
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: echo "label=${PLATFORM##*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ${{ matrix.platform }} image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:scan-${{ steps.arch.outputs.label }}
+          cache-from: type=gha,scope=${{ steps.arch.outputs.label }}
+          cache-to: type=gha,mode=max,scope=${{ steps.arch.outputs.label }}
+
+      - name: Scan ${{ matrix.platform }} image (blocking gate)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan-${{ steps.arch.outputs.label }}
+          format: table
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Generate SARIF report
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}:scan-${{ steps.arch.outputs.label }}
+          format: sarif
+          output: trivy-${{ steps.arch.outputs.label }}.sarif
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Resolve main branch for SARIF upload
+        if: always()
+        id: sarif-ref
+        run: |
+          git fetch origin main
+          git checkout -B main origin/main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Trivy scan results
+        if: always() && hashFiles('trivy-*.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-${{ steps.arch.outputs.label }}.sarif
+          category: trivy-image-${{ steps.arch.outputs.label }}
+          ref: refs/heads/main
+          sha: ${{ steps.sarif-ref.outputs.sha }}
+
+  build-and-push:
+    # Publishes the multi-arch manifest only after every architecture passed
+    # the scan gate above.
+    needs: scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -49,29 +136,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.35.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
-          format: sarif
-          output: trivy-results.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
-
-      - name: Resolve main branch for SARIF upload
-        id: sarif-ref
-        run: |
-          git fetch origin main
-          git checkout -B main origin/main
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Upload Trivy scan results
-        if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-results.sarif
-          ref: refs/heads/main
-          sha: ${{ steps.sarif-ref.outputs.sha }}
+          cache-from: |
+            type=gha,scope=amd64
+            type=gha,scope=arm64

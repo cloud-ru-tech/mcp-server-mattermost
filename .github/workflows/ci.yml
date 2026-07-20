@@ -39,3 +39,57 @@ jobs:
 
       - name: Run tests with coverage
         run: uv run pytest --cov=mcp_server_mattermost --cov-report=xml
+
+  sca:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # Blocking gate: fail only on fixable HIGH/CRITICAL, matching the image
+      # scan in docker-publish.yml. Fixable LOW/MEDIUM are reported below but
+      # do not block; unfixed findings never block.
+      - name: Scan uv.lock for fixable HIGH/CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: uv.lock
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          format: table
+          ignore-unfixed: true
+          exit-code: "1"
+
+      # Report-only: surface fixable LOW/MEDIUM in the CI log on every PR and
+      # push without failing the build.
+      - name: Report fixable LOW/MEDIUM vulnerabilities (non-blocking)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: uv.lock
+          scanners: vuln
+          severity: LOW,MEDIUM
+          format: table
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Generate SARIF report
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: uv.lock
+          scanners: vuln
+          format: sarif
+          output: trivy-sca.sarif
+          exit-code: "0"
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('trivy-sca.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-sca.sarif
