@@ -9,13 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,
-  missing consent check in OAuth proxy callback) and includes later
-  redirect-URI/SSRF/DNS-rebinding hardening; dependency floor raised to
-  `fastmcp>=3.4,<4`.
-- Added blocking SCA gate: Trivy scans `uv.lock` on every PR and push to main
-  (fails on any known vulnerability); Docker images are scanned before push
-  (fails on fixable HIGH/CRITICAL findings). Exceptions only via `.trivyignore`
-  with a documented reason and review date.
+  missing consent check in the OAuth proxy callback), plus CVE-2026-32871
+  (authenticated SSRF) and CVE-2025-64340 (command injection) that were
+  present in the previous 3.0.2, and includes later redirect-URI/SSRF/
+  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4,<4`.
+- Remediated 20 known advisories (8 HIGH, 9 MEDIUM, 3 LOW) in transitive and
+  dev/docs dependencies by upgrading them to fixed versions: `cryptography`,
+  `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`,
+  `pytest`, `pygments`, `pymdown-extensions`.
+- Added a blocking SCA gate: Trivy scans `uv.lock` on every PR and push to
+  main and fails on any *fixable* vulnerability (all severities); vulnerabilities
+  with no fix available are reported to the Security tab but do not block.
+  Docker images are scanned before push (fails on fixable HIGH/CRITICAL).
+  Exceptions only via `.trivyignore` with a documented reason and review date.
 
 ## [0.5.1] - 2026-07-07
 
