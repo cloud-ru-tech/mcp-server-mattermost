@@ -9,10 +9,13 @@ env:
 
 jobs:
   scan:
-    # Build and vulnerability-scan EVERY published architecture before anything
-    # is pushed. A fixable HIGH/CRITICAL in any arch fails this job, and the
-    # publish job depends on it — so a vulnerable artifact can never reach the
-    # registry, even if the finding is absent from the other architecture.
+    # Build and vulnerability-scan EVERY published architecture before the
+    # publish job runs (it has `needs: scan`), so a fixable HIGH/CRITICAL in any
+    # arch blocks the release even if absent from the other architecture.
+    # Note: build-and-push rebuilds the image rather than pushing this scanned
+    # artifact, so the published image matches what was scanned only insofar as
+    # the inputs (Dockerfile, uv.lock, base image, GHA cache) are unchanged
+    # between the two jobs.
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -136,4 +139,3 @@ jobs:
           cache-from: |
             type=gha,scope=amd64
             type=gha,scope=arm64
-          cache-to: type=gha,mode=max
