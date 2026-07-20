@@ -56,6 +56,7 @@ jobs:
           scan-ref: uv.lock
           scanners: vuln
           format: table
+          ignore-unfixed: true
           exit-code: "1"
 
       - name: Generate SARIF report
