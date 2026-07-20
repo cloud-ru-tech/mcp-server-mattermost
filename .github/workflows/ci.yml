@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Scan uv.lock for known vulnerabilities
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: uv.lock
@@ -60,7 +60,7 @@ jobs:
 
       - name: Generate SARIF report
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: aquasecurity/trivy-action@v0.35.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: uv.lock
