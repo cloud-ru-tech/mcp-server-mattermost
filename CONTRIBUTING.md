@@ -66,15 +66,16 @@ Use clear, descriptive commit messages:
 ## Dependency Updates (Dependabot)
 
 Dependencies are kept current by [Dependabot](https://docs.github.com/en/code-security/dependabot),
-configured in `.github/dependabot.yml`. It tracks three ecosystems, each checked
-**weekly** (Monday):
+configured in `.github/dependabot.yml`. It tracks four package ecosystems, each
+checked **weekly** (Monday):
 
 - **Python** (`pyproject.toml` + `uv.lock`)
 - **GitHub Actions** (`.github/workflows/`)
 - **Docker** base image (`Dockerfile`)
+- **Docs toolchain** (`docs/requirements.txt`, used by ReadTheDocs)
 
 A **cooldown** delays PRs until a release has "aged" (Python: patch 3 days, minor
-7 days, major 14 days; Actions/Docker: 3 days), so routine PRs arrive less often
+7 days, major 14 days; Actions/Docker/docs: 3 days), so routine PRs arrive less often
 than weekly and only for releases that have settled. Cooldown does **not** apply
 to security updates — those are raised immediately.
 
@@ -86,6 +87,7 @@ to security updates — those are raised immediately.
 | Python major | One separate PR per dependency |
 | GitHub Actions | Combined into one grouped PR |
 | Docker base image | Separate PR |
+| Docs toolchain (pip) | Separate PR |
 | Security update | Separate, prioritized PR (never grouped) |
 
 ### How PRs are handled
@@ -106,7 +108,7 @@ Dependabot does **not** create duplicates on the next weekly run. It updates the
 existing open PR in place — bumping a grouped PR to include newly available
 patches, moving a PR to a newer version if one is released, or rebasing after
 `main` moves. Once an ecosystem reaches its open-PR limit (Python 5, Actions 3,
-Docker 3), no new PRs are opened until some are merged or closed. **Do not push
+Docker 3, docs 2), no new PRs are opened until some are merged or closed. **Do not push
 commits into a Dependabot PR branch** unless you intend to take it over —
 manual edits stop Dependabot from auto-updating that PR.
 

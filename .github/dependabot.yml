@@ -70,3 +70,21 @@ updates:
       include: "scope"
     cooldown:
       default-days: 3
+
+  # 4) Docs toolchain — docs/requirements.txt (installed by ReadTheDocs)
+  - package-ecosystem: "pip"
+    directory: "/docs"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:30"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 2
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    cooldown:
+      default-days: 3

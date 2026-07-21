@@ -92,6 +92,6 @@ JSON
 After the config is merged to `main`:
 
 1. Go to the repository's **Insights → Dependency graph → Dependabot** tab.
-2. Each ecosystem (`uv`, `github-actions`, `docker`) should be listed with a
-   recent "last checked" time and **no config error**.
+2. Each ecosystem (`uv`, `github-actions`, `docker`, `pip`) should be listed
+   with a recent "last checked" time and **no config error**.
 3. Use **"Check for updates"** to trigger a run on demand.
