@@ -1,0 +1,11 @@
+# Code owners for dependency, CI, and build files.
+# @legard is auto-requested for review on changes to these paths.
+# Requiring Code Owner approval before merge is enforced via branch
+# protection on main (see MAINTAINERS.md).
+
+/.github/CODEOWNERS       @legard
+/.github/dependabot.yml   @legard
+/.github/workflows/       @legard
+/pyproject.toml           @legard
+/uv.lock                  @legard
+/Dockerfile               @legard
