@@ -3,6 +3,7 @@
 # Requiring Code Owner approval before merge is enforced via branch
 # protection on main (see MAINTAINERS.md).
 
+/.github/CODEOWNERS       @legard
 /.github/dependabot.yml   @legard
 /.github/workflows/       @legard
 /pyproject.toml           @legard
