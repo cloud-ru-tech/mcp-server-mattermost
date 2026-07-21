@@ -2345,8 +2345,8 @@ name = "secretstorage"
 version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cryptography" },
-    { name = "jeepney" },
+    { name = "cryptography", marker = "sys_platform != 'win32'" },
+    { name = "jeepney", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be", size = 19884, upload-time = "2025-11-23T19:02:53.191Z" }
 wheels = [
@@ -2496,11 +2496,11 @@ wheels = [
 
 [[package]]
 name = "types-cachetools"
-version = "6.2.0.20251022"
+version = "7.0.0.20260518"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/3b/a8/f9bcc7f1be63af43ef0170a773e2d88817bcc7c9d8769f2228c802826efe/types_cachetools-6.2.0.20251022.tar.gz", hash = "sha256:f1d3c736f0f741e89ec10f0e1b0138625023e21eb33603a930c149e0318c0cef", size = 9608, upload-time = "2025-10-22T03:03:58.16Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c8/14/1e4fca2b250dbc75be9f0beab083acb3cd1151711e1031eb4a854dfd71be/types_cachetools-7.0.0.20260518.tar.gz", hash = "sha256:7730014e4fef0c6f01e2cd0f980f8ce6d1b1d2472c8459c1f382348ec1a6b435", size = 10072, upload-time = "2026-05-18T06:02:20.396Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/98/2d/8d821ed80f6c2c5b427f650bf4dc25b80676ed63d03388e4b637d2557107/types_cachetools-6.2.0.20251022-py3-none-any.whl", hash = "sha256:698eb17b8f16b661b90624708b6915f33dbac2d185db499ed57e4997e7962cad", size = 9341, upload-time = "2025-10-22T03:03:57.036Z" },
+    { url = "https://files.pythonhosted.org/packages/45/e0/767be6b60859fd2edc4512fabdedbce703fc8d4ec5007b31abaf37a51c6c/types_cachetools-7.0.0.20260518-py3-none-any.whl", hash = "sha256:997b356870915f8bbc9b2cdb4e7271c01d487996fdac2a9c8e91cc5b1261b3d1", size = 9500, upload-time = "2026-05-18T06:02:19.042Z" },
 ]
 
 [[package]]
