@@ -84,7 +84,8 @@ JSON
 - Dependabot PRs already run with a read-only `GITHUB_TOKEN` and have **no**
   access to Actions secrets — this is the correct, safe default.
 - Publish workflows (`publish.yml`, `docker-publish.yml`) trigger only on
-  `release: published`, so they never run on a Dependabot PR.
+  `release: published`, and `publish-test.yml` only on manual
+  `workflow_dispatch` — none of them ever run on a Dependabot PR.
 - No workflow uses `pull_request_target`; keep it that way.
 
 ## Verifying the Dependabot config
