@@ -18,6 +18,9 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 | `MATTERMOST_TIMEOUT` | 30 | Request timeout in seconds (1-300) |
 | `MATTERMOST_MAX_RETRIES` | 3 | Maximum retry attempts for failed requests (0-10) |
 | `MATTERMOST_VERIFY_SSL` | true | Verify SSL certificates |
+| `MATTERMOST_MAX_CONNECTIONS` | 100 | Max HTTP connections in the shared pool (1-1000) |
+| `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS` | 20 | Max idle keepalive connections; must be ≤ max connections (0-1000) |
+| `MATTERMOST_KEEPALIVE_EXPIRY` | 5.0 | Seconds an idle keepalive connection stays in the pool (0-600) |
 | `MATTERMOST_EXTRA_CA_CERTS` | — | Path to extra PEM CAs appended to the default trust store |
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |

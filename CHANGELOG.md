@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Shared HTTP connection pool: the Mattermost HTTP client is created once at
+  startup and reused across all tool calls (sequential and concurrent),
+  eliminating per-call TCP/TLS handshakes and TIME_WAIT churn. Pool limits are
+  configurable via `MATTERMOST_MAX_CONNECTIONS` (default 100),
+  `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS` (default 20), and
+  `MATTERMOST_KEEPALIVE_EXPIRY` (default 5.0s). The bearer token is sent
+  per-request and is never stored in the shared client's default headers, so a
+  single pool safely serves multiple users without mixing tokens.
+
+### Fixed
+- File uploads now send the correct `multipart/form-data` Content-Type. The
+  client previously carried a default `Content-Type: application/json` header
+  that httpx did not override for multipart requests.
+
 ### Security
 - Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,
   missing consent check in the OAuth proxy callback), plus CVE-2026-32871
