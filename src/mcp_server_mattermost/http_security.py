@@ -8,7 +8,7 @@ resolves the FastMCP Host/Origin (DNS-rebinding) protection settings.
 """
 
 import ipaddress
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 from .config import AuthMode, Settings
 from .exceptions import ConfigurationError
@@ -87,7 +87,7 @@ def enforce_unauthenticated_http_policy(settings: Settings, *, transport: str, h
 class HostOriginRunKwargs(TypedDict):
     """Keyword arguments for ``mcp.run(transport="http", **kwargs)``."""
 
-    host_origin_protection: str
+    host_origin_protection: Literal["auto"]
     allowed_hosts: list[str] | None
     allowed_origins: list[str] | None
 
