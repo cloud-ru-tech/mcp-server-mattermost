@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   missing consent check in the OAuth proxy callback), plus CVE-2026-32871
   (authenticated SSRF) and CVE-2025-64340 (command injection) that were
   present in the previous 3.0.2, and includes later redirect-URI/SSRF/
-  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4,<4`.
+  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4.4,<4`
+  (3.4.3 is the first release with the Host/Origin protection kwargs the HTTP
+  transport passes unconditionally; 3.4.4 is the tested/locked version).
 - Remediated 20 known advisories (8 HIGH, 9 MEDIUM, 3 LOW) in transitive and
   dev/docs dependencies by upgrading them to fixed versions: `cryptography`,
   `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`,
