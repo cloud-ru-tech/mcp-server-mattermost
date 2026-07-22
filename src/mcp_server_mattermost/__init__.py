@@ -73,10 +73,38 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if not args.http:
+        from .server import mcp  # noqa: PLC0415
+
+        with contextlib.suppress(KeyboardInterrupt):
+            mcp.run(transport="stdio")
+        return
+
+    # HTTP transport: enforce transport security before importing/binding the server.
+    from mcp_server_mattermost.config import get_settings  # noqa: PLC0415
+    from mcp_server_mattermost.exceptions import ConfigurationError  # noqa: PLC0415
+    from mcp_server_mattermost.http_security import (  # noqa: PLC0415
+        enforce_unauthenticated_http_policy,
+        resolve_host_origin_kwargs,
+    )
+    from mcp_server_mattermost.logging import logger, setup_logging  # noqa: PLC0415
+
+    settings = get_settings()
+    try:
+        warning = enforce_unauthenticated_http_policy(settings, transport="http", host=args.host)
+    except ConfigurationError as exc:
+        raise SystemExit(str(exc)) from exc
+    if warning:
+        setup_logging(settings.log_level, settings.log_format)
+        logger.warning(warning)
+
     from .server import mcp  # noqa: PLC0415
 
     with contextlib.suppress(KeyboardInterrupt):
-        if args.http:
-            mcp.run(transport="http", host=args.host, port=args.port, uvicorn_config={"ws": "wsproto"})
-        else:
-            mcp.run(transport="stdio")
+        mcp.run(
+            transport="http",
+            host=args.host,
+            port=args.port,
+            uvicorn_config={"ws": "wsproto"},
+            **resolve_host_origin_kwargs(settings),
+        )
