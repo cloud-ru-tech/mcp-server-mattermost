@@ -72,6 +72,36 @@ def _wait_for_rate_limit(retry_state: RetryCallState) -> float:
     return float(wait_exponential(multiplier=1, min=1, max=10)(retry_state))
 
 
+def create_http_client(settings: Settings) -> httpx.AsyncClient:
+    """Create an httpx.AsyncClient configured for the Mattermost API.
+
+    The client carries no ``Authorization`` or ``Content-Type`` default header.
+    ``Authorization`` is attached per-request (so one shared pool can serve
+    multiple users without mixing tokens), and httpx derives ``Content-Type``
+    per-request from the ``json=``/``files=`` body (correct multipart uploads).
+
+    Security note: httpx does not log request headers by default. If enabling
+    httpx debug logging (HTTPX_LOG_LEVEL=debug), ensure bearer tokens are not
+    exposed.
+
+    Args:
+        settings: Application configuration.
+
+    Returns:
+        Configured httpx.AsyncClient. The caller owns its lifecycle.
+    """
+    return httpx.AsyncClient(
+        base_url=f"{settings.url}/api/{settings.api_version}",
+        timeout=httpx.Timeout(settings.timeout),
+        verify=settings.verify_ssl,
+        limits=httpx.Limits(
+            max_connections=settings.max_connections,
+            max_keepalive_connections=settings.max_keepalive_connections,
+            keepalive_expiry=settings.keepalive_expiry,
+        ),
+    )
+
+
 class MattermostClient:
     """Async client for Mattermost REST API v4.
 

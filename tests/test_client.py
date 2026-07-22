@@ -2358,3 +2358,50 @@ class TestTokenOverride:
 
         # Check the Authorization header was set with the override token
         assert route.calls[0].request.headers["authorization"] == "Bearer my-override-token"
+
+
+class TestCreateHttpClient:
+    @pytest.mark.asyncio
+    async def test_factory_base_url_and_clean_headers(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        client = create_http_client(get_settings())
+        try:
+            assert str(client.base_url).rstrip("/") == "https://test.mattermost.com/api/v4"
+            assert "authorization" not in client.headers
+            assert "content-type" not in client.headers
+        finally:
+            await client.aclose()
+        assert client.is_closed is True
+
+    @pytest.mark.asyncio
+    async def test_factory_passes_limits_from_settings(self, mock_settings, mocker):
+        import httpx
+
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        spy = mocker.spy(httpx, "AsyncClient")
+        client = create_http_client(get_settings())
+        try:
+            limits = spy.call_args.kwargs["limits"]
+            assert limits.max_connections == 100
+            assert limits.max_keepalive_connections == 20
+            assert limits.keepalive_expiry == 5.0
+        finally:
+            await client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_factory_client_infers_multipart_content_type(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        client = create_http_client(get_settings())
+        try:
+            req = client.build_request("POST", "/files", data={"channel_id": "c"}, files={"files": ("a.txt", b"hi")})
+            assert req.headers["content-type"].startswith("multipart/form-data")
+            json_req = client.build_request("POST", "/posts", json={"a": 1})
+            assert json_req.headers["content-type"] == "application/json"
+        finally:
+            await client.aclose()
