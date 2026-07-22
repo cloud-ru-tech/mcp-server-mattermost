@@ -27,7 +27,7 @@ gh api -X PUT repos/cloud-ru-tech/mcp-server-mattermost/vulnerability-alerts
 gh api -X PUT repos/cloud-ru-tech/mcp-server-mattermost/automated-security-fixes
 ```
 
-Security-update PRs are raised independently of the weekly schedule and are not
+Security-update PRs are raised independently of the monthly schedule and are not
 delayed by cooldown.
 
 ### 2. Branch protection on `main`
