@@ -1,12 +1,14 @@
 """Configuration management using Pydantic Settings."""
 
+import json
 from enum import Enum
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 from urllib.parse import urlsplit
 
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class AuthMode(str, Enum):
@@ -83,6 +85,18 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format: 'json' or 'text'")
     api_version: str = Field(default="v4", description="Mattermost API version")
+    allow_unauthenticated_http: bool = Field(
+        default=False,
+        description="Allow static_token over HTTP on loopback only (unauthenticated MCP endpoint)",
+    )
+    http_allowed_hosts: Annotated[list[str] | None, NoDecode] = Field(
+        default=None,
+        description="Extra allowed Host header values for HTTP transport (JSON array or comma-separated)",
+    )
+    http_allowed_origins: Annotated[list[str] | None, NoDecode] = Field(
+        default=None,
+        description="Extra allowed Origin header values for HTTP transport (JSON array or comma-separated)",
+    )
 
     oauth_client_id: str | None = Field(default=None, description="Mattermost OAuth App client ID")
     oauth_client_type: OAuthClientType = Field(
@@ -156,6 +170,21 @@ class Settings(BaseSettings):
         if not v.startswith("/"):
             msg = "MATTERMOST_OAUTH_CALLBACK_PATH must start with '/'"
             raise ValueError(msg)
+        return v
+
+    @field_validator("http_allowed_hosts", "http_allowed_origins", mode="before")
+    @classmethod
+    def _parse_host_origin_list(cls, v: object) -> object:
+        """Accept a JSON array or a comma-separated string; blank string becomes None."""
+        if v is None or isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            stripped = v.strip()
+            if not stripped:
+                return None
+            if stripped.startswith("["):
+                return json.loads(stripped)  # parse JSON array
+            return [item.strip() for item in stripped.split(",") if item.strip()]
         return v
 
     @model_validator(mode="after")
