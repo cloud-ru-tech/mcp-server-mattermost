@@ -110,50 +110,65 @@ class MattermostClient:
             channels = await client.get_channels(team_id)
     """
 
-    def __init__(self, settings: Settings, token: str | None = None) -> None:
-        """Initialize client with settings and optional token override.
+    def __init__(
+        self,
+        settings: Settings,
+        token: str | None = None,
+        http_client: httpx.AsyncClient | None = None,
+    ) -> None:
+        """Initialize client with settings, optional token override, and optional shared client.
 
         Args:
-            settings: Application configuration
-            token: Optional token override (e.g. from request); used instead of settings.token when set
+            settings: Application configuration.
+            token: Optional token override (e.g. from request); used instead of settings.token.
+            http_client: Optional shared httpx.AsyncClient to borrow. When provided, the client's
+                lifecycle is owned by the caller and ``lifespan()`` will not close it.
         """
         self.settings = settings
         self._token_override = token
+        self._borrowed_client = http_client
         self._client: httpx.AsyncClient | None = None
         self._current_user_id: str | None = None
+        raw = token if token is not None else (settings.token or "")
+        effective_token = raw.strip()
+        self._auth_headers: dict[str, str] = {"Authorization": f"Bearer {effective_token}"} if effective_token else {}
 
     @asynccontextmanager
     async def lifespan(self) -> AsyncIterator["MattermostClient"]:
         """Context manager for client lifecycle.
 
-        Security note: httpx does not log request headers by default.
-        If enabling httpx debug logging (HTTPX_LOG_LEVEL=debug), ensure
-        tokens are not exposed. The Authorization header contains a bearer
-        token that must remain secret.
+        Borrows the shared client when one was supplied (does not close it), or
+        creates and closes its own via ``create_http_client`` otherwise. The
+        bearer token is never placed in the client's default headers; it is
+        attached per-request (see ``_request``).
 
         Yields:
-            Self with initialized httpx client
+            Self with an active httpx client.
         """
-        raw = self._token_override if self._token_override is not None else (self.settings.token or "")
-        effective_token = raw.strip()
-        headers: dict[str, str] = {"Content-Type": "application/json"}
-        if effective_token:
-            headers["Authorization"] = f"Bearer {effective_token}"
+        if self._auth_headers:
             logger.info("Initializing Mattermost API client")
         else:
             logger.warning("Initializing Mattermost API client without authentication token")
-        async with httpx.AsyncClient(
-            base_url=f"{self.settings.url}/api/{self.settings.api_version}",
-            headers=headers,
-            timeout=httpx.Timeout(self.settings.timeout),
-            verify=self.settings.verify_ssl,
-        ) as client:
+
+        if self._borrowed_client is not None:
+            self._client = self._borrowed_client
+            self._current_user_id = None
+            try:
+                yield self
+            finally:
+                self._client = None
+                self._current_user_id = None
+        else:
+            client = create_http_client(self.settings)
             self._client = client
-            self._current_user_id = None  # Reset cache on new lifespan
-            yield self
-            self._client = None
-            self._current_user_id = None  # Clear cache on exit
-        logger.info("Mattermost API client closed")
+            self._current_user_id = None
+            try:
+                yield self
+            finally:
+                await client.aclose()
+                self._client = None
+                self._current_user_id = None
+                logger.info("Mattermost API client closed")
 
     def _make_retrying(self) -> Callable[[_F], _F]:
         """Create tenacity retry decorator with instance settings.
@@ -302,6 +317,9 @@ class MattermostClient:
     ) -> dict[str, Any] | list[Any] | None:
         """Make HTTP request to Mattermost API with retry.
 
+        The bearer token is injected per-request; explicit ``headers`` passed by
+        callers take precedence on key conflicts.
+
         Args:
             method: HTTP method (GET, POST, PUT, DELETE)
             endpoint: API endpoint (e.g., "/users/me")
@@ -318,11 +336,12 @@ class MattermostClient:
             MattermostAPIError: For other API errors
         """
         retrying = self._make_retrying()
+        headers = {**self._auth_headers, **(kwargs.pop("headers", None) or {})}
 
         @retrying
         async def _do_request() -> dict[str, Any] | list[Any] | None:
             self._log_http_request(method, endpoint)
-            response = await self._http.request(method, endpoint, **kwargs)
+            response = await self._http.request(method, endpoint, headers=headers, **kwargs)
             self._log_http_response(response.status_code)
             return self._handle_response(response)
 
@@ -1144,6 +1163,7 @@ class MattermostClient:
                 params={"channel_id": channel_id, "filename": filename},
                 data={"channel_id": channel_id},
                 files={"files": (filename, content)},
+                headers=self._auth_headers,
             )
             self._log_http_response(response.status_code)
             return self._handle_response(response)

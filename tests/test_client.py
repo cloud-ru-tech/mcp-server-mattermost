@@ -93,35 +93,48 @@ class TestMattermostClientLifespan:
             assert str(client._client.base_url).rstrip("/") == "https://test.mattermost.com/api/v4"
 
     @pytest.mark.asyncio
-    async def test_lifespan_sets_auth_header(self, mock_settings):
+    async def test_lifespan_keeps_auth_out_of_default_headers(self, mock_settings):
+        """Security: the token is never stored in the httpx client's default headers."""
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
         client = MattermostClient(settings)
 
         async with client.lifespan():
-            assert "Authorization" in client._client.headers
-            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+            assert "authorization" not in client._client.headers
+        assert client._auth_headers == {"Authorization": "Bearer test-token-12345"}
 
     @pytest.mark.asyncio
-    async def test_lifespan_uses_token_override_in_header(self, mock_settings):
+    @respx.mock
+    async def test_token_override_sent_per_request(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
         settings = get_settings()
         client = MattermostClient(settings, token="override-token")
 
         async with client.lifespan():
-            assert client._client.headers["Authorization"] == "Bearer override-token"
+            await client.get_me()
+
+        assert route.calls[0].request.headers["Authorization"] == "Bearer override-token"
 
     @pytest.mark.asyncio
-    async def test_lifespan_none_override_falls_back_to_settings_token(self, mock_settings):
+    @respx.mock
+    async def test_settings_token_sent_per_request_when_no_override(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
         settings = get_settings()
         client = MattermostClient(settings, token=None)
 
         async with client.lifespan():
-            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+            await client.get_me()
+
+        assert route.calls[0].request.headers["Authorization"] == "Bearer test-token-12345"
 
     @pytest.mark.asyncio
     async def test_lifespan_warns_when_no_token(self, mock_settings_allow_http, caplog):
@@ -143,6 +156,68 @@ class TestMattermostClientLifespan:
             assert any("without authentication token" in record.message for record in caplog.records)
         finally:
             mm_logger.propagate = original_propagate
+
+
+class TestSharedClient:
+    @pytest.mark.asyncio
+    async def test_borrowed_client_not_closed_on_exit(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            client = MattermostClient(settings, http_client=shared)
+            async with client.lifespan():
+                assert client._client is shared
+            assert shared.is_closed is False
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_two_wrappers_share_client_isolate_tokens(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            a = MattermostClient(settings, token="tok-A", http_client=shared)
+            b = MattermostClient(settings, token="tok-B", http_client=shared)
+            async with a.lifespan():
+                assert a._client is shared
+                await a.get_me()
+            async with b.lifespan():
+                assert b._client is shared
+                await b.get_me()
+            assert route.calls[0].request.headers["Authorization"] == "Bearer tok-A"
+            assert route.calls[1].request.headers["Authorization"] == "Bearer tok-B"
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_sends_multipart_content_type(self, mock_settings, tmp_path):
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.post("https://test.mattermost.com/api/v4/files").mock(
+            return_value=httpx.Response(201, json={"file_infos": [{"id": "f1"}]}),
+        )
+        f = tmp_path / "a.txt"
+        f.write_bytes(b"hello")
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        async with client.lifespan():
+            await client.upload_file(channel_id="c1", file_path=str(f))
+
+        content_type = route.calls[0].request.headers["content-type"]
+        assert content_type.startswith("multipart/form-data")
+        assert route.calls[0].request.headers["Authorization"] == "Bearer test-token-12345"
 
 
 class TestMattermostClientResponseHandler:
@@ -2336,7 +2411,7 @@ class TestTokenOverride:
 
     @pytest.mark.asyncio
     async def test_lifespan_uses_override_token_in_headers(self, mock_settings: None) -> None:
-        """When token override is set, Authorization header uses override token."""
+        """When token override is set, the per-request Authorization header uses the override token."""
         import httpx
         import respx
 
@@ -2352,9 +2427,9 @@ class TestTokenOverride:
                 return_value=httpx.Response(200, json={"id": "u1"})
             )
             async with client.lifespan():
-                # Make a request to trigger the header to be checked
-                response = await client._client.get("/users/me")
-                assert response.status_code == 200
+                # Make a request through the client so per-request auth is applied
+                result = await client.get_me()
+                assert result["id"] == "u1"
 
         # Check the Authorization header was set with the override token
         assert route.calls[0].request.headers["authorization"] == "Bearer my-override-token"
