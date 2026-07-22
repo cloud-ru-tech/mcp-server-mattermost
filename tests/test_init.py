@@ -54,6 +54,34 @@ class TestMain:
             )
         get_settings.cache_clear()
 
+    def test_main_http_allowlists_flow_to_run(self, monkeypatch) -> None:
+        """Non-empty MATTERMOST_HTTP_ALLOWED_* env values reach mcp.run()."""
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setenv("MATTERMOST_HTTP_ALLOWED_HOSTS", "good.example, other.example")
+        monkeypatch.setenv("MATTERMOST_HTTP_ALLOWED_ORIGINS", '["https://good.example"]')
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http"])
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
+
+            main()
+
+            mock_mcp.run.assert_called_once_with(
+                transport="http",
+                host="127.0.0.1",
+                port=8000,
+                uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=["good.example", "other.example"],
+                allowed_origins=["https://good.example"],
+            )
+        get_settings.cache_clear()
+
     def test_main_with_custom_port(self, monkeypatch) -> None:
         """--port is respected on the http run call."""
         from mcp_server_mattermost.config import get_settings
