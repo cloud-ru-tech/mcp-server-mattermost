@@ -45,6 +45,19 @@ The token needs these Mattermost permissions for full functionality:
 Bot accounts get most permissions automatically. Personal access tokens inherit
 the user's permissions.
 
+### HTTP transport
+
+`static_token` over HTTP publishes an **unauthenticated** endpoint that acts with the shared token, so it
+is refused by default. It is allowed only on a loopback bind with an explicit opt-in:
+
+```bash
+export MCP_TRANSPORT=http MCP_HOST=127.0.0.1
+export MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP=true
+```
+
+Binding to a non-loopback address (e.g. `0.0.0.0`) with `static_token` is always refused. For networked or
+multi-user HTTP, use [`client_token`](#client_token) or [`oauth_proxy`](#oauth_proxy).
+
 ## `client_token`
 
 HTTP transport mode where each MCP client sends its own Mattermost token. The

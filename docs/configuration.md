@@ -22,6 +22,17 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
 | `MATTERMOST_API_VERSION` | v4 | Mattermost API version |
+| `MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP` | false | Allow `static_token` over HTTP — loopback bind only. See [Authentication](authentication.md#static_token) |
+| `MATTERMOST_HTTP_ALLOWED_HOSTS` | — | Extra allowed `Host` values for HTTP (JSON array or comma-separated) |
+| `MATTERMOST_HTTP_ALLOWED_ORIGINS` | — | Extra allowed `Origin` values for HTTP (JSON array or comma-separated) |
+
+## HTTP transport security
+
+The HTTP transport enables DNS-rebinding protection automatically (`host_origin_protection="auto"`):
+loopback deployments reject unknown `Host`/`Origin` headers, while non-loopback binds are unaffected
+until you declare an allowlist. Set `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS`
+to enforce strict validation for a networked deployment (e.g. the public host behind a reverse proxy).
+`X-Forwarded-*` headers are not trusted automatically.
 
 ## Environment File
 
