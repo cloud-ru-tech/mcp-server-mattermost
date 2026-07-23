@@ -1,41 +1,34 @@
-"""Transport-security guards for the HTTP transport.
+"""Transport-security advisories for the HTTP transport.
 
 The ``static_token`` auth mode runs the MCP endpoint with no client authentication:
-the shared Mattermost token is used server-side for every tool call. Exposing that
-over HTTP lets any network peer drive the tools with the token's privileges, so this
-module refuses that combination unless it is explicitly opted into on loopback, and
-resolves the FastMCP Host/Origin (DNS-rebinding) protection settings.
+the shared Mattermost token is used server-side for every tool call. This module warns
+(but never refuses) when that mode is served over HTTP — a plain warning on a loopback
+bind, a louder one on a non-loopback bind where any reachable peer can drive the tools
+with the token's privileges — matching the MCP spec's posture (auth is a SHOULD, and the
+hard control is Host/Origin validation). It also resolves the FastMCP Host/Origin
+(DNS-rebinding) protection settings.
 """
 
 import ipaddress
 from typing import Literal, TypedDict
 
 from .config import AuthMode, Settings
-from .exceptions import ConfigurationError
 
 
-_LOOPBACK_REFUSAL = (
-    "HTTP transport with MATTERMOST_AUTH_MODE=static_token exposes an MCP endpoint that "
-    "requires no client authentication and executes tools with the shared Mattermost token. "
-    "Refusing to start. "
-    "To run on loopback for local/single-host use, set MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP=true. "
-    "For networked or multi-user access, use MATTERMOST_AUTH_MODE=client_token or "
-    "MATTERMOST_AUTH_MODE=oauth_proxy instead."
-)
-
-_NON_LOOPBACK_REFUSAL = (
-    "HTTP transport with MATTERMOST_AUTH_MODE=static_token is bound to a non-loopback address "
-    "({host}) without client authentication. Refusing to start. "
-    "MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP only permits binding to loopback "
-    "(127.0.0.1 / ::1 / localhost). "
-    "For network exposure use MATTERMOST_AUTH_MODE=client_token or oauth_proxy, or place an "
-    "authenticating reverse proxy in the same network namespace and bind this server to loopback."
+_NON_LOOPBACK_WARNING = (
+    "Unauthenticated HTTP on a non-loopback address ({host}): the MCP endpoint executes tools "
+    "with the shared Mattermost token and performs NO client authentication, so any peer that can "
+    "reach {host} can drive the tools with the token's privileges. Put an authenticating reverse "
+    "proxy in front, or switch to MATTERMOST_AUTH_MODE=client_token or oauth_proxy. Set "
+    "MATTERMOST_HTTP_ALLOWED_HOSTS / MATTERMOST_HTTP_ALLOWED_ORIGINS to enable Host/Origin "
+    "DNS-rebinding protection for this bind."
 )
 
 _LOOPBACK_WARNING = (
-    "Unauthenticated HTTP enabled on loopback (MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP=true). "
-    "The MCP endpoint executes tools with the shared Mattermost token and performs no client "
-    "authentication. Ensure this host is trusted. Host/Origin DNS-rebinding protection is active."
+    "Unauthenticated HTTP on loopback: the MCP endpoint executes tools with the shared "
+    "Mattermost token and performs no client authentication. Ensure this host is trusted; "
+    "for networked or multi-user access use MATTERMOST_AUTH_MODE=client_token or oauth_proxy. "
+    "Host/Origin DNS-rebinding protection is active."
 )
 
 
@@ -57,8 +50,11 @@ def is_loopback_host(host: str) -> bool:
         return False
 
 
-def enforce_unauthenticated_http_policy(settings: Settings, *, transport: str, host: str) -> str | None:
-    """Enforce the fail-closed policy for unauthenticated HTTP.
+def unauthenticated_http_warning(settings: Settings, *, transport: str, host: str) -> str | None:
+    """Return a security warning when static_token is served unauthenticated over HTTP.
+
+    Never refuses to start: the server always boots. The warning is louder on a
+    non-loopback bind, where the endpoint is reachable by network peers.
 
     Args:
         settings: Loaded application settings.
@@ -66,20 +62,14 @@ def enforce_unauthenticated_http_policy(settings: Settings, *, transport: str, h
         host: Bind host for HTTP transport.
 
     Returns:
-        A security warning string when the opted-in loopback combination is risky-but-allowed,
-        or None when there is nothing to warn about.
-
-    Raises:
-        ConfigurationError: When the transport / auth mode / host combination is forbidden.
+        A security warning string when static_token runs unauthenticated over HTTP
+        (louder for a non-loopback bind), or None when there is nothing to warn about.
     """
     if transport != "http" or settings.auth_mode is not AuthMode.STATIC_TOKEN:
         return None
 
     if not is_loopback_host(host):
-        raise ConfigurationError(_NON_LOOPBACK_REFUSAL.format(host=host))
-
-    if not settings.allow_unauthenticated_http:
-        raise ConfigurationError(_LOOPBACK_REFUSAL)
+        return _NON_LOOPBACK_WARNING.format(host=host)
 
     return _LOOPBACK_WARNING
 

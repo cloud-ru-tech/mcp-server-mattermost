@@ -3,8 +3,6 @@
 import sys
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 class TestMain:
     """Tests for main() entry point."""
@@ -128,45 +126,44 @@ class TestMain:
 
 
 class TestHttpTransportSecurity:
-    """main() fail-closed guard for unauthenticated HTTP."""
+    """main() guard for unauthenticated HTTP: warn (never refuse), louder off-loopback."""
 
-    def test_http_static_token_no_optin_refuses(self, monkeypatch) -> None:
+    def test_http_static_token_public_runs_with_warning(self, monkeypatch) -> None:
         from mcp_server_mattermost.config import get_settings
 
         get_settings.cache_clear()
         monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
         monkeypatch.setenv("MATTERMOST_TOKEN", "test-token")
-        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "127.0.0.1"])
-
-        from mcp_server_mattermost import main
-
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert "MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP" in str(exc.value)
-        get_settings.cache_clear()
-
-    def test_http_static_token_public_refuses_even_with_optin(self, monkeypatch) -> None:
-        from mcp_server_mattermost.config import get_settings
-
-        get_settings.cache_clear()
-        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
-        monkeypatch.setenv("MATTERMOST_TOKEN", "test-token")
-        monkeypatch.setenv("MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP", "true")
         monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "0.0.0.0"])  # noqa: S104
 
-        from mcp_server_mattermost import main
+        with (
+            patch("mcp_server_mattermost.server.mcp") as mock_mcp,
+            patch("mcp_server_mattermost.logging.logger") as mock_logger,
+            patch("mcp_server_mattermost.logging.setup_logging"),
+        ):
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
 
-        with pytest.raises(SystemExit):
             main()
+
+            mock_mcp.run.assert_called_once_with(
+                transport="http",
+                host="0.0.0.0",  # noqa: S104
+                port=8000,
+                uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
+            )
+            mock_logger.warning.assert_called_once()
         get_settings.cache_clear()
 
-    def test_http_static_token_loopback_optin_runs_with_warning(self, monkeypatch) -> None:
+    def test_http_static_token_loopback_runs_with_warning(self, monkeypatch) -> None:
         from mcp_server_mattermost.config import get_settings
 
         get_settings.cache_clear()
         monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
         monkeypatch.setenv("MATTERMOST_TOKEN", "test-token")
-        monkeypatch.setenv("MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP", "true")
         monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "127.0.0.1"])
 
         with (

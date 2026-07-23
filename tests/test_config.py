@@ -431,7 +431,6 @@ def test_http_security_settings_defaults(monkeypatch):
     from mcp_server_mattermost.config import Settings
 
     settings = Settings()
-    assert settings.allow_unauthenticated_http is False
     assert settings.http_allowed_hosts is None
     assert settings.http_allowed_origins is None
 

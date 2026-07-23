@@ -85,10 +85,6 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format: 'json' or 'text'")
     api_version: str = Field(default="v4", description="Mattermost API version")
-    allow_unauthenticated_http: bool = Field(
-        default=False,
-        description="Allow static_token over HTTP on loopback only (unauthenticated MCP endpoint)",
-    )
     http_allowed_hosts: Annotated[list[str] | None, NoDecode] = Field(
         default=None,
         description="Extra allowed Host header values for HTTP transport (JSON array or comma-separated)",

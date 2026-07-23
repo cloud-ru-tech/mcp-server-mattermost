@@ -3,11 +3,10 @@
 import pytest
 
 from mcp_server_mattermost.config import AuthMode, Settings
-from mcp_server_mattermost.exceptions import ConfigurationError
 from mcp_server_mattermost.http_security import (
-    enforce_unauthenticated_http_policy,
     is_loopback_host,
     resolve_host_origin_kwargs,
+    unauthenticated_http_warning,
 )
 
 
@@ -27,46 +26,44 @@ def test_is_loopback_false(host: str) -> None:
     assert is_loopback_host(host) is False
 
 
-def test_stdio_static_token_allowed() -> None:
-    assert enforce_unauthenticated_http_policy(_settings(), transport="stdio", host="0.0.0.0") is None  # noqa: S104
+def test_stdio_static_token_no_warning() -> None:
+    assert unauthenticated_http_warning(_settings(), transport="stdio", host="0.0.0.0") is None  # noqa: S104
 
 
-def test_http_client_token_allowed() -> None:
+def test_http_client_token_no_warning() -> None:
     settings = _settings(auth_mode=AuthMode.CLIENT_TOKEN, token=None)
-    assert enforce_unauthenticated_http_policy(settings, transport="http", host="0.0.0.0") is None  # noqa: S104
+    assert unauthenticated_http_warning(settings, transport="http", host="0.0.0.0") is None  # noqa: S104
 
 
-def test_http_static_token_loopback_no_optin_refused() -> None:
-    with pytest.raises(ConfigurationError) as exc:
-        enforce_unauthenticated_http_policy(_settings(), transport="http", host="127.0.0.1")
-    assert "MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP" in str(exc.value)
-
-
-def test_http_static_token_public_refused_even_with_optin() -> None:
-    settings = _settings(allow_unauthenticated_http=True)
-    with pytest.raises(ConfigurationError) as exc:
-        enforce_unauthenticated_http_policy(settings, transport="http", host="0.0.0.0")  # noqa: S104
-    assert "loopback" in str(exc.value).lower()
-
-
-def test_http_static_token_loopback_optin_warns() -> None:
-    settings = _settings(allow_unauthenticated_http=True)
-    warning = enforce_unauthenticated_http_policy(settings, transport="http", host="127.0.0.1")
+@pytest.mark.parametrize("host", ["127.0.0.1", "::1", "localhost"])
+def test_http_static_token_loopback_warns(host: str) -> None:
+    warning = unauthenticated_http_warning(_settings(), transport="http", host=host)
     assert warning is not None
     assert "loopback" in warning.lower()
 
 
-def test_messages_never_leak_secrets() -> None:
-    settings = _settings(allow_unauthenticated_http=True)
-    warning = enforce_unauthenticated_http_policy(settings, transport="http", host="127.0.0.1")
+def test_http_static_token_public_warns() -> None:
+    """Non-loopback no longer refuses to start — it returns a louder warning instead."""
+    warning = unauthenticated_http_warning(_settings(), transport="http", host="0.0.0.0")  # noqa: S104
     assert warning is not None
-    assert "SENTINEL-TOKEN" not in warning
-    assert "Authorization" not in warning
+    assert "0.0.0.0" in warning  # noqa: S104
+    assert "client_token" in warning
+
+
+def test_guard_does_not_reference_removed_env_var() -> None:
+    """The MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP opt-in was removed; no message should mention it."""
     for host in ("127.0.0.1", "0.0.0.0"):  # noqa: S104
-        with pytest.raises(ConfigurationError) as exc:
-            enforce_unauthenticated_http_policy(_settings(), transport="http", host=host)
-        assert "SENTINEL-TOKEN" not in str(exc.value)
-        assert "Authorization" not in str(exc.value)
+        warning = unauthenticated_http_warning(_settings(), transport="http", host=host)
+        assert warning is not None
+        assert "ALLOW_UNAUTHENTICATED_HTTP" not in warning
+
+
+def test_messages_never_leak_secrets() -> None:
+    for host in ("127.0.0.1", "0.0.0.0"):  # noqa: S104
+        warning = unauthenticated_http_warning(_settings(), transport="http", host=host)
+        assert warning is not None
+        assert "SENTINEL-TOKEN" not in warning
+        assert "Authorization" not in warning
 
 
 def test_resolve_host_origin_kwargs_defaults() -> None:

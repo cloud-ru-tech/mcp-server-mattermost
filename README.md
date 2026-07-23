@@ -216,12 +216,16 @@ docker run -i --rm \
 
 ### HTTP mode (production)
 
+For networked HTTP use per-client auth. `static_token` over HTTP serves an unauthenticated endpoint acting
+with the shared token (the server starts but logs a loud warning) — see
+[HTTP transport security](docs/configuration.md#http-transport-security).
+
 ```bash
 docker run -d -p 8000:8000 \
   -e MCP_TRANSPORT=http \
   -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_AUTH_MODE=client_token \
   -e MATTERMOST_URL=https://your-mattermost.com \
-  -e MATTERMOST_TOKEN=your-token \
   legard/mcp-server-mattermost
 ```
 

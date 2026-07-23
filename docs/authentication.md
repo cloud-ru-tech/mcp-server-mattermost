@@ -47,16 +47,17 @@ the user's permissions.
 
 ### HTTP transport
 
-`static_token` over HTTP publishes an **unauthenticated** endpoint that acts with the shared token, so it
-is refused by default. It is allowed only on a loopback bind with an explicit opt-in:
+`static_token` over HTTP publishes an **unauthenticated** endpoint that acts with the shared token. The
+server always starts and logs a security warning — a plain one on a loopback bind, a louder one on a
+non-loopback bind (`0.0.0.0`), where any peer that can reach the address can drive the tools with the
+token's privileges:
 
 ```bash
 export MCP_TRANSPORT=http MCP_HOST=127.0.0.1
-export MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP=true
 ```
 
-Binding to a non-loopback address (e.g. `0.0.0.0`) with `static_token` is always refused. For networked or
-multi-user HTTP, use [`client_token`](#client_token) or [`oauth_proxy`](#oauth_proxy).
+For a non-loopback bind, put an authenticating reverse proxy in front, or — for networked or multi-user
+HTTP — use [`client_token`](#client_token) or [`oauth_proxy`](#oauth_proxy) so each client authenticates.
 
 ## `client_token`
 

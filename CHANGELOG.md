@@ -27,18 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (amd64, arm64) is built and scanned before the manifest is pushed (fails on
   fixable HIGH/CRITICAL). Exceptions only via `.trivyignore` with a documented
   reason and review date.
-- HTTP transport now refuses to start with `MATTERMOST_AUTH_MODE=static_token` (the default) unless bound to
-  loopback with `MATTERMOST_ALLOW_UNAUTHENTICATED_HTTP=true`; a non-loopback bind with `static_token` is always
-  refused. This prevents accidentally exposing an unauthenticated MCP endpoint that acts with the shared
-  Mattermost token. Use `client_token` or `oauth_proxy` for networked HTTP.
+- HTTP transport with `MATTERMOST_AUTH_MODE=static_token` (the default) now logs a security warning at
+  startup instead of refusing — a plain warning on a loopback bind, a louder one on a non-loopback bind
+  (`0.0.0.0`) where the unauthenticated endpoint (acting with the shared Mattermost token) is reachable by
+  network peers. The server never fails to start on this account, so container upgrades are not broken; put
+  an authenticating proxy in front, or use `client_token` / `oauth_proxy`, for networked HTTP.
 - Enabled DNS-rebinding protection for the HTTP transport (`host_origin_protection="auto"`): loopback
   deployments reject unknown `Host`/`Origin` headers. New `MATTERMOST_HTTP_ALLOWED_HOSTS` /
   `MATTERMOST_HTTP_ALLOWED_ORIGINS` declare allowlists for networked deployments.
-
-### Changed
-- **Breaking (HTTP only):** the previous `docker run` HTTP example (`static_token` bound to `0.0.0.0`) no
-  longer starts. Switch to `MATTERMOST_AUTH_MODE=client_token`/`oauth_proxy`, or bind to loopback behind a
-  co-located auth proxy. stdio `static_token` is unchanged.
 
 ## [0.5.1] - 2026-07-07
 
