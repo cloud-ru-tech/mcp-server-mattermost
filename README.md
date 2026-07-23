@@ -218,7 +218,7 @@ docker run -i --rm \
 
 For networked HTTP use per-client auth. `static_token` over HTTP serves an unauthenticated endpoint acting
 with the shared token (the server starts but logs a loud warning) — see
-[HTTP transport security](docs/configuration.md#http-transport-security).
+[Authentication → HTTP transport](docs/authentication.md#http-transport).
 
 ```bash
 docker run -d -p 8000:8000 \

@@ -39,10 +39,9 @@ docker run -i --rm \
 
 ## HTTP Mode (Production)
 
-HTTP with `static_token` on a non-loopback bind starts but logs a loud warning: it exposes an
-unauthenticated endpoint acting with the shared token to the network. Either front it with an
-authenticating reverse proxy, or — recommended for networked deployments — use per-client auth,
-`oauth_proxy` (below) or `client_token`:
+For networked HTTP use per-client auth: `client_token` (below) or `oauth_proxy` (below). `static_token`
+over HTTP serves an unauthenticated endpoint and only warns — it does not block; see
+[Authentication → HTTP transport](authentication.md#http-transport):
 
 ```bash
 docker run -d -p 8000:8000 \

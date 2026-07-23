@@ -27,9 +27,10 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 
 ## HTTP transport security
 
-`static_token` over HTTP is never blocked, but it serves an unauthenticated endpoint acting with the shared
-token — the server logs a warning at startup (louder on a non-loopback bind). For networked access, front it
-with an authenticating proxy or use `client_token` / `oauth_proxy` (see [Authentication](authentication.md)).
+`static_token` over HTTP serves an unauthenticated endpoint acting with the shared token — the server warns
+but never blocks. See [Authentication → HTTP transport](authentication.md#http-transport) for that auth
+posture and its remediation. This section covers the transport-level Host/Origin protection, which applies
+to every auth mode.
 
 The HTTP transport turns on DNS-rebinding protection automatically (`host_origin_protection="auto"`):
 

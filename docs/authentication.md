@@ -59,6 +59,10 @@ export MCP_TRANSPORT=http MCP_HOST=127.0.0.1
 For a non-loopback bind, put an authenticating reverse proxy in front, or — for networked or multi-user
 HTTP — use [`client_token`](#client_token) or [`oauth_proxy`](#oauth_proxy) so each client authenticates.
 
+Independently of the auth mode, the HTTP transport enables Host/Origin DNS-rebinding protection. See
+[HTTP transport security](configuration.md#http-transport-security) for the
+`MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS` allowlists and `421`/`403` troubleshooting.
+
 ## `client_token`
 
 HTTP transport mode where each MCP client sends its own Mattermost token. The
