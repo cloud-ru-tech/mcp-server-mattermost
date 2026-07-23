@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_server_mattermost.constants import LIFESPAN_HTTP_CLIENT_KEY
+
 
 class TestServerSetup:
     """Tests for FastMCP server instance."""
@@ -39,7 +41,7 @@ class TestDependencyProviders:
         from mcp_server_mattermost.deps import get_client
 
         fake_ctx = MagicMock()
-        fake_ctx.lifespan_context = {"http_client": MagicMock()}
+        fake_ctx.lifespan_context = {LIFESPAN_HTTP_CLIENT_KEY: MagicMock()}
 
         with (
             patch("mcp_server_mattermost.deps.get_access_token", return_value=None),

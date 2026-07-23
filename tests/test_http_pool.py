@@ -56,3 +56,24 @@ class TestSharedPool:
 
         assert spy.call_count == 1
         assert spy.spy_return.is_closed is True
+
+    @pytest.mark.asyncio
+    async def test_teardown_closes_auth_even_if_pool_close_raises(self, mock_settings, mocker):
+        # Shutdown must free the auth provider even if the pool's aclose() fails.
+        from mcp_server_mattermost import server
+        from mcp_server_mattermost.server import mcp
+
+        failing_client = mocker.MagicMock()
+        failing_client.aclose = mocker.AsyncMock(side_effect=RuntimeError("aclose boom"))
+        mocker.patch.object(server, "create_http_client", return_value=failing_client)
+
+        fake_auth = mocker.MagicMock()
+        fake_auth.close = mocker.AsyncMock()
+        mocker.patch.object(mcp, "auth", fake_auth)
+
+        with pytest.raises(RuntimeError, match="aclose boom"):
+            async with Client(mcp):
+                pass
+
+        failing_client.aclose.assert_awaited_once()
+        fake_auth.close.assert_awaited_once()

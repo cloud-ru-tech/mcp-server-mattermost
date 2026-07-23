@@ -462,3 +462,15 @@ class TestPoolSettings:
 
         with pytest.raises(ValueError, match="cannot exceed"):
             Settings()
+
+    def test_keepalive_equal_to_max_connections_is_allowed(self, monkeypatch):
+        from mcp_server_mattermost.config import Settings
+
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_TOKEN", "t")
+        monkeypatch.setenv("MATTERMOST_MAX_CONNECTIONS", "10")
+        monkeypatch.setenv("MATTERMOST_MAX_KEEPALIVE_CONNECTIONS", "10")
+
+        settings = Settings()
+
+        assert settings.max_keepalive_connections == settings.max_connections == 10

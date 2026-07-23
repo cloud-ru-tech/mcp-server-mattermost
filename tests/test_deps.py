@@ -4,10 +4,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from mcp_server_mattermost.constants import LIFESPAN_HTTP_CLIENT_KEY
+
 
 def _fake_context_with_pool():
     ctx = MagicMock()
-    ctx.lifespan_context = {"http_client": MagicMock()}
+    ctx.lifespan_context = {LIFESPAN_HTTP_CLIENT_KEY: MagicMock()}
     return ctx
 
 

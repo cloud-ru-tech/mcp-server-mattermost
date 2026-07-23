@@ -21,8 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - File uploads now send the correct `multipart/form-data` Content-Type. The
   client previously carried a default `Content-Type: application/json` header
   that httpx did not override for multipart requests.
+- Server shutdown now closes the auth provider even if closing the shared HTTP
+  pool fails, so a failing `aclose()` no longer leaks the auth provider.
 
 ### Security
+- The shared HTTP pool is transport-only: its cookie jar is disabled, so a
+  `Set-Cookie` from one user's response is never stored and replayed on another
+  user's request through the pool (`client_token`/`oauth_proxy` modes).
 - Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,
   missing consent check in the OAuth proxy callback), plus CVE-2026-32871
   (authenticated SSRF) and CVE-2025-64340 (command injection) that were

@@ -1,6 +1,7 @@
 """Async HTTP client for Mattermost API v4."""
 
 import asyncio
+import http.cookiejar
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -99,6 +100,11 @@ def create_http_client(settings: Settings) -> httpx.AsyncClient:
             max_keepalive_connections=settings.max_keepalive_connections,
             keepalive_expiry=settings.keepalive_expiry,
         ),
+        # The shared pool serves multiple tenants (client_token/oauth_proxy modes),
+        # so keep it transport-only: a jar that accepts no domain never stores a
+        # Set-Cookie from one user's response nor replays it on another's request.
+        # Authentication always travels in the per-request Authorization header.
+        cookies=http.cookiejar.CookieJar(policy=http.cookiejar.DefaultCookiePolicy(allowed_domains=[])),
     )
 
 
@@ -151,23 +157,21 @@ class MattermostClient:
             logger.warning("Initializing Mattermost API client without authentication token")
 
         if self._borrowed_client is not None:
-            self._client = self._borrowed_client
-            self._current_user_id = None
-            try:
-                yield self
-            finally:
-                self._client = None
-                self._current_user_id = None
+            client = self._borrowed_client
+            owns_client = False
         else:
             client = create_http_client(self.settings)
-            self._client = client
+            owns_client = True
+
+        self._client = client
+        self._current_user_id = None
+        try:
+            yield self
+        finally:
+            self._client = None
             self._current_user_id = None
-            try:
-                yield self
-            finally:
+            if owns_client:
                 await client.aclose()
-                self._client = None
-                self._current_user_id = None
                 logger.info("Mattermost API client closed")
 
     def _make_retrying(self) -> Callable[[_F], _F]:

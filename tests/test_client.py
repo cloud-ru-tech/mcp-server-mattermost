@@ -201,6 +201,58 @@ class TestSharedClient:
 
     @pytest.mark.asyncio
     @respx.mock
+    async def test_concurrent_wrappers_do_not_mix_tokens(self, mock_settings):
+        # Interleaved requests from two tenants through one shared pool must each
+        # carry their own token — the core guarantee of the shared-pool design.
+        import asyncio
+
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        seen_tokens: list[str | None] = []
+
+        def record(request: httpx.Request) -> httpx.Response:
+            seen_tokens.append(request.headers.get("Authorization"))
+            return httpx.Response(200, json={"id": "u1"})
+
+        respx.get("https://test.mattermost.com/api/v4/users/me").mock(side_effect=record)
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            a = MattermostClient(settings, token="tok-A", http_client=shared)
+            b = MattermostClient(settings, token="tok-B", http_client=shared)
+
+            async def call(wrapper: MattermostClient) -> None:
+                async with wrapper.lifespan():
+                    await wrapper.get_me()
+
+            await asyncio.gather(call(a), call(b))
+
+            assert set(seen_tokens) == {"Bearer tok-A", "Bearer tok-B"}
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_caller_headers_merge_and_override_auth(self, mock_settings):
+        # Explicit headers passed by callers merge with the per-request auth header
+        # and win on key conflicts (see MattermostClient._request docstring).
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
+        settings = get_settings()
+        client = MattermostClient(settings, token="base-token")
+        async with client.lifespan():
+            await client.get("/users/me", headers={"Authorization": "Bearer override", "X-Custom": "1"})
+
+        sent = route.calls[0].request.headers
+        assert sent["Authorization"] == "Bearer override"
+        assert sent["X-Custom"] == "1"
+
+    @pytest.mark.asyncio
+    @respx.mock
     async def test_upload_sends_multipart_content_type(self, mock_settings, tmp_path):
         from mcp_server_mattermost.config import get_settings
 
@@ -2478,5 +2530,28 @@ class TestCreateHttpClient:
             assert req.headers["content-type"].startswith("multipart/form-data")
             json_req = client.build_request("POST", "/posts", json={"a": 1})
             assert json_req.headers["content-type"] == "application/json"
+        finally:
+            await client.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_factory_client_does_not_persist_cookies(self, mock_settings):
+        # The shared pool is transport-only: a Set-Cookie returned to one tenant must
+        # never be stored and replayed on another tenant's request through the pool.
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        respx.get("https://test.mattermost.com/api/v4/first").mock(
+            return_value=httpx.Response(200, headers={"Set-Cookie": "MMAUTHTOKEN=session-A; Path=/"}, json={}),
+        )
+        second = respx.get("https://test.mattermost.com/api/v4/second").mock(
+            return_value=httpx.Response(200, json={}),
+        )
+        client = create_http_client(get_settings())
+        try:
+            await client.get("/first")
+            assert list(client.cookies.jar) == []
+            await client.get("/second")
+            assert "cookie" not in second.calls[0].request.headers
         finally:
             await client.aclose()

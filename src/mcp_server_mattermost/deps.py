@@ -7,6 +7,7 @@ from fastmcp.server.dependencies import get_access_token, get_context
 
 from .client import MattermostClient
 from .config import AuthMode, get_settings
+from .constants import LIFESPAN_HTTP_CLIENT_KEY
 from .exceptions import AuthenticationError
 
 
@@ -44,7 +45,7 @@ async def get_client() -> AsyncIterator[MattermostClient]:
     if settings.auth_mode in {AuthMode.CLIENT_TOKEN, AuthMode.OAUTH_PROXY}:
         token = _get_mattermost_token_from_auth_context()
 
-    http_client = get_context().lifespan_context.get("http_client")
+    http_client = get_context().lifespan_context.get(LIFESPAN_HTTP_CLIENT_KEY)
     if http_client is None:
         msg = "Shared HTTP client is not initialized — app_lifespan is not running"
         raise RuntimeError(msg)
