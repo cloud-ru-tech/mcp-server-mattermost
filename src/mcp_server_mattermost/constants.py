@@ -25,3 +25,7 @@ FILE_UPLOADED = "File uploaded successfully"
 # API response wrapper keys (from Mattermost Go source)
 # See: https://github.com/mattermost/mattermost/blob/master/server/public/model/channel_bookmark.go
 UPDATE_BOOKMARK_RESPONSE_KEY = "updated"
+
+# Lifespan context keys
+# Key under which app_lifespan stores the shared httpx.AsyncClient; read by get_client.
+LIFESPAN_HTTP_CLIENT_KEY = "http_client"

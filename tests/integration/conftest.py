@@ -12,10 +12,13 @@ Fixtures provide:
 """
 
 import contextlib
+import inspect
 import os
 from dataclasses import dataclass
+from pathlib import Path
 
 import pytest
+import pytest_asyncio
 from _pytest.monkeypatch import MonkeyPatch
 from fastmcp import Client
 
@@ -29,19 +32,13 @@ from .utils import cleanup_channel, make_test_name, setup_docker_host, to_dict
 _DOCKER_AVAILABLE = setup_docker_host()
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Session-scoped event loop for async fixtures.
-
-    Replaces deprecated asyncio.get_event_loop() calls.
-    Required for session-scoped async operations with pytest-asyncio.
-    """
-    import asyncio
-
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Run async integration tests on the server's session-scoped event loop."""
+    integration_dir = Path(__file__).parent
+    session_loop = pytest.mark.asyncio(loop_scope="session")
+    for item in items:
+        if item.path.is_relative_to(integration_dir) and inspect.iscoroutinefunction(item.obj):
+            item.add_marker(session_loop, append=False)
 
 
 @dataclass
@@ -62,8 +59,8 @@ def monkeypatch_session():
     mp.undo()
 
 
-@pytest.fixture(scope="session")
-def mattermost_env(monkeypatch_session, event_loop) -> TestEnvironment:
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def mattermost_env(monkeypatch_session) -> TestEnvironment:
     """Configure test environment: external server or Testcontainers.
 
     If MATTERMOST_URL and MATTERMOST_TOKEN are set, uses external server.
@@ -78,13 +75,13 @@ def mattermost_env(monkeypatch_session, event_loop) -> TestEnvironment:
         # Remove trailing slash to avoid double-slash in URLs
         url = url.rstrip("/")
 
-        with httpx.Client(
+        async with httpx.AsyncClient(
             base_url=f"{url}/api/v4",
             headers={"Authorization": f"Bearer {token}"},
             timeout=30.0,
             follow_redirects=True,
         ) as client:
-            teams = client.get("/users/me/teams").json()
+            teams = (await client.get("/users/me/teams")).json()
             team_id = teams[0]["id"] if teams else ""
 
         yield TestEnvironment(url=url, token=token, team_id=team_id)
@@ -119,7 +116,7 @@ def mattermost_env(monkeypatch_session, event_loop) -> TestEnvironment:
             mm.start()
 
             try:
-                env_data = event_loop.run_until_complete(initialize_mattermost(mm.get_base_url()))
+                env_data = await initialize_mattermost(mm.get_base_url())
 
                 monkeypatch_session.setenv("MATTERMOST_URL", env_data["url"])
                 monkeypatch_session.setenv("MATTERMOST_TOKEN", env_data["token"])
@@ -138,7 +135,7 @@ def mattermost_env(monkeypatch_session, event_loop) -> TestEnvironment:
             postgres.stop()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def mcp_client(mattermost_env):
     """MCP client connected to server via in-memory transport.
 
@@ -155,70 +152,33 @@ async def mcp_client(mattermost_env):
         yield client
 
 
-@pytest.fixture(scope="session")
-def session_mcp_client_sync(mattermost_env, event_loop):
-    """Session-scoped MCP client for setup operations (sync wrapper).
-
-    Uses a more robust pattern that properly handles exceptions during cleanup.
-    """
-    import warnings
-
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def session_mcp_client(mattermost_env):
+    """Session-scoped MCP client for setup and cleanup operations."""
     from mcp_server_mattermost.server import mcp
 
-    client = None
-    cleanup_exc = None
-
-    async def create_and_track():
-        nonlocal client
-        client = Client(mcp)
-        await client.__aenter__()
-        return client
-
-    try:
-        event_loop.run_until_complete(create_and_track())
+    async with Client(mcp) as client:
         yield client
-    finally:
-        if client is not None:
-
-            async def cleanup():
-                nonlocal cleanup_exc
-                try:
-                    await client.__aexit__(None, None, None)
-                except Exception as e:  # noqa: BLE001 - need to catch all to warn and continue
-                    cleanup_exc = e
-
-            event_loop.run_until_complete(cleanup())
-
-            if cleanup_exc is not None:
-                warnings.warn(f"Error during MCP client cleanup: {cleanup_exc}", stacklevel=2)
 
 
-@pytest.fixture(scope="session")
-def bot_user(session_mcp_client_sync, mattermost_env, event_loop):
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def bot_user(session_mcp_client, mattermost_env):
     """Bot user info (reused across all tests)."""
-
-    async def get_bot():
-        result = await session_mcp_client_sync.call_tool("get_me", {})
-        return to_dict(result)
-
-    return event_loop.run_until_complete(get_bot())
+    result = await session_mcp_client.call_tool("get_me", {})
+    return to_dict(result)
 
 
-@pytest.fixture(scope="session")
-def team(session_mcp_client_sync, mattermost_env, event_loop):
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
+async def team(session_mcp_client, mattermost_env):
     """Test team info (reused across all tests)."""
-
-    async def get_team():
-        result = await session_mcp_client_sync.call_tool(
-            "get_team",
-            {"team_id": mattermost_env.team_id},
-        )
-        return to_dict(result)
-
-    return event_loop.run_until_complete(get_team())
+    result = await session_mcp_client.call_tool(
+        "get_team",
+        {"team_id": mattermost_env.team_id},
+    )
+    return to_dict(result)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_channel(mcp_client, team):
     """Fresh channel for each test with cleanup."""
     name = make_test_name()
@@ -238,7 +198,7 @@ async def test_channel(mcp_client, team):
     await cleanup_channel(channel["id"])
 
 
-@pytest.fixture
+@pytest_asyncio.fixture(loop_scope="session")
 async def test_post(mcp_client, test_channel):
     """Fresh message for each test with cleanup."""
     result = await mcp_client.call_tool(
@@ -256,12 +216,12 @@ async def test_post(mcp_client, test_channel):
         await mcp_client.call_tool("delete_message", {"post_id": post["id"]})
 
 
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_orphaned_resources(session_mcp_client_sync, mattermost_env, event_loop):
+@pytest_asyncio.fixture(scope="session", loop_scope="session", autouse=True)
+async def cleanup_orphaned_resources(session_mcp_client, mattermost_env):
     """Clean up leftover test resources before and after tests."""
 
     async def cleanup():
-        result = await session_mcp_client_sync.call_tool(
+        result = await session_mcp_client.call_tool(
             "list_public_channels",
             {"team_id": mattermost_env.team_id},
         )
@@ -280,8 +240,8 @@ def cleanup_orphaned_resources(session_mcp_client_sync, mattermost_env, event_lo
                     with contextlib.suppress(Exception):
                         await client.delete(f"/channels/{channel['id']}")
 
-    event_loop.run_until_complete(cleanup())
+    await cleanup()
 
     yield
 
-    event_loop.run_until_complete(cleanup())
+    await cleanup()

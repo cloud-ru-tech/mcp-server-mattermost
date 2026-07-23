@@ -93,35 +93,48 @@ class TestMattermostClientLifespan:
             assert str(client._client.base_url).rstrip("/") == "https://test.mattermost.com/api/v4"
 
     @pytest.mark.asyncio
-    async def test_lifespan_sets_auth_header(self, mock_settings):
+    async def test_lifespan_keeps_auth_out_of_default_headers(self, mock_settings):
+        """Security: the token is never stored in the httpx client's default headers."""
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
         client = MattermostClient(settings)
 
         async with client.lifespan():
-            assert "Authorization" in client._client.headers
-            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+            assert "authorization" not in client._client.headers
+        assert client._auth_headers == {"Authorization": "Bearer test-token-12345"}
 
     @pytest.mark.asyncio
-    async def test_lifespan_uses_token_override_in_header(self, mock_settings):
+    @respx.mock
+    async def test_token_override_sent_per_request(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
         settings = get_settings()
         client = MattermostClient(settings, token="override-token")
 
         async with client.lifespan():
-            assert client._client.headers["Authorization"] == "Bearer override-token"
+            await client.get_me()
+
+        assert route.calls[0].request.headers["Authorization"] == "Bearer override-token"
 
     @pytest.mark.asyncio
-    async def test_lifespan_none_override_falls_back_to_settings_token(self, mock_settings):
+    @respx.mock
+    async def test_settings_token_sent_per_request_when_no_override(self, mock_settings):
         from mcp_server_mattermost.config import get_settings
 
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
         settings = get_settings()
         client = MattermostClient(settings, token=None)
 
         async with client.lifespan():
-            assert client._client.headers["Authorization"] == "Bearer test-token-12345"
+            await client.get_me()
+
+        assert route.calls[0].request.headers["Authorization"] == "Bearer test-token-12345"
 
     @pytest.mark.asyncio
     async def test_lifespan_warns_when_no_token(self, mock_settings_allow_http, caplog):
@@ -143,6 +156,120 @@ class TestMattermostClientLifespan:
             assert any("without authentication token" in record.message for record in caplog.records)
         finally:
             mm_logger.propagate = original_propagate
+
+
+class TestSharedClient:
+    @pytest.mark.asyncio
+    async def test_borrowed_client_not_closed_on_exit(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            client = MattermostClient(settings, http_client=shared)
+            async with client.lifespan():
+                assert client._client is shared
+            assert shared.is_closed is False
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_two_wrappers_share_client_isolate_tokens(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            a = MattermostClient(settings, token="tok-A", http_client=shared)
+            b = MattermostClient(settings, token="tok-B", http_client=shared)
+            async with a.lifespan():
+                assert a._client is shared
+                await a.get_me()
+            async with b.lifespan():
+                assert b._client is shared
+                await b.get_me()
+            assert route.calls[0].request.headers["Authorization"] == "Bearer tok-A"
+            assert route.calls[1].request.headers["Authorization"] == "Bearer tok-B"
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_concurrent_wrappers_do_not_mix_tokens(self, mock_settings):
+        # Interleaved requests from two tenants through one shared pool must each
+        # carry their own token — the core guarantee of the shared-pool design.
+        import asyncio
+
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        seen_tokens: list[str | None] = []
+
+        def record(request: httpx.Request) -> httpx.Response:
+            seen_tokens.append(request.headers.get("Authorization"))
+            return httpx.Response(200, json={"id": "u1"})
+
+        respx.get("https://test.mattermost.com/api/v4/users/me").mock(side_effect=record)
+        settings = get_settings()
+        shared = create_http_client(settings)
+        try:
+            a = MattermostClient(settings, token="tok-A", http_client=shared)
+            b = MattermostClient(settings, token="tok-B", http_client=shared)
+
+            async def call(wrapper: MattermostClient) -> None:
+                async with wrapper.lifespan():
+                    await wrapper.get_me()
+
+            await asyncio.gather(call(a), call(b))
+
+            assert set(seen_tokens) == {"Bearer tok-A", "Bearer tok-B"}
+        finally:
+            await shared.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_caller_headers_merge_and_override_auth(self, mock_settings):
+        # Explicit headers passed by callers merge with the per-request auth header
+        # and win on key conflicts (see MattermostClient._request docstring).
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
+        settings = get_settings()
+        client = MattermostClient(settings, token="base-token")
+        async with client.lifespan():
+            await client.get("/users/me", headers={"Authorization": "Bearer override", "X-Custom": "1"})
+
+        sent = route.calls[0].request.headers
+        assert sent["Authorization"] == "Bearer override"
+        assert sent["X-Custom"] == "1"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_sends_multipart_content_type(self, mock_settings, tmp_path):
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.post("https://test.mattermost.com/api/v4/files").mock(
+            return_value=httpx.Response(201, json={"file_infos": [{"id": "f1"}]}),
+        )
+        f = tmp_path / "a.txt"
+        f.write_bytes(b"hello")
+        settings = get_settings()
+        client = MattermostClient(settings)
+
+        async with client.lifespan():
+            await client.upload_file(channel_id="c1", file_path=str(f))
+
+        content_type = route.calls[0].request.headers["content-type"]
+        assert content_type.startswith("multipart/form-data")
+        assert route.calls[0].request.headers["Authorization"] == "Bearer test-token-12345"
 
 
 class TestMattermostClientResponseHandler:
@@ -2336,7 +2463,7 @@ class TestTokenOverride:
 
     @pytest.mark.asyncio
     async def test_lifespan_uses_override_token_in_headers(self, mock_settings: None) -> None:
-        """When token override is set, Authorization header uses override token."""
+        """When token override is set, the per-request Authorization header uses the override token."""
         import httpx
         import respx
 
@@ -2352,9 +2479,79 @@ class TestTokenOverride:
                 return_value=httpx.Response(200, json={"id": "u1"})
             )
             async with client.lifespan():
-                # Make a request to trigger the header to be checked
-                response = await client._client.get("/users/me")
-                assert response.status_code == 200
+                # Make a request through the client so per-request auth is applied
+                result = await client.get_me()
+                assert result["id"] == "u1"
 
         # Check the Authorization header was set with the override token
         assert route.calls[0].request.headers["authorization"] == "Bearer my-override-token"
+
+
+class TestCreateHttpClient:
+    @pytest.mark.asyncio
+    async def test_factory_base_url_and_clean_headers(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        client = create_http_client(get_settings())
+        try:
+            assert str(client.base_url).rstrip("/") == "https://test.mattermost.com/api/v4"
+            assert "authorization" not in client.headers
+            assert "content-type" not in client.headers
+        finally:
+            await client.aclose()
+        assert client.is_closed is True
+
+    @pytest.mark.asyncio
+    async def test_factory_passes_limits_from_settings(self, mock_settings, mocker):
+        import httpx
+
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        spy = mocker.spy(httpx, "AsyncClient")
+        client = create_http_client(get_settings())
+        try:
+            limits = spy.call_args.kwargs["limits"]
+            assert limits.max_connections == 100
+            assert limits.max_keepalive_connections == 20
+            assert limits.keepalive_expiry == 5.0
+        finally:
+            await client.aclose()
+
+    @pytest.mark.asyncio
+    async def test_factory_client_infers_multipart_content_type(self, mock_settings):
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        client = create_http_client(get_settings())
+        try:
+            req = client.build_request("POST", "/files", data={"channel_id": "c"}, files={"files": ("a.txt", b"hi")})
+            assert req.headers["content-type"].startswith("multipart/form-data")
+            json_req = client.build_request("POST", "/posts", json={"a": 1})
+            assert json_req.headers["content-type"] == "application/json"
+        finally:
+            await client.aclose()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_factory_client_does_not_persist_cookies(self, mock_settings):
+        # The shared pool is transport-only: a Set-Cookie returned to one tenant must
+        # never be stored and replayed on another tenant's request through the pool.
+        from mcp_server_mattermost.client import create_http_client
+        from mcp_server_mattermost.config import get_settings
+
+        respx.get("https://test.mattermost.com/api/v4/first").mock(
+            return_value=httpx.Response(200, headers={"Set-Cookie": "MMAUTHTOKEN=session-A; Path=/"}, json={}),
+        )
+        second = respx.get("https://test.mattermost.com/api/v4/second").mock(
+            return_value=httpx.Response(200, json={}),
+        )
+        client = create_http_client(get_settings())
+        try:
+            await client.get("/first")
+            assert list(client.cookies.jar) == []
+            await client.get("/second")
+            assert "cookie" not in second.calls[0].request.headers
+        finally:
+            await client.aclose()

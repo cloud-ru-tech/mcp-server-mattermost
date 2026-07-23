@@ -1,8 +1,16 @@
 """Tests for dependency injection providers."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+
+from mcp_server_mattermost.constants import LIFESPAN_HTTP_CLIENT_KEY
+
+
+def _fake_context_with_pool():
+    ctx = MagicMock()
+    ctx.lifespan_context = {LIFESPAN_HTTP_CLIENT_KEY: MagicMock()}
+    return ctx
 
 
 class TestGetClient:
@@ -12,10 +20,14 @@ class TestGetClient:
         from mcp_server_mattermost.client import MattermostClient
         from mcp_server_mattermost.deps import get_client
 
-        with patch("mcp_server_mattermost.deps.get_access_token", return_value=None):
+        with (
+            patch("mcp_server_mattermost.deps.get_access_token", return_value=None),
+            patch("mcp_server_mattermost.deps.get_context", return_value=_fake_context_with_pool()),
+        ):
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
                 assert client._token_override is None
+                assert client._borrowed_client is not None
 
     @pytest.mark.asyncio
     async def test_client_token_uses_access_token_claims(self, mock_settings_allow_http: None) -> None:
@@ -32,7 +44,10 @@ class TestGetClient:
             claims={"mattermost_token": "from-mattermost-token"},
         )
 
-        with patch("mcp_server_mattermost.deps.get_access_token", return_value=mock_token):
+        with (
+            patch("mcp_server_mattermost.deps.get_access_token", return_value=mock_token),
+            patch("mcp_server_mattermost.deps.get_context", return_value=_fake_context_with_pool()),
+        ):
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
                 assert client._token_override == "from-mattermost-token"
@@ -97,9 +112,28 @@ class TestGetClient:
             claims={"mattermost_token": "from-oauth-proxy"},
         )
 
-        with patch("mcp_server_mattermost.deps.get_access_token", return_value=mock_token):
+        with (
+            patch("mcp_server_mattermost.deps.get_access_token", return_value=mock_token),
+            patch("mcp_server_mattermost.deps.get_context", return_value=_fake_context_with_pool()),
+        ):
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
                 assert client._token_override == "from-oauth-proxy"
 
         get_settings.cache_clear()
+
+    @pytest.mark.asyncio
+    async def test_missing_pool_raises_runtime_error(self, mock_settings: None) -> None:
+        """get_client fails loud when the shared HTTP pool is not initialized."""
+        from mcp_server_mattermost.deps import get_client
+
+        empty_ctx = MagicMock()
+        empty_ctx.lifespan_context = {}
+
+        with (
+            patch("mcp_server_mattermost.deps.get_access_token", return_value=None),
+            patch("mcp_server_mattermost.deps.get_context", return_value=empty_ctx),
+            pytest.raises(RuntimeError, match="Shared HTTP client is not initialized"),
+        ):
+            async with get_client():
+                pass

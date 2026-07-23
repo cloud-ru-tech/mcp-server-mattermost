@@ -1,6 +1,10 @@
 """Tests for FastMCP server setup."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
+
+from mcp_server_mattermost.constants import LIFESPAN_HTTP_CLIENT_KEY
 
 
 class TestServerSetup:
@@ -32,12 +36,19 @@ class TestDependencyProviders:
 
     @pytest.mark.asyncio
     async def test_get_client_yields_client(self, mock_settings: None) -> None:
-        """Test that get_client yields MattermostClient."""
+        """Test that get_client yields MattermostClient bound to the shared pool."""
         from mcp_server_mattermost.client import MattermostClient
         from mcp_server_mattermost.deps import get_client
 
-        async with get_client() as client:
-            assert isinstance(client, MattermostClient)
+        fake_ctx = MagicMock()
+        fake_ctx.lifespan_context = {LIFESPAN_HTTP_CLIENT_KEY: MagicMock()}
+
+        with (
+            patch("mcp_server_mattermost.deps.get_access_token", return_value=None),
+            patch("mcp_server_mattermost.deps.get_context", return_value=fake_ctx),
+        ):
+            async with get_client() as client:
+                assert isinstance(client, MattermostClient)
 
 
 class TestServerIntegration:

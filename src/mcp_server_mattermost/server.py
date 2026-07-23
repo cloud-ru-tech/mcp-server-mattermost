@@ -10,7 +10,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .auth_factory import build_auth_provider_from_env
+from .client import create_http_client
 from .config import get_settings
+from .constants import LIFESPAN_HTTP_CLIENT_KEY
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
 from .tls import install_extra_ca_certs
@@ -18,24 +20,28 @@ from .tls import install_extra_ca_certs
 
 @lifespan
 async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
-    """Manage application lifecycle.
+    """Manage application lifecycle and own the shared HTTP connection pool.
 
     Args:
-        _server: FastMCP server instance (required by FastMCP lifespan protocol)
+        _server: FastMCP server instance (required by FastMCP lifespan protocol).
 
     Yields:
-        Empty dict (no shared lifespan state needed)
+        Lifespan context with the shared httpx.AsyncClient under LIFESPAN_HTTP_CLIENT_KEY.
     """
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
     logger.info("Starting Mattermost MCP server")
     logger.debug("Server URL: %s", settings.url)
+    http_client = create_http_client(settings)
     try:
-        yield {}
+        yield {LIFESPAN_HTTP_CLIENT_KEY: http_client}
     finally:
-        if _server.auth is not None and hasattr(_server.auth, "close"):
-            await _server.auth.close()
-        logger.info("Mattermost MCP server shutdown complete")
+        try:
+            await http_client.aclose()
+        finally:
+            if _server.auth is not None and hasattr(_server.auth, "close"):
+                await _server.auth.close()
+            logger.info("Mattermost MCP server shutdown complete")
 
 
 def _create_mcp() -> FastMCP:
