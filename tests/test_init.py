@@ -26,12 +26,16 @@ class TestMain:
 
             mock_mcp.run.assert_called_once_with(transport="stdio")
 
-    def test_main_with_http_flag(self) -> None:
-        """Test that --http flag uses http transport."""
-        with (
-            patch.object(sys, "argv", ["mcp-server-mattermost", "--http"]),
-            patch("mcp_server_mattermost.server.mcp") as mock_mcp,
-        ):
+    def test_main_with_http_flag(self, monkeypatch) -> None:
+        """--http uses http transport with Host/Origin protection."""
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http"])
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
             mock_mcp.run = MagicMock()
             from mcp_server_mattermost import main
 
@@ -42,14 +46,24 @@ class TestMain:
                 host="127.0.0.1",
                 port=8000,
                 uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
             )
+        get_settings.cache_clear()
 
-    def test_main_with_custom_port(self) -> None:
-        """Test that --port flag is respected."""
-        with (
-            patch.object(sys, "argv", ["mcp-server-mattermost", "--http", "--port", "9000"]),
-            patch("mcp_server_mattermost.server.mcp") as mock_mcp,
-        ):
+    def test_main_http_allowlists_flow_to_run(self, monkeypatch) -> None:
+        """Non-empty MATTERMOST_HTTP_ALLOWED_* env values reach mcp.run()."""
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setenv("MATTERMOST_HTTP_ALLOWED_HOSTS", "good.example, other.example")
+        monkeypatch.setenv("MATTERMOST_HTTP_ALLOWED_ORIGINS", '["https://good.example"]')
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http"])
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
             mock_mcp.run = MagicMock()
             from mcp_server_mattermost import main
 
@@ -58,15 +72,74 @@ class TestMain:
             mock_mcp.run.assert_called_once_with(
                 transport="http",
                 host="127.0.0.1",
-                port=9000,
+                port=8000,
                 uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=["good.example", "other.example"],
+                allowed_origins=["https://good.example"],
             )
+        get_settings.cache_clear()
 
-    def test_main_with_custom_host(self) -> None:
-        """Test that --host flag is respected."""
+    def test_main_with_custom_port(self, monkeypatch) -> None:
+        """--port is respected on the http run call."""
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--port", "9000"])
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
+
+            main()
+
+            assert mock_mcp.run.call_args[1]["port"] == 9000
+        get_settings.cache_clear()
+
+    def test_main_with_custom_host(self, monkeypatch) -> None:
+        """--host flag is respected under the client_token auth mode."""
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "0.0.0.0"])  # noqa: S104
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
+
+            main()
+
+            mock_mcp.run.assert_called_once_with(
+                transport="http",
+                host="0.0.0.0",  # noqa: S104
+                port=8000,
+                uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
+            )
+        get_settings.cache_clear()
+
+
+class TestHttpTransportSecurity:
+    """main() guard for unauthenticated HTTP: warn (never refuse), louder off-loopback."""
+
+    def test_http_static_token_public_runs_with_warning(self, monkeypatch) -> None:
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_TOKEN", "test-token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "0.0.0.0"])  # noqa: S104
+
         with (
-            patch.object(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "0.0.0.0"]),  # noqa: S104
             patch("mcp_server_mattermost.server.mcp") as mock_mcp,
+            patch("mcp_server_mattermost.logging.logger") as mock_logger,
+            patch("mcp_server_mattermost.logging.setup_logging"),
         ):
             mock_mcp.run = MagicMock()
             from mcp_server_mattermost import main
@@ -78,7 +151,67 @@ class TestMain:
                 host="0.0.0.0",  # noqa: S104
                 port=8000,
                 uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
             )
+            mock_logger.warning.assert_called_once()
+        get_settings.cache_clear()
+
+    def test_http_static_token_loopback_runs_with_warning(self, monkeypatch) -> None:
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_TOKEN", "test-token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "127.0.0.1"])
+
+        with (
+            patch("mcp_server_mattermost.server.mcp") as mock_mcp,
+            patch("mcp_server_mattermost.logging.logger") as mock_logger,
+            patch("mcp_server_mattermost.logging.setup_logging"),
+        ):
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
+
+            main()
+
+            mock_mcp.run.assert_called_once_with(
+                transport="http",
+                host="127.0.0.1",
+                port=8000,
+                uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
+            )
+            mock_logger.warning.assert_called_once()
+        get_settings.cache_clear()
+
+    def test_http_client_token_runs_without_optin(self, monkeypatch) -> None:
+        from mcp_server_mattermost.config import get_settings
+
+        get_settings.cache_clear()
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
+        monkeypatch.setattr(sys, "argv", ["mcp-server-mattermost", "--http", "--host", "0.0.0.0"])  # noqa: S104
+
+        with patch("mcp_server_mattermost.server.mcp") as mock_mcp:
+            mock_mcp.run = MagicMock()
+            from mcp_server_mattermost import main
+
+            main()
+
+            mock_mcp.run.assert_called_once_with(
+                transport="http",
+                host="0.0.0.0",  # noqa: S104
+                port=8000,
+                uvicorn_config={"ws": "wsproto"},
+                host_origin_protection="auto",
+                allowed_hosts=None,
+                allowed_origins=None,
+            )
+        get_settings.cache_clear()
 
 
 class TestVersion:

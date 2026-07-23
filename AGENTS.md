@@ -88,6 +88,8 @@ Optional:
 - `MATTERMOST_LOG_FORMAT` (default: json) - Log format: 'json' for production, 'text' for development
 - `MATTERMOST_API_VERSION` (default: v4)
 - `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` (default: false) - Allow HTTP clients to use their own Mattermost tokens
+- `MATTERMOST_HTTP_ALLOWED_HOSTS` (default: none) - Extra allowed `Host` header values for HTTP transport (JSON array or comma-separated)
+- `MATTERMOST_HTTP_ALLOWED_ORIGINS` (default: none) - Extra allowed `Origin` header values for HTTP transport (JSON array or comma-separated)
 
 ## Testing
 

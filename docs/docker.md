@@ -39,14 +39,16 @@ docker run -i --rm \
 
 ## HTTP Mode (Production)
 
-For production deployments with health checks:
+For networked HTTP use per-client auth: `client_token` (below) or `oauth_proxy` (below). `static_token`
+over HTTP serves an unauthenticated endpoint and only warns — it does not block; see
+[Authentication → HTTP transport](authentication.md#http-transport):
 
 ```bash
 docker run -d -p 8000:8000 \
   -e MCP_TRANSPORT=http \
   -e MCP_HOST=0.0.0.0 \
+  -e MATTERMOST_AUTH_MODE=client_token \
   -e MATTERMOST_URL=https://your-mattermost.com \
-  -e MATTERMOST_TOKEN=your-token \
   legard/mcp-server-mattermost
 ```
 
@@ -55,6 +57,31 @@ Health check endpoint:
 ```bash
 curl http://localhost:8000/health
 ```
+
+### Keeping `static_token` behind an auth proxy
+
+A `static_token` server behind an authenticating proxy starts on any bind (the warning is expected here —
+the proxy provides authentication). To also make the server **unreachable except through the proxy**,
+co-locate the proxy in the same network namespace and bind the MCP server to loopback (the proxy publishes
+the port):
+
+```yaml
+services:
+  auth-proxy:
+    image: your-auth-proxy
+    ports: ["8000:8000"]
+  mattermost-mcp:
+    image: legard/mcp-server-mattermost
+    network_mode: "service:auth-proxy"   # shares localhost with the proxy
+    environment:
+      MCP_TRANSPORT: http
+      MCP_HOST: 127.0.0.1
+      MATTERMOST_URL: https://your-mattermost.com
+      MATTERMOST_TOKEN: your-token
+```
+
+On this loopback bind, DNS-rebinding protection is active. If the proxy forwards the public `Host`, add it
+to `MATTERMOST_HTTP_ALLOWED_HOSTS`. `X-Forwarded-*` headers are not trusted automatically.
 
 ## HTTP Mode with Mattermost OAuth Proxy
 

@@ -22,6 +22,28 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 | `MATTERMOST_LOG_LEVEL` | INFO | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
 | `MATTERMOST_LOG_FORMAT` | json | Log format: `json` for production, `text` for development |
 | `MATTERMOST_API_VERSION` | v4 | Mattermost API version |
+| `MATTERMOST_HTTP_ALLOWED_HOSTS` | — | Extra allowed `Host` values for HTTP (JSON array or comma-separated) |
+| `MATTERMOST_HTTP_ALLOWED_ORIGINS` | — | Extra allowed `Origin` values for HTTP (JSON array or comma-separated) |
+
+## HTTP transport security
+
+`static_token` over HTTP serves an unauthenticated endpoint acting with the shared token — the server warns
+but never blocks. See [Authentication → HTTP transport](authentication.md#http-transport) for that auth
+posture and its remediation. This section covers the transport-level Host/Origin protection, which applies
+to every auth mode.
+
+The HTTP transport turns on DNS-rebinding protection automatically (`host_origin_protection="auto"`):
+
+- **Loopback bind** (`127.0.0.1` / `localhost` / `::1`) — `Host` and `Origin` are validated. Normal MCP
+  clients (loopback `Host`, no `Origin`) pass; an unknown `Host` gets `421`, a foreign `Origin` gets `403`.
+- **Non-loopback bind** (`0.0.0.0`, LAN IP) — validation is **off** until you set an allowlist, so it does
+  not protect a networked deployment on its own.
+
+Declare allowlists with `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS` (JSON array or
+comma-separated) — e.g. the public host behind a reverse proxy. `X-Forwarded-*` headers are not trusted.
+
+**Troubleshooting:** `421 Misdirected Request` → add the client's `Host` to `MATTERMOST_HTTP_ALLOWED_HOSTS`.
+`403 Forbidden Origin` → add the browser `Origin` to `MATTERMOST_HTTP_ALLOWED_ORIGINS`.
 
 ## Environment File
 

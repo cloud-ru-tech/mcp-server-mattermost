@@ -22,6 +22,7 @@ class TestMainEnvVars:
     def test_mcp_transport_http_env_var(self, mock_settings, mock_mcp_run, monkeypatch):
         """MCP_TRANSPORT=http triggers HTTP mode."""
         monkeypatch.setenv("MCP_TRANSPORT", "http")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
         monkeypatch.setattr("sys.argv", ["mcp-server-mattermost"])
 
         from mcp_server_mattermost import main
@@ -36,6 +37,7 @@ class TestMainEnvVars:
         """MCP_HOST env var sets HTTP host."""
         monkeypatch.setenv("MCP_TRANSPORT", "http")
         monkeypatch.setenv("MCP_HOST", "0.0.0.0")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
         monkeypatch.setattr("sys.argv", ["mcp-server-mattermost"])
 
         from mcp_server_mattermost import main
@@ -49,6 +51,7 @@ class TestMainEnvVars:
         """MCP_PORT env var sets HTTP port."""
         monkeypatch.setenv("MCP_TRANSPORT", "http")
         monkeypatch.setenv("MCP_PORT", "9000")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
         monkeypatch.setattr("sys.argv", ["mcp-server-mattermost"])
 
         from mcp_server_mattermost import main
@@ -61,6 +64,7 @@ class TestMainEnvVars:
     def test_cli_args_override_env_vars(self, mock_settings, mock_mcp_run, monkeypatch):
         """CLI arguments take precedence over env vars."""
         monkeypatch.setenv("MCP_PORT", "9000")
+        monkeypatch.setenv("MATTERMOST_AUTH_MODE", "client_token")
         monkeypatch.setattr("sys.argv", ["mcp-server-mattermost", "--http", "--port", "8080"])
 
         from mcp_server_mattermost import main

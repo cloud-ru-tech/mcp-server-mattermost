@@ -12,7 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   missing consent check in the OAuth proxy callback), plus CVE-2026-32871
   (authenticated SSRF) and CVE-2025-64340 (command injection) that were
   present in the previous 3.0.2, and includes later redirect-URI/SSRF/
-  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4,<4`.
+  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4.4,<4`
+  (3.4.3 is the first release with the Host/Origin protection kwargs the HTTP
+  transport passes unconditionally; 3.4.4 is the tested/locked version).
 - Remediated 20 known advisories (8 HIGH, 9 MEDIUM, 3 LOW) in transitive and
   dev/docs dependencies by upgrading them to fixed versions: `cryptography`,
   `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`,
@@ -25,6 +27,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (amd64, arm64) is built and scanned before the manifest is pushed (fails on
   fixable HIGH/CRITICAL). Exceptions only via `.trivyignore` with a documented
   reason and review date.
+- HTTP transport with `MATTERMOST_AUTH_MODE=static_token` (the default) now logs a security warning at
+  startup instead of refusing — a plain warning on a loopback bind, a louder one on a non-loopback bind
+  (`0.0.0.0`) where the unauthenticated endpoint (acting with the shared Mattermost token) is reachable by
+  network peers. The server never fails to start on this account, so container upgrades are not broken; put
+  an authenticating proxy in front, or use `client_token` / `oauth_proxy`, for networked HTTP.
+- Enabled DNS-rebinding protection for the HTTP transport (`host_origin_protection="auto"`): loopback
+  deployments reject unknown `Host`/`Origin` headers. New `MATTERMOST_HTTP_ALLOWED_HOSTS` /
+  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declare allowlists for networked deployments.
 
 ## [0.5.1] - 2026-07-07
 

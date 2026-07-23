@@ -83,6 +83,7 @@ and posts a report highlighting what still needs attention:
 
 **Example attachment payload:**
 
+<!--- pyml disable-num-lines 12 line-length -->
 ```json
 {
   "channel_id": "support-channel-id",
@@ -120,6 +121,7 @@ structured release notes — grouped by category, each with its own color:
 
 **Example attachment payload:**
 
+<!--- pyml disable-num-lines 23 line-length -->
 ```json
 {
   "channel_id": "releases-channel-id",
@@ -279,7 +281,8 @@ to Mattermost; the summary stays in your conversation with the AI.
 
 ## Project Kickoff
 
-> "Set up a channel for Project Phoenix — private, invite @alice, @bob and @carol, and post a welcome message with the project goals"
+> "Set up a channel for Project Phoenix — private, invite @alice, @bob and @carol,
+> and post a welcome message with the project goals"
 
 A single prompt triggers a chain of 7+ tool calls:
 
