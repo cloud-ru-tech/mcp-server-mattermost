@@ -4,6 +4,7 @@ import pytest
 
 from mcp_server_mattermost.config import AuthMode, Settings
 from mcp_server_mattermost.http_security import (
+    host_origin_posture,
     is_loopback_host,
     resolve_host_origin_kwargs,
     unauthenticated_http_warning,
@@ -64,6 +65,37 @@ def test_messages_never_leak_secrets() -> None:
         assert warning is not None
         assert "SENTINEL-TOKEN" not in warning
         assert "Authorization" not in warning
+
+
+def test_warning_describes_protection_per_connection_not_per_bind() -> None:
+    """The non-loopback warning must not claim protection is off for the bind as a whole."""
+    warning = unauthenticated_http_warning(_settings(), transport="http", host="0.0.0.0")  # noqa: S104
+    assert warning is not None
+    assert "per connection" in warning
+    assert "for this bind" not in warning
+
+
+def test_posture_reports_absent_allowlists() -> None:
+    posture = host_origin_posture(_settings())
+    assert "allowed_hosts=[]" in posture
+    assert "allowed_origins=[]" in posture
+    assert "arrives on" in posture
+
+
+def test_posture_reports_configured_allowlists() -> None:
+    settings = _settings(
+        http_allowed_hosts=["a.example", "b.example"],
+        http_allowed_origins=["https://a.example"],
+    )
+    posture = host_origin_posture(settings)
+    assert "allowed_hosts=[a.example, b.example]" in posture
+    assert "allowed_origins=[https://a.example]" in posture
+
+
+def test_posture_never_leaks_secrets() -> None:
+    posture = host_origin_posture(_settings())
+    assert "SENTINEL-TOKEN" not in posture
+    assert "Authorization" not in posture
 
 
 def test_resolve_host_origin_kwargs_defaults() -> None:

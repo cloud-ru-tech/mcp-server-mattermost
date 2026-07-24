@@ -32,9 +32,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0.0.0.0`) where the unauthenticated endpoint (acting with the shared Mattermost token) is reachable by
   network peers. The server never fails to start on this account, so container upgrades are not broken; put
   an authenticating proxy in front, or use `client_token` / `oauth_proxy`, for networked HTTP.
-- Enabled DNS-rebinding protection for the HTTP transport (`host_origin_protection="auto"`): loopback
-  deployments reject unknown `Host`/`Origin` headers. New `MATTERMOST_HTTP_ALLOWED_HOSTS` /
-  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declare allowlists for networked deployments.
+- Enabled DNS-rebinding protection for the HTTP transport (`host_origin_protection="auto"`): each connection
+  is validated by the local address it arrives on, so a request arriving on `127.0.0.1`/`localhost`/`::1`
+  rejects an unknown `Host` (`421`) and a foreign `Origin` (`403`) even when the server is bound to `0.0.0.0`.
+  Arrivals on a LAN or public address are validated once `MATTERMOST_HTTP_ALLOWED_HOSTS` /
+  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declares an allowlist. A same-host reverse proxy or health checker that
+  reaches the server over loopback with a public `Host`/`Origin` must be listed there — see
+  [HTTP transport security](docs/configuration.md#http-transport-security). The HTTP transport logs the
+  active posture and the configured allowlists at startup.
 
 ## [0.5.1] - 2026-07-07
 

@@ -80,18 +80,20 @@ def main() -> None:
             mcp.run(transport="stdio")
         return
 
-    # HTTP transport: surface any transport-security warning before importing/binding the server.
+    # HTTP transport: surface the transport-security posture and warnings before importing/binding the server.
     from mcp_server_mattermost.config import get_settings  # noqa: PLC0415
     from mcp_server_mattermost.http_security import (  # noqa: PLC0415
+        host_origin_posture,
         resolve_host_origin_kwargs,
         unauthenticated_http_warning,
     )
     from mcp_server_mattermost.logging import logger, setup_logging  # noqa: PLC0415
 
     settings = get_settings()
+    setup_logging(settings.log_level, settings.log_format)
+    logger.info(host_origin_posture(settings))
     warning = unauthenticated_http_warning(settings, transport="http", host=args.host)
     if warning:
-        setup_logging(settings.log_level, settings.log_format)
         logger.warning(warning)
 
     from .server import mcp  # noqa: PLC0415

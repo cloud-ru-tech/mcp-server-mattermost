@@ -32,18 +32,45 @@ but never blocks. See [Authentication → HTTP transport](authentication.md#http
 posture and its remediation. This section covers the transport-level Host/Origin protection, which applies
 to every auth mode.
 
-The HTTP transport turns on DNS-rebinding protection automatically (`host_origin_protection="auto"`):
-
-- **Loopback bind** (`127.0.0.1` / `localhost` / `::1`) — `Host` and `Origin` are validated. Normal MCP
-  clients (loopback `Host`, no `Origin`) pass; an unknown `Host` gets `421`, a foreign `Origin` gets `403`.
-- **Non-loopback bind** (`0.0.0.0`, LAN IP) — validation is **off** until you set an allowlist, so it does
-  not protect a networked deployment on its own.
+The HTTP transport turns on DNS-rebinding protection automatically (`host_origin_protection="auto"`). Each
+connection is classified by the **local address it arrived on**, not by the bind address: a server bound to
+`0.0.0.0` validates a request that reaches it through `127.0.0.1` and skips one that reaches it through a
+LAN address.
 
 Declare allowlists with `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS` (JSON array or
-comma-separated) — e.g. the public host behind a reverse proxy. `X-Forwarded-*` headers are not trusted.
+comma-separated) — e.g. the public host behind a reverse proxy. Cells name the headers that get validated;
+column heads drop the `MATTERMOST_HTTP_` prefix.
 
-**Troubleshooting:** `421 Misdirected Request` → add the client's `Host` to `MATTERMOST_HTTP_ALLOWED_HOSTS`.
-`403 Forbidden Origin` → add the browser `Origin` to `MATTERMOST_HTTP_ALLOWED_ORIGINS`.
+| Connection arrived on | No allowlist | `ALLOWED_HOSTS` set | `ALLOWED_ORIGINS` only |
+|-----------------------|--------------|---------------------|------------------------|
+| `127.0.0.1`, `localhost`, `::1` | `Host` + `Origin` | `Host` + `Origin` | `Host` + `Origin` |
+| LAN or public address | none | `Host` + `Origin` | `Origin` |
+
+Accepted in every configuration: `Host: 127.0.0.1` / `localhost` / `::1`, the local address the connection
+arrived on, and any loopback `Origin` when `Host` is loopback. A request with no `Origin` header — every
+non-browser MCP client — is never rejected on `Origin`. Allowlist entries are glob patterns
+(`*.example.com`). `X-Forwarded-*` headers are not trusted.
+
+**Upgrade note:** a same-host reverse proxy or health checker that connects over `127.0.0.1` while
+preserving a public `Host`/`Origin` is validated even on a `0.0.0.0` bind — list its values in
+`MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS`.
+
+Three behaviors behind a surprising `421`/`403`:
+
+- `MATTERMOST_HTTP_ALLOWED_ORIGINS` **alone** drops the same-origin exemption for non-loopback arrivals: a
+  same-origin browser request then gets `403` unless its origin is listed. Set
+  `MATTERMOST_HTTP_ALLOWED_HOSTS` as well, or list every origin the browser sends.
+- `Host` matching ignores the port, `Origin` matching includes it. `https://app.example.com` means port 443,
+  so list `https://app.example.com:8443` explicitly.
+- A request arriving off-loopback but carrying `Host: localhost` has its `Origin` validated even with no
+  allowlist set — a proxy using `proxy_set_header Host localhost` needs its `Origin` listed.
+
+**Troubleshooting**
+
+| Symptom | Fix |
+|---------|-----|
+| `421 Misdirected Request` | Add the client's `Host` to `MATTERMOST_HTTP_ALLOWED_HOSTS` |
+| `403 Forbidden Origin` | Add the browser `Origin`, with port, to `MATTERMOST_HTTP_ALLOWED_ORIGINS` |
 
 ## Environment File
 

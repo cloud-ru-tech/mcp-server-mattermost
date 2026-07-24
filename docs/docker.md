@@ -80,8 +80,9 @@ services:
       MATTERMOST_TOKEN: your-token
 ```
 
-On this loopback bind, DNS-rebinding protection is active. If the proxy forwards the public `Host`, add it
-to `MATTERMOST_HTTP_ALLOWED_HOSTS`. `X-Forwarded-*` headers are not trusted automatically.
+Every connection here arrives over loopback, so `Host`/`Origin` validation is active. If the proxy forwards
+the public `Host`, add it to `MATTERMOST_HTTP_ALLOWED_HOSTS`. `X-Forwarded-*` headers are not trusted
+automatically.
 
 ## HTTP Mode with Mattermost OAuth Proxy
 
