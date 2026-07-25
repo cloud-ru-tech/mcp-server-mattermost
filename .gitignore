@@ -68,3 +68,6 @@ demo/
 # MkDocs build output
 site/
 .specs/
+
+# Dogfooding run artifacts (reports, logs, screenshots, videos)
+dogfood-output/
