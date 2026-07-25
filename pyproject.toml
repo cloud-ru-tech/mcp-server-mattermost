@@ -36,6 +36,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docs = [
+    "mkdocs-material",
+]
+
+[dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
     "pytest>=8.0",
@@ -49,9 +54,6 @@ dev = [
     "testcontainers[postgres]>=4.0",
     "pymarkdownlnt>=0.9.35",
     "types-cachetools",
-]
-docs = [
-    "mkdocs-material",
 ]
 
 [project.scripts]
