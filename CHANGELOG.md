@@ -8,61 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
-- Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,
-  missing consent check in the OAuth proxy callback), plus CVE-2026-32871
-  (authenticated SSRF) and CVE-2025-64340 (command injection) that were
-  present in the previous 3.0.2, and includes later redirect-URI/SSRF/
-  DNS-rebinding hardening; dependency floor raised to `fastmcp>=3.4.4,<4`
-  (3.4.3 is the first release with the Host/Origin protection kwargs the HTTP
-  transport passes unconditionally; 3.4.4 is the tested/locked version).
-- Remediated 20 known advisories (8 HIGH, 9 MEDIUM, 3 LOW) in transitive and
-  dev/docs dependencies by upgrading them to fixed versions: `cryptography`,
-  `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`,
-  `pytest`, `pygments`, `pymdown-extensions`.
-- Added a blocking SCA gate: Trivy scans `uv.lock` on every PR and push to
-  main and fails on *fixable* HIGH/CRITICAL vulnerabilities, matching the
-  per-architecture image scan. Fixable LOW/MEDIUM are reported (CI log, plus
-  the Security tab on main) but do not block; vulnerabilities with no fix
-  available are reported but never block. Every published image architecture
-  (amd64, arm64) is built and scanned before the manifest is pushed (fails on
-  fixable HIGH/CRITICAL). Exceptions only via `.trivyignore` with a documented
-  reason and review date.
-- HTTP transport with `MATTERMOST_AUTH_MODE=static_token` (the default) now logs a security warning at
-  startup instead of refusing — a plain warning on a loopback bind, a louder one on a non-loopback bind
-  (`0.0.0.0`) where the unauthenticated endpoint (acting with the shared Mattermost token) is reachable by
-  network peers. The server never fails to start on this account, so container upgrades are not broken; put
-  an authenticating proxy in front, or use `client_token` / `oauth_proxy`, for networked HTTP.
-- Added opt-in DNS-rebinding protection for the HTTP transport via
-  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` (`off` / `auto` / `strict`). It is **off unless set**, so
-  upgrading does not start rejecting traffic that worked before; leaving it unset also keeps FastMCP's
-  own `FASTMCP_HTTP_HOST_ORIGIN_PROTECTION` in effect. Under `auto` each connection is validated by the
-  local address it arrives on: an arrival on `127.0.0.1`/`localhost`/`::1` rejects an unknown `Host`
-  (`421`) and a foreign `Origin` (`403`) even when the server is bound to `0.0.0.0`, while arrivals on a
-  LAN or public address are validated once `MATTERMOST_HTTP_ALLOWED_HOSTS` /
-  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declares an allowlist. On a loopback bind FastMCP adds the bind
-  address to the allowlist, so a reverse proxy forwarding a public `Host` must be listed there — see
+- Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733, missing consent check in the
+  OAuth proxy callback), plus CVE-2026-32871 (authenticated SSRF) and CVE-2025-64340 (command injection)
+  present in the previous 3.0.2. Floor raised to `fastmcp>=3.4.4,<4`; 3.4.3 is the first release with the
+  Host/Origin protection this transport relies on.
+- Remediated 20 known advisories (8 HIGH, 9 MEDIUM, 3 LOW) in transitive and dev/docs dependencies:
+  `cryptography`, `pyjwt`, `mcp`, `urllib3`, `pydantic-settings`, `requests`, `idna`, `pytest`,
+  `pygments`, `pymdown-extensions`.
+- Added a blocking SCA gate: Trivy scans `uv.lock` and every published image architecture, failing on
+  *fixable* HIGH/CRITICAL. Fixable LOW/MEDIUM are reported but do not block, as are vulnerabilities with
+  no fix available. Exceptions only via `.trivyignore` with a documented reason and review date.
+- `static_token` over HTTP now warns at startup instead of refusing to start — louder on a non-loopback
+  bind, where the unauthenticated endpoint acting with the shared token is reachable by network peers.
+  Container upgrades are no longer broken by this check.
+- Added opt-in DNS-rebinding protection via `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION`
+  (`off` / `auto` / `strict`), with `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS`
+  allowlists. **Off unless set**, so upgrading rejects nothing that worked before, and FastMCP's own
+  `FASTMCP_HTTP_HOST_ORIGIN_PROTECTION` still applies. Configured through FastMCP's settings rather than
+  `mcp.run()` kwargs, so it also covers `fastmcp run`, a standalone ASGI server, and the app mounted into
+  a parent application — previously none of those were protected. Rejections are logged with the
+  offending `Host`/`Origin` and the variable that would accept it. See
   [HTTP transport security](docs/configuration.md#http-transport-security).
-- The protection is applied through FastMCP's settings rather than passed to `mcp.run()`, so it now also
-  covers `fastmcp run`, a standalone ASGI server over `mcp.http_app()`, and this app mounted into a
-  parent Starlette/FastAPI application — previously none of those received it.
-- Rejections are logged at `WARNING` naming the offending `Host`/`Origin`, the address the connection
-  arrived on, and the variable that would accept it; the response stays a bare `421`/`403`. The HTTP
-  transport logs the active posture and the configured allowlists at startup, and warns when an
-  allowlist is configured while protection is off.
 
 ### Deprecated
-- Host/Origin protection defaults to off. **Starting with 1.0.0 the default becomes `auto`**, which
-  rejects an unknown `Host` with `421` on connections arriving over loopback — including a same-host
-  reverse proxy or health checker that forwards a public `Host`. Set
-  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` explicitly now — including `=off` if that is the behavior you
-  want — and the upgrade changes nothing for you. See
-  [HTTP transport security](docs/configuration.md#http-transport-security).
+- Host/Origin protection defaults to off; **in 1.0.0 the default becomes `auto`** (#30). Set
+  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` explicitly now — `=off` included — and that upgrade changes
+  nothing for you.
 
 ### Fixed
-- `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS` accept bracketed IPv6 literals
-  (`[::1]`, `[::1],127.0.0.1`), which previously aborted startup with a JSON parser error. Values that
-  reduce to an empty list (`[]`, a stray trailing comma) are now treated as unset instead of as an
-  allowlist matching nothing.
+- Allowlists accept bracketed IPv6 literals (`[::1]`), which previously aborted startup with a JSON
+  parser error; a value reducing to an empty list is now treated as unset rather than as an allowlist
+  matching nothing.
 - Raised the `pydantic-settings` floor to `>=2.7`. The declared `>=2.0` allowed versions without
   `NoDecode`, where the package failed to import at all — on stdio as well as HTTP.
 
