@@ -226,8 +226,15 @@ docker run -d -p 8000:8000 \
   -e MCP_HOST=0.0.0.0 \
   -e MATTERMOST_AUTH_MODE=client_token \
   -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION=auto \
+  -e MATTERMOST_HTTP_ALLOWED_HOSTS=mcp.example.com \
   legard/mcp-server-mattermost
 ```
+
+`client_token` means each MCP client authenticates with its own Mattermost token, sent as
+`Authorization: Bearer <token>` — a client configured without one gets `401`. The two
+`MATTERMOST_HTTP_*` variables turn on Host/Origin (DNS-rebinding) protection, which is off by
+default; see [HTTP transport security](docs/configuration.md#http-transport-security).
 
 Health check: `curl http://localhost:8000/health`
 

@@ -49,8 +49,17 @@ docker run -d -p 8000:8000 \
   -e MCP_HOST=0.0.0.0 \
   -e MATTERMOST_AUTH_MODE=client_token \
   -e MATTERMOST_URL=https://your-mattermost.com \
+  -e MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION=auto \
+  -e MATTERMOST_HTTP_ALLOWED_HOSTS=mcp.example.com \
   legard/mcp-server-mattermost
 ```
+
+In `client_token` mode every MCP client must send its own Mattermost token as
+`Authorization: Bearer <token>`; requests without one get `401`.
+
+A published-port container receives connections on its bridge address, which `auto` does not validate on its
+own — declare `MATTERMOST_HTTP_ALLOWED_HOSTS` (the public hostname clients use) to turn the check on there.
+See [HTTP transport security](configuration.md#http-transport-security).
 
 Health check endpoint:
 
@@ -65,24 +74,30 @@ the proxy provides authentication). To also make the server **unreachable except
 co-locate the proxy in the same network namespace and bind the MCP server to loopback (the proxy publishes
 the port):
 
+The two containers share one network namespace, so they need different ports: the proxy publishes 8000 and
+forwards to the MCP server on 8001.
+
 ```yaml
 services:
   auth-proxy:
     image: your-auth-proxy
-    ports: ["8000:8000"]
+    ports: ["8000:8000"]                 # upstream: 127.0.0.1:8001
   mattermost-mcp:
     image: legard/mcp-server-mattermost
     network_mode: "service:auth-proxy"   # shares localhost with the proxy
     environment:
       MCP_TRANSPORT: http
       MCP_HOST: 127.0.0.1
+      MCP_PORT: 8001
       MATTERMOST_URL: https://your-mattermost.com
       MATTERMOST_TOKEN: your-token
+      MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION: auto
 ```
 
-Every connection here arrives over loopback, so `Host`/`Origin` validation is active. If the proxy forwards
-the public `Host`, add it to `MATTERMOST_HTTP_ALLOWED_HOSTS`. `X-Forwarded-*` headers are not trusted
-automatically.
+Every connection here arrives over loopback, so with `auto` the `Host` and `Origin` are validated. If the
+proxy forwards the public `Host`, add it to `MATTERMOST_HTTP_ALLOWED_HOSTS`, or the server answers `421`.
+`X-Forwarded-Host` is never trusted; `X-Forwarded-Proto` is honored from loopback peers, which the proxy is
+here.
 
 ## HTTP Mode with Mattermost OAuth Proxy
 

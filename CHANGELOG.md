@@ -32,14 +32,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`0.0.0.0`) where the unauthenticated endpoint (acting with the shared Mattermost token) is reachable by
   network peers. The server never fails to start on this account, so container upgrades are not broken; put
   an authenticating proxy in front, or use `client_token` / `oauth_proxy`, for networked HTTP.
-- Enabled DNS-rebinding protection for the HTTP transport (`host_origin_protection="auto"`): each connection
-  is validated by the local address it arrives on, so a request arriving on `127.0.0.1`/`localhost`/`::1`
-  rejects an unknown `Host` (`421`) and a foreign `Origin` (`403`) even when the server is bound to `0.0.0.0`.
-  Arrivals on a LAN or public address are validated once `MATTERMOST_HTTP_ALLOWED_HOSTS` /
-  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declares an allowlist. A same-host reverse proxy or health checker that
-  reaches the server over loopback with a public `Host`/`Origin` must be listed there — see
-  [HTTP transport security](docs/configuration.md#http-transport-security). The HTTP transport logs the
-  active posture and the configured allowlists at startup.
+- Added opt-in DNS-rebinding protection for the HTTP transport via
+  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` (`off` / `auto` / `strict`). It is **off unless set**, so
+  upgrading does not start rejecting traffic that worked before; leaving it unset also keeps FastMCP's
+  own `FASTMCP_HTTP_HOST_ORIGIN_PROTECTION` in effect. Under `auto` each connection is validated by the
+  local address it arrives on: an arrival on `127.0.0.1`/`localhost`/`::1` rejects an unknown `Host`
+  (`421`) and a foreign `Origin` (`403`) even when the server is bound to `0.0.0.0`, while arrivals on a
+  LAN or public address are validated once `MATTERMOST_HTTP_ALLOWED_HOSTS` /
+  `MATTERMOST_HTTP_ALLOWED_ORIGINS` declares an allowlist. On a loopback bind FastMCP adds the bind
+  address to the allowlist, so a reverse proxy forwarding a public `Host` must be listed there — see
+  [HTTP transport security](docs/configuration.md#http-transport-security).
+- The protection is applied through FastMCP's settings rather than passed to `mcp.run()`, so it now also
+  covers `fastmcp run`, a standalone ASGI server over `mcp.http_app()`, and this app mounted into a
+  parent Starlette/FastAPI application — previously none of those received it.
+- Rejections are logged at `WARNING` naming the offending `Host`/`Origin`, the address the connection
+  arrived on, and the variable that would accept it; the response stays a bare `421`/`403`. The HTTP
+  transport logs the active posture and the configured allowlists at startup, and warns when an
+  allowlist is configured while protection is off.
+
+### Deprecated
+- Host/Origin protection defaults to off. **Starting with 1.0.0 the default becomes `auto`**, which
+  rejects an unknown `Host` with `421` on connections arriving over loopback — including a same-host
+  reverse proxy or health checker that forwards a public `Host`. Set
+  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` explicitly now — including `=off` if that is the behavior you
+  want — and the upgrade changes nothing for you. See
+  [HTTP transport security](docs/configuration.md#http-transport-security).
+
+### Fixed
+- `MATTERMOST_HTTP_ALLOWED_HOSTS` / `MATTERMOST_HTTP_ALLOWED_ORIGINS` accept bracketed IPv6 literals
+  (`[::1]`, `[::1],127.0.0.1`), which previously aborted startup with a JSON parser error. Values that
+  reduce to an empty list (`[]`, a stray trailing comma) are now treated as unset instead of as an
+  allowlist matching nothing.
+- Raised the `pydantic-settings` floor to `>=2.7`. The declared `>=2.0` allowed versions without
+  `NoDecode`, where the package failed to import at all — on stdio as well as HTTP.
 
 ## [0.5.1] - 2026-07-07
 
