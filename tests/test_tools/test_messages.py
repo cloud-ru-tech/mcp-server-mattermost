@@ -71,11 +71,7 @@ class TestPostMessage:
         )
 
     async def test_post_message_when_server_omits_file_ids(self, mock_client: AsyncMock) -> None:
-        """Servers <= v10.4.0 drop the file_ids key on posts with no attachments (see #27).
-
-        Covers the Post(**data) path shared with update_message, pin_message and
-        unpin_message.
-        """
+        """post_message parses a post with no file_ids key (#27)."""
         mock_client.create_post.return_value = make_post_data(omit=("file_ids",))
 
         result = await messages.post_message(
@@ -111,10 +107,7 @@ class TestGetChannelMessages:
         assert result.truncated is False
 
     async def test_get_channel_messages_when_server_omits_file_ids(self, mock_client: AsyncMock) -> None:
-        """Nested posts missing the file_ids key must parse too (see #27).
-
-        Covers the PostList(**data) path shared with search_messages and get_thread.
-        """
+        """get_channel_messages parses nested posts with no file_ids key (#27)."""
         mock_client.get_posts.return_value = make_post_list_data(
             posts={"ps1": make_post_data(id="ps1", omit=("file_ids",))},
             order=["ps1"],

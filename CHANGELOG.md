@@ -8,14 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- `Post.file_ids` now defaults to an empty list instead of being a required field.
-  Mattermost tags the field `json:"file_ids,omitempty"` up to and including v10.4.0
-  (covering the 9.5 and 9.11 ESR lines), so posts without attachments omit the key
-  entirely and every response carrying a post failed to parse with
-  `ValidationError: file_ids Field required`. Affected `post_message`,
-  `update_message`, `pin_message`, `unpin_message`, `get_channel_messages`,
-  `search_messages` and `get_thread`. Servers on v10.5.0 or newer always send `[]`
-  and are unaffected either way. ([#27](https://github.com/cloud-ru-tech/mcp-server-mattermost/issues/27))
+- `Post.file_ids` defaults to an empty list — Mattermost ≤ v10.4.0 omits the key on posts
+  without attachments, which broke parsing in every tool that returns posts
+  ([#27](https://github.com/cloud-ru-tech/mcp-server-mattermost/issues/27))
 
 ### Security
 - Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733,

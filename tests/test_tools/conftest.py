@@ -55,12 +55,7 @@ def make_post_data(
     omit: tuple[str, ...] = (),
     **overrides,
 ) -> dict:
-    """Create full post mock data.
-
-    Most Post fields are always present in the JSON. `file_ids` is the exception:
-    Mattermost <= v10.4.0 tags it `omitempty` and drops the key on posts without
-    attachments. Pass `omit=("file_ids",)` to reproduce that shape.
-    """
+    """Create full post mock data. Pass `omit` to drop keys the server may not send."""
     data = {
         "id": post_id,
         "create_at": 1706400000000,
