@@ -26,6 +26,18 @@ class OAuthClientType(str, Enum):
     CONFIDENTIAL = "confidential"
 
 
+class HostOriginProtection(str, Enum):
+    """Host/Origin (DNS-rebinding) protection level for the HTTP transport.
+
+    Leaving the setting unset is distinct from ``OFF``: unset defers to FastMCP's own
+    ``FASTMCP_HTTP_HOST_ORIGIN_PROTECTION``, while ``OFF`` overrides it.
+    """
+
+    OFF = "off"
+    AUTO = "auto"
+    STRICT = "strict"
+
+
 _LOCALHOST_HOSTS = {"localhost", "127.0.0.1", "::1"}
 
 
@@ -56,6 +68,9 @@ class Settings(BaseSettings):
         MATTERMOST_LOG_LEVEL: Logging level (default: INFO)
         MATTERMOST_LOG_FORMAT: Log format, 'json' or 'text' (default: json)
         MATTERMOST_API_VERSION: API version (default: v4)
+        MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION: off, auto, or strict (default: FastMCP's own setting)
+        MATTERMOST_HTTP_ALLOWED_HOSTS: Extra allowed Host values (JSON array or comma-separated)
+        MATTERMOST_HTTP_ALLOWED_ORIGINS: Extra allowed Origin values (JSON array or comma-separated)
     """
 
     model_config = SettingsConfigDict(
@@ -85,6 +100,10 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     log_format: str = Field(default="json", description="Log format: 'json' or 'text'")
     api_version: str = Field(default="v4", description="Mattermost API version")
+    http_host_origin_protection: HostOriginProtection | None = Field(
+        default=None,
+        description="Host/Origin protection for HTTP transport: 'off', 'auto', or 'strict' (unset: FastMCP default)",
+    )
     http_allowed_hosts: Annotated[list[str] | None, NoDecode] = Field(
         default=None,
         description="Extra allowed Host header values for HTTP transport (JSON array or comma-separated)",
@@ -168,20 +187,46 @@ class Settings(BaseSettings):
             raise ValueError(msg)
         return v
 
+    @field_validator("http_host_origin_protection", mode="before")
+    @classmethod
+    def _normalize_host_origin_protection(cls, v: object) -> object:
+        """Accept any case; blank string becomes None."""
+        if isinstance(v, str):
+            stripped = v.strip()
+            return stripped.lower() or None
+        return v
+
     @field_validator("http_allowed_hosts", "http_allowed_origins", mode="before")
     @classmethod
     def _parse_host_origin_list(cls, v: object) -> object:
-        """Accept a JSON array or a comma-separated string; blank string becomes None."""
+        """Accept a JSON array or a comma-separated string; an empty result becomes None.
+
+        An empty list is not neutral downstream — FastMCP treats any non-None allowlist as
+        an explicit one and starts validating every connection — so it is normalized away.
+        """
         if v is None or isinstance(v, list):
-            return v
+            return v or None
         if isinstance(v, str):
-            stripped = v.strip()
-            if not stripped:
-                return None
-            if stripped.startswith("["):
-                return json.loads(stripped)  # parse JSON array
-            return [item.strip() for item in stripped.split(",") if item.strip()]
+            return cls._split_host_origin_entries(v) or None
         return v
+
+    @staticmethod
+    def _split_host_origin_entries(raw: str) -> list[str]:
+        """Split a raw allowlist string, preferring JSON and falling back to comma-separated.
+
+        The fallback is what makes bracketed IPv6 literals work: ``[::1]`` is not valid JSON,
+        and it is the canonical spelling of an IPv6 ``Host`` header value.
+        """
+        stripped = raw.strip()
+        if not stripped:
+            return []
+        try:
+            parsed = json.loads(stripped)
+        except ValueError:
+            parsed = None
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+        return [item.strip() for item in stripped.split(",") if item.strip()]
 
     @model_validator(mode="after")
     def validate_auth_configuration(self) -> "Settings":

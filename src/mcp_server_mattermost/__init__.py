@@ -80,23 +80,26 @@ def main() -> None:
             mcp.run(transport="stdio")
         return
 
-    # HTTP transport: surface the transport-security posture and warnings before importing/binding the server.
     from mcp_server_mattermost.config import get_settings  # noqa: PLC0415
     from mcp_server_mattermost.http_security import (  # noqa: PLC0415
         host_origin_posture,
-        resolve_host_origin_kwargs,
+        inert_allowlist_warning,
         unauthenticated_http_warning,
     )
     from mcp_server_mattermost.logging import logger, setup_logging  # noqa: PLC0415
 
+    # Importing the server applies the Host/Origin protection, so the posture below reflects it.
+    from .server import mcp  # noqa: PLC0415
+
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
-    logger.info(host_origin_posture(settings))
-    warning = unauthenticated_http_warning(settings, transport="http", host=args.host)
-    if warning:
-        logger.warning(warning)
-
-    from .server import mcp  # noqa: PLC0415
+    logger.info(host_origin_posture(settings, host=args.host))
+    for warning in (
+        inert_allowlist_warning(settings),
+        unauthenticated_http_warning(settings, transport="http", host=args.host),
+    ):
+        if warning:
+            logger.warning(warning)
 
     with contextlib.suppress(KeyboardInterrupt):
         mcp.run(
@@ -104,5 +107,4 @@ def main() -> None:
             host=args.host,
             port=args.port,
             uvicorn_config={"ws": "wsproto"},
-            **resolve_host_origin_kwargs(settings),
         )

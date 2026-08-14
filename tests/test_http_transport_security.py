@@ -7,8 +7,9 @@ reaching it through a LAN address. These tests drive that distinction through th
 ``base_url``, which is what populates ``scope["server"]``.
 
 The bind address cannot be exercised from here: ``mcp.http_app()`` never receives one. Only
-``mcp.run()`` does, where FastMCP additionally pins an allowlist for a loopback bind. Our side
-of that contract — the kwargs handed to ``mcp.run()`` — is asserted in ``tests/test_init.py``.
+``mcp.run()`` does, where FastMCP additionally pins an allowlist for a loopback bind. These tests
+pass the protection level explicitly; that it is also picked up from configuration on every
+entry point is asserted in ``tests/test_http_security.py``.
 """
 
 import fastmcp
@@ -66,8 +67,8 @@ class TestLoopbackArrival:
 class TestNonLoopbackArrival:
     """A connection arriving on a LAN address is unvalidated until an allowlist exists.
 
-    This is the ISSUE-001 configuration: one process bound to 0.0.0.0 accepts these headers on
-    its LAN address while rejecting the very same headers on 127.0.0.1.
+    One process bound to 0.0.0.0 therefore accepts these headers on its LAN address while
+    rejecting the very same headers on 127.0.0.1.
     """
 
     @pytest.fixture
