@@ -4,7 +4,7 @@ from mcp_server_mattermost.models.post import Post, PostList, Reaction
 
 
 def test_post_parses_minimal():
-    """Test Post with minimal fields (all core fields required per Go source)."""
+    """Test Post with every documented field present, as sent by Mattermost >= v10.5.0."""
     data = {
         "id": "post123",
         "create_at": 1706400000000,
@@ -129,3 +129,51 @@ def test_post_list_truncated_can_be_set() -> None:
     """Tools may set truncated=True after detecting a cap hit."""
     pl = PostList(order=[], posts={}, truncated=True)
     assert pl.truncated is True
+
+
+def _post_without_file_ids(post_id: str = "post123") -> dict:
+    """Build a post payload as Mattermost <= v10.4.0 sends it: no file_ids key at all."""
+    return {
+        "id": post_id,
+        "create_at": 1706400000000,
+        "update_at": 1706400000000,
+        "delete_at": 0,
+        "edit_at": 0,
+        "user_id": "user456",
+        "channel_id": "ch789",
+        "root_id": "",
+        "original_id": "",
+        "message": "Hello world",
+        "type": "",
+        "hashtags": "",
+        "pending_post_id": "",
+        "is_pinned": False,
+    }
+
+
+def test_post_parses_without_file_ids_key() -> None:
+    """Servers <= v10.4.0 omit file_ids on posts with no attachments (see #27)."""
+    post = Post(**_post_without_file_ids())
+
+    assert post.file_ids == []
+
+
+def test_post_list_parses_nested_post_without_file_ids_key() -> None:
+    """The omitted key must not break nested parsing either.
+
+    Covers get_channel_messages, search_messages and get_thread, which all go
+    through PostList.
+    """
+    post_list = PostList(order=["post1"], posts={"post1": _post_without_file_ids("post1")})
+
+    assert post_list.posts["post1"].file_ids == []
+
+
+def test_post_file_ids_default_is_not_shared_between_instances() -> None:
+    """file_ids uses default_factory, so each Post gets its own list."""
+    first = Post(**_post_without_file_ids("post1"))
+    second = Post(**_post_without_file_ids("post2"))
+
+    first.file_ids.append("fileX")
+
+    assert second.file_ids == []

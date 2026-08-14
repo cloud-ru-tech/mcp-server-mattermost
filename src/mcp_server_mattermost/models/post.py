@@ -6,7 +6,15 @@ from .base import MattermostResponse
 
 
 class Post(MattermostResponse):
-    """Message/post in Mattermost."""
+    """Message/post in Mattermost.
+
+    Note: ``file_ids`` must keep a default. Mattermost tags the field
+    ``json:"file_ids,omitempty"`` up to and including v10.4.0 (covering the 9.5 and
+    9.11 ESR lines), so posts without attachments omit the key entirely. The tag lost
+    ``omitempty`` in v10.5.0, which is why newer servers always send ``[]``.
+
+    See: https://github.com/mattermost/mattermost/blob/master/server/public/model/post.go
+    """
 
     id: str = Field(description="Unique post identifier")
     create_at: int = Field(description="Creation timestamp in milliseconds")
