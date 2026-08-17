@@ -28,12 +28,14 @@ def _create_token_flow_server() -> FastMCP:
 
     Avoids FileSystemProvider to prevent ``importlib.reload()`` of tool
     modules that would break the module-level ``mcp`` singleton's DI.
+
+    Deliberately no ``lifespan=app_lifespan``: this is the embedding shape, and
+    a tool added to a foreign server has to work without our lifespan.
     """
     from mcp_server_mattermost.auth import MattermostTokenVerifier
-    from mcp_server_mattermost.server import app_lifespan
     from mcp_server_mattermost.tools.users import get_me
 
-    server = FastMCP(name="TokenFlowTest", auth=MattermostTokenVerifier(), lifespan=app_lifespan)
+    server = FastMCP(name="TokenFlowTest", auth=MattermostTokenVerifier())
     server.add_tool(get_me)
     return server
 

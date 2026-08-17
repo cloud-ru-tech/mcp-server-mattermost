@@ -33,12 +33,31 @@ _DOCKER_AVAILABLE = setup_docker_host()
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Run async integration tests on the server's session-scoped event loop."""
+    """Run async integration tests on the server's session-scoped event loop.
+
+    The session-scoped fixtures live on that loop, so a test left on a
+    function-scoped one deadlocks against them. ``asyncio_mode = "auto"`` stamps
+    every async test with a bare ``asyncio`` marker before this hook runs, so
+    presence of the marker means nothing — only an explicit ``loop_scope`` does,
+    and that one is the author's choice and left alone.
+
+    ``obj`` is read defensively: it exists only on Python items, and a
+    non-Python collector under this directory would otherwise abort the whole
+    session with an INTERNALERROR.
+    """
     integration_dir = Path(__file__).parent
     session_loop = pytest.mark.asyncio(loop_scope="session")
     for item in items:
-        if item.path.is_relative_to(integration_dir) and inspect.iscoroutinefunction(item.obj):
-            item.add_marker(session_loop, append=False)
+        if not item.path.is_relative_to(integration_dir):
+            continue
+        if not inspect.iscoroutinefunction(getattr(item, "obj", None)):
+            continue
+        existing = item.get_closest_marker("asyncio")
+        if existing is not None and "loop_scope" in existing.kwargs:
+            continue
+        # Prepend: get_closest_marker returns the first marker, and auto mode's
+        # scopeless one is already in the list.
+        item.add_marker(session_loop, append=False)
 
 
 @dataclass
