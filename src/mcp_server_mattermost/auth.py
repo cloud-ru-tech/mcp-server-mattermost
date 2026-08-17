@@ -7,6 +7,7 @@ import httpx
 from cachetools import TTLCache
 from fastmcp.server.auth import AccessToken, TokenVerifier
 
+from .http_pool import shared_http_client
 from .logging import logger
 
 
@@ -26,7 +27,9 @@ class MattermostTokenVerifier(TokenVerifier):
     ``MATTERMOST_URL`` to be set in the environment.
 
     Features:
-        - Reusable httpx.AsyncClient (avoids TCP+TLS handshake per request)
+        - Borrows the process-wide shared connection pool, so token checks obey
+          the same limits, TLS settings and disabled cookie jar as tool calls
+          and do not pay a TCP+TLS handshake per request
         - In-memory TTL cache keyed by SHA256 hash of token (60s default)
 
     Token validation flow:
@@ -38,22 +41,9 @@ class MattermostTokenVerifier(TokenVerifier):
     """
 
     def __init__(self) -> None:
-        """Initialize verifier with empty cache and no HTTP client."""
+        """Initialize verifier with an empty token cache."""
         super().__init__()
-        self._client: httpx.AsyncClient | None = None
         self._cache: TTLCache[str, AccessToken] = TTLCache(maxsize=_TOKEN_CACHE_MAXSIZE, ttl=_TOKEN_CACHE_TTL)
-
-    def _get_client(self) -> httpx.AsyncClient:
-        """Return reusable httpx.AsyncClient, creating lazily on first call."""
-        if self._client is None:
-            from .config import get_settings  # noqa: PLC0415
-
-            settings = get_settings()
-            self._client = httpx.AsyncClient(
-                verify=settings.verify_ssl,
-                timeout=httpx.Timeout(settings.timeout),
-            )
-        return self._client
 
     @staticmethod
     def _hash_token(token: str) -> str:
@@ -77,13 +67,13 @@ class MattermostTokenVerifier(TokenVerifier):
         from .config import get_settings  # noqa: PLC0415
 
         settings = get_settings()
-        url = f"{settings.url}/api/{settings.api_version}/users/me"
         try:
-            client = self._get_client()
-            response = await client.get(
-                url,
-                headers={"Authorization": f"Bearer {token}"},
-            )
+            # The pool's base_url already carries /api/<version>.
+            async with shared_http_client(settings) as client:
+                response = await client.get(
+                    "/users/me",
+                    headers={"Authorization": f"Bearer {token}"},
+                )
         except httpx.HTTPError as exc:
             logger.warning("Mattermost token verification failed (network error): %s", exc)
             return None
@@ -106,9 +96,3 @@ class MattermostTokenVerifier(TokenVerifier):
 
         logger.debug("Mattermost token rejected (status=%d)", response.status_code)
         return None
-
-    async def close(self) -> None:
-        """Close the underlying HTTP client."""
-        if self._client is not None:
-            await self._client.aclose()
-            self._client = None

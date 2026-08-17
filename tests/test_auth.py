@@ -184,38 +184,27 @@ class TestMattermostTokenVerifier:
             assert route.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_close_cleans_up_client(self, mock_settings: None) -> None:
-        """After close(), verify_token still succeeds via lazy re-initialization."""
+    async def test_verify_token_borrows_the_shared_pool(self, mock_settings: None, mocker) -> None:
+        """Token checks use the same pool as tool calls, so they obey its limits."""
+        from mcp_server_mattermost import http_pool
         from mcp_server_mattermost.auth import MattermostTokenVerifier
         from mcp_server_mattermost.config import get_settings
 
         settings = get_settings()
+        spy = mocker.spy(http_pool, "create_http_client")
         verifier = MattermostTokenVerifier()
 
-        with respx.mock:
-            route = respx.get(f"{settings.url}/api/v4/users/me").mock(
-                return_value=httpx.Response(200, json={"id": "user1", "username": "alice"})
-            )
-            # First call creates the client
-            result1 = await verifier.verify_token("token-1")
-            assert result1 is not None
+        async with http_pool.shared_http_client(settings) as pool:
+            with respx.mock:
+                respx.get(f"{settings.url}/api/v4/users/me").mock(
+                    return_value=httpx.Response(200, json={"id": "user1", "username": "alice"})
+                )
+                assert await verifier.verify_token("token-1") is not None
 
-            # Close discards the client
-            await verifier.close()
-
-            # Next call should lazy re-init and succeed
-            result2 = await verifier.verify_token("token-2")
-            assert result2 is not None
-            assert result2.client_id == "user1"
-            assert route.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_close_when_never_used_is_safe(self, mock_settings: None) -> None:
-        """Calling close() on a verifier that was never used does not raise."""
-        from mcp_server_mattermost.auth import MattermostTokenVerifier
-
-        verifier = MattermostTokenVerifier()
-        await verifier.close()  # Should not raise
+            # No client of its own — it inherits the configured connection
+            # limits, TLS settings and the disabled cookie jar.
+            assert spy.call_count == 1
+            assert spy.spy_return is pool
 
     @pytest.mark.asyncio
     async def test_programming_error_propagates(self, mock_settings: None) -> None:
@@ -227,7 +216,7 @@ class TestMattermostTokenVerifier:
         verifier = MattermostTokenVerifier()
 
         with (
-            patch.object(verifier, "_get_client", side_effect=TypeError("bug in code")),
+            patch("mcp_server_mattermost.auth.shared_http_client", side_effect=TypeError("bug in code")),
             pytest.raises(TypeError, match="bug in code"),
         ):
             await verifier.verify_token("any-token")

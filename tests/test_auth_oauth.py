@@ -168,26 +168,12 @@ def test_mattermost_oauth_proxy_strips_only_resource_from_parent_authorize_url(m
 
 
 @pytest.mark.asyncio
-async def test_mattermost_oauth_proxy_closes_mattermost_verifier() -> None:
-    """OAuth proxy owns the Mattermost verifier and closes it during server shutdown."""
-    from fastmcp.server.auth import AccessToken
-
+async def test_mattermost_oauth_proxy_uses_the_verifier_it_was_given() -> None:
+    """The verifier owns no client of its own, so the proxy only has to wire it in."""
     from mcp_server_mattermost.auth import MattermostTokenVerifier
     from mcp_server_mattermost.auth_oauth import MattermostOAuthProxy
 
-    class TrackingVerifier(MattermostTokenVerifier):
-        def __init__(self) -> None:
-            super().__init__()
-            self.closed = False
-
-        async def verify_token(self, token: str) -> AccessToken | None:
-            return None
-
-        async def close(self) -> None:
-            self.closed = True
-            await super().close()
-
-    verifier = TrackingVerifier()
+    verifier = MattermostTokenVerifier()
     auth = MattermostOAuthProxy(
         upstream_authorization_endpoint="https://mm.example.com/oauth/authorize",
         upstream_token_endpoint="https://mm.example.com/oauth/access_token",
@@ -199,6 +185,5 @@ async def test_mattermost_oauth_proxy_closes_mattermost_verifier() -> None:
         jwt_signing_key="signing-key-1234567890",
     )
 
-    await auth.close()
-
-    assert verifier.closed is True
+    assert auth._token_validator is verifier
+    assert not hasattr(verifier, "close")

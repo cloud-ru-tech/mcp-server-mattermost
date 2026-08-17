@@ -51,7 +51,7 @@ class MattermostOAuthProxy(OAuthProxy):
         fallback_access_token_expiry_seconds: int | None = None,
         enable_cimd: bool = True,
     ) -> None:
-        """Initialize proxy and keep explicit ownership of the Mattermost verifier."""
+        """Initialize the proxy with the Mattermost verifier as its token verifier."""
         super().__init__(
             upstream_authorization_endpoint=upstream_authorization_endpoint,
             upstream_token_endpoint=upstream_token_endpoint,
@@ -76,7 +76,6 @@ class MattermostOAuthProxy(OAuthProxy):
             fallback_access_token_expiry_seconds=fallback_access_token_expiry_seconds,
             enable_cimd=enable_cimd,
         )
-        self._mattermost_verifier = mattermost_verifier
 
     def _build_upstream_authorize_url(self, txn_id: str, transaction: dict[str, Any]) -> str:
         """Construct the Mattermost authorize URL without RFC8707 resource."""
@@ -84,10 +83,6 @@ class MattermostOAuthProxy(OAuthProxy):
         parts = urlsplit(url)
         query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key != "resource"]
         return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
-
-    async def close(self) -> None:
-        """Close the owned Mattermost token verifier."""
-        await self._mattermost_verifier.close()
 
 
 def build_mattermost_oauth_proxy(settings: Settings) -> OAuthProxy:
