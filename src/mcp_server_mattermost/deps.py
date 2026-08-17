@@ -3,12 +3,12 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastmcp.server.dependencies import get_access_token, get_context
+from fastmcp.server.dependencies import get_access_token
 
 from .client import MattermostClient
 from .config import AuthMode, get_settings
-from .constants import LIFESPAN_HTTP_CLIENT_KEY
 from .exceptions import AuthenticationError
+from .http_pool import shared_http_client
 
 
 def _get_mattermost_token_from_auth_context() -> str:
@@ -29,15 +29,13 @@ def _get_mattermost_token_from_auth_context() -> str:
 async def get_client() -> AsyncIterator[MattermostClient]:
     """Provide a Mattermost client bound to the process-wide shared HTTP pool.
 
-    The shared ``httpx.AsyncClient`` is created once by ``app_lifespan`` and
-    reached here via the FastMCP request context. The per-request token is
-    attached by ``MattermostClient``; it is never stored in the shared client.
+    The pool comes from ``http_pool``, not from the FastMCP lifespan context, so
+    these tools also work when imported into another server or driven directly
+    as a library. The per-request token is attached by ``MattermostClient``; it
+    is never stored in the shared client.
 
     Yields:
         MattermostClient ready for API calls.
-
-    Raises:
-        RuntimeError: If the shared HTTP client is not available (server lifespan not running).
     """
     settings = get_settings()
     token: str | None = None
@@ -45,11 +43,7 @@ async def get_client() -> AsyncIterator[MattermostClient]:
     if settings.auth_mode in {AuthMode.CLIENT_TOKEN, AuthMode.OAUTH_PROXY}:
         token = _get_mattermost_token_from_auth_context()
 
-    http_client = get_context().lifespan_context.get(LIFESPAN_HTTP_CLIENT_KEY)
-    if http_client is None:
-        msg = "Shared HTTP client is not initialized — app_lifespan is not running"
-        raise RuntimeError(msg)
-
-    client = MattermostClient(settings, token=token, http_client=http_client)
-    async with client.lifespan():
-        yield client
+    async with shared_http_client(settings) as http_client:
+        client = MattermostClient(settings, token=token, http_client=http_client)
+        async with client.lifespan():
+            yield client

@@ -1,6 +1,7 @@
 """FastMCP server for Mattermost integration."""
 
 from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Literal
 
@@ -14,40 +15,53 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .auth_factory import build_auth_provider_from_env
-from .client import create_http_client
 from .config import get_settings
-from .constants import LIFESPAN_HTTP_CLIENT_KEY
 from .http_guard_log import GuardRejectionLoggingMiddleware
+from .http_pool import owned_shared_client
 from .http_security import apply_http_security_settings
 from .logging import logger, setup_logging
 from .middleware import LoggingMiddleware
 from .tls import install_extra_ca_certs
 
 
+async def _close_auth_provider(server: FastMCP) -> None:
+    """Release the auth provider's own resources, if it has any.
+
+    Args:
+        server: FastMCP server whose auth provider is being torn down.
+    """
+    if server.auth is not None and hasattr(server.auth, "close"):
+        await server.auth.close()
+
+
 @lifespan
 async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
-    """Manage application lifecycle and own the shared HTTP connection pool.
+    """Manage application lifecycle and hold the shared HTTP connection pool.
+
+    The pool is deliberately not published in the lifespan context: FastMCP
+    shallow-merges composed lifespans, so a context key can be overwritten by
+    another lifespan whose client would then receive the Mattermost token.
+    ``get_client`` reaches the pool through ``http_pool`` instead.
 
     Args:
         _server: FastMCP server instance (required by FastMCP lifespan protocol).
 
     Yields:
-        Lifespan context with the shared httpx.AsyncClient under LIFESPAN_HTTP_CLIENT_KEY.
+        Empty lifespan context.
     """
     settings = get_settings()
     setup_logging(settings.log_level, settings.log_format)
     logger.info("Starting Mattermost MCP server")
     logger.debug("Server URL: %s", settings.url)
-    http_client = create_http_client(settings)
-    try:
-        yield {LIFESPAN_HTTP_CLIENT_KEY: http_client}
-    finally:
-        try:
-            await http_client.aclose()
-        finally:
-            if _server.auth is not None and hasattr(_server.auth, "close"):
-                await _server.auth.close()
-            logger.info("Mattermost MCP server shutdown complete")
+
+    # A flat stack, so a failing pool teardown cannot swallow the auth teardown
+    # (or the reverse), and "shutdown complete" is only claimed once it is.
+    async with AsyncExitStack() as stack:
+        stack.push_async_callback(_close_auth_provider, _server)
+        await stack.enter_async_context(owned_shared_client(settings))
+        yield {}
+
+    logger.info("Mattermost MCP server shutdown complete")
 
 
 class MattermostMCP(FastMCP):

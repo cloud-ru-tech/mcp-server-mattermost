@@ -1,10 +1,8 @@
 """Tests for FastMCP server setup."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-
-from mcp_server_mattermost.constants import LIFESPAN_HTTP_CLIENT_KEY
 
 
 class TestServerSetup:
@@ -40,13 +38,7 @@ class TestDependencyProviders:
         from mcp_server_mattermost.client import MattermostClient
         from mcp_server_mattermost.deps import get_client
 
-        fake_ctx = MagicMock()
-        fake_ctx.lifespan_context = {LIFESPAN_HTTP_CLIENT_KEY: MagicMock()}
-
-        with (
-            patch("mcp_server_mattermost.deps.get_access_token", return_value=None),
-            patch("mcp_server_mattermost.deps.get_context", return_value=fake_ctx),
-        ):
+        with patch("mcp_server_mattermost.deps.get_access_token", return_value=None):
             async with get_client() as client:
                 assert isinstance(client, MattermostClient)
 
