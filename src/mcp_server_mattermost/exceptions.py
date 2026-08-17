@@ -9,6 +9,15 @@ class ConfigurationError(MattermostMCPError):
     """Raised when configuration is invalid or missing."""
 
 
+class ConnectionPoolTimeoutError(MattermostMCPError):
+    """Raised when no connection in the shared HTTP pool came free in time.
+
+    Deliberately not a ``MattermostAPIError``: the request never reached
+    Mattermost, so reporting it as an upstream failure would misdirect whoever
+    has to act on it.
+    """
+
+
 class MattermostAPIError(MattermostMCPError):
     """Raised when Mattermost API returns an error.
 

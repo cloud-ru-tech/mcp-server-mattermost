@@ -15,28 +15,56 @@ from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attem
 
 from .config import Settings
 from .constants import UPDATE_BOOKMARK_RESPONSE_KEY
-from .exceptions import AuthenticationError, MattermostAPIError, NotFoundError, RateLimitError
+from .exceptions import (
+    AuthenticationError,
+    ConnectionPoolTimeoutError,
+    MattermostAPIError,
+    NotFoundError,
+    RateLimitError,
+)
 from .logging import logger, request_id_var
 
 
 _F = TypeVar("_F", bound=Callable[..., Any])
 
+_JSON_CONTENT_TYPE = "application/json"
 
-def _is_retryable_exception(exc: BaseException) -> bool:
-    """Check if exception should trigger a retry.
+# Methods a repeat of which cannot produce a second side effect.
+_REPLAYABLE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "PUT", "DELETE"})
+
+# What a reused keepalive socket raises when the server closed it first. These
+# only became reachable once idle connections started surviving between calls.
+_STALE_CONNECTION_ERRORS = (
+    httpx.RemoteProtocolError,
+    httpx.ReadError,
+    httpx.WriteError,
+    httpx.CloseError,
+)
+
+
+def _make_retry_predicate(method: str) -> Callable[[BaseException], bool]:
+    """Build the retry rule for one request.
 
     Args:
-        exc: Exception to check
+        method: HTTP method of the request, which decides whether a half-sent
+            request may be replayed.
 
     Returns:
-        True if exception is retryable (rate limit or server error)
+        Predicate telling tenacity whether an exception is worth another attempt.
     """
-    if isinstance(exc, RateLimitError):
-        return True
-    if isinstance(exc, MattermostAPIError):
-        # Only retry on server errors (5xx), not client errors (4xx)
-        return exc.status_code is not None and exc.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
-    return False
+    replayable = method.upper() in _REPLAYABLE_METHODS
+
+    def _is_retryable_exception(exc: BaseException) -> bool:
+        if isinstance(exc, RateLimitError):
+            return True
+        if isinstance(exc, MattermostAPIError):
+            # Only retry on server errors (5xx), not client errors (4xx)
+            return exc.status_code is not None and exc.status_code >= HTTPStatus.INTERNAL_SERVER_ERROR
+        # A pooled connection the server dropped while it sat idle. Re-dialling
+        # is safe only where replaying cannot duplicate a side effect.
+        return replayable and isinstance(exc, _STALE_CONNECTION_ERRORS)
+
+    return _is_retryable_exception
 
 
 def _log_retry(retry_state: RetryCallState) -> None:
@@ -69,6 +97,10 @@ def _wait_for_rate_limit(retry_state: RetryCallState) -> float:
     if isinstance(exc, RateLimitError) and exc.retry_after is not None:
         return float(exc.retry_after)
 
+    # A socket the server had already closed: nothing to wait for, re-dial now.
+    if isinstance(exc, _STALE_CONNECTION_ERRORS):
+        return 0.0
+
     # Otherwise use exponential backoff: 1s, 2s, 4s, 8s... (max 10s)
     return float(wait_exponential(multiplier=1, min=1, max=10)(retry_state))
 
@@ -76,10 +108,13 @@ def _wait_for_rate_limit(retry_state: RetryCallState) -> float:
 def create_http_client(settings: Settings) -> httpx.AsyncClient:
     """Create an httpx.AsyncClient configured for the Mattermost API.
 
-    The client carries no ``Authorization`` or ``Content-Type`` default header.
-    ``Authorization`` is attached per-request (so one shared pool can serve
-    multiple users without mixing tokens), and httpx derives ``Content-Type``
-    per-request from the ``json=``/``files=`` body (correct multipart uploads).
+    The client carries no ``Authorization`` or ``Content-Type`` default header;
+    both are attached per-request by ``MattermostClient._request``. The token so
+    one shared pool can serve several users without mixing them, the content
+    type so httpx can derive multipart's own (with its boundary) from ``files=``.
+
+    ``httpx.Timeout(settings.timeout)`` sets every phase, *including* how long a
+    request waits for a free connection when the pool is at ``max_connections``.
 
     Security note: httpx does not log request headers by default. If enabling
     httpx debug logging (HTTPX_LOG_LEVEL=debug), ensure bearer tokens are not
@@ -91,6 +126,26 @@ def create_http_client(settings: Settings) -> httpx.AsyncClient:
     Returns:
         Configured httpx.AsyncClient. The caller owns its lifecycle.
     """
+    if settings.max_keepalive_connections == 0 or settings.keepalive_expiry == 0:
+        logger.warning(
+            "Connection reuse is disabled by configuration; every request will open a new connection",
+            extra={
+                "event": "http_pool_reuse_disabled",
+                "max_keepalive_connections": settings.max_keepalive_connections,
+                "keepalive_expiry": settings.keepalive_expiry,
+            },
+        )
+
+    logger.info(
+        "HTTP connection pool created",
+        extra={
+            "event": "http_pool_created",
+            "max_connections": settings.max_connections,
+            "max_keepalive_connections": settings.max_keepalive_connections,
+            "keepalive_expiry": settings.keepalive_expiry,
+        },
+    )
+
     return httpx.AsyncClient(
         base_url=f"{settings.url}/api/{settings.api_version}",
         timeout=httpx.Timeout(settings.timeout),
@@ -128,7 +183,11 @@ class MattermostClient:
             settings: Application configuration.
             token: Optional token override (e.g. from request); used instead of settings.token.
             http_client: Optional shared httpx.AsyncClient to borrow. When provided, the client's
-                lifecycle is owned by the caller and ``lifespan()`` will not close it.
+                lifecycle is owned by the caller and ``lifespan()`` will not close it. Its base
+                URL, timeout and TLS configuration are fixed at construction and therefore win
+                over ``settings``, which then only supplies ``max_retries`` and the token. Pass a
+                pool built from the same settings — ``http_pool.shared_http_client`` guarantees
+                that by rebuilding whenever any of them change.
         """
         self.settings = settings
         self._token_override = token
@@ -152,7 +211,10 @@ class MattermostClient:
             Self with an active httpx client.
         """
         if self._auth_headers:
-            logger.info("Initializing Mattermost API client")
+            # DEBUG, not INFO: this runs per tool call, and on the shared pool
+            # it initializes nothing. The pool's own lifecycle is logged once,
+            # in create_http_client and where it is closed.
+            logger.debug("Initializing Mattermost API client")
         else:
             logger.warning("Initializing Mattermost API client without authentication token")
 
@@ -172,10 +234,13 @@ class MattermostClient:
             self._current_user_id = None
             if owns_client:
                 await client.aclose()
-                logger.info("Mattermost API client closed")
+                logger.info("HTTP connection pool closed")
 
-    def _make_retrying(self) -> Callable[[_F], _F]:
+    def _make_retrying(self, method: str) -> Callable[[_F], _F]:
         """Create tenacity retry decorator with instance settings.
+
+        Args:
+            method: HTTP method of the request being wrapped.
 
         Returns:
             Configured retry decorator
@@ -183,7 +248,7 @@ class MattermostClient:
         return retry(
             stop=stop_after_attempt(self.settings.max_retries + 1),
             wait=_wait_for_rate_limit,
-            retry=retry_if_exception(_is_retryable_exception),
+            retry=retry_if_exception(_make_retry_predicate(method)),
             before_sleep=_log_retry,
             reraise=True,
         )
@@ -195,6 +260,39 @@ class MattermostClient:
             msg = "Client not initialized. Use async with client.lifespan():"
             raise RuntimeError(msg)
         return self._client
+
+    async def _send(
+        self,
+        method: str,
+        endpoint: str,
+        **kwargs: Any,  # noqa: ANN401 - kwargs forwarded to httpx
+    ) -> httpx.Response:
+        """Send one request, naming the real cause when the pool is exhausted.
+
+        Left alone, ``httpx.PoolTimeout`` is a ``TimeoutException`` and gets
+        reported as an upstream timeout, which is misleading: the request never
+        left the process.
+
+        Args:
+            method: HTTP method.
+            endpoint: API endpoint.
+            **kwargs: Additional arguments for the httpx request.
+
+        Returns:
+            The HTTP response.
+
+        Raises:
+            ConnectionPoolTimeoutError: If no pooled connection came free in time.
+        """
+        try:
+            return await self._http.request(method, endpoint, **kwargs)
+        except httpx.PoolTimeout as exc:
+            msg = (
+                f"Timed out after {self.settings.timeout}s waiting for a free HTTP connection. "
+                f"The pool is capped at MATTERMOST_MAX_CONNECTIONS={self.settings.max_connections}; "
+                f"raise it or lower concurrency."
+            )
+            raise ConnectionPoolTimeoutError(msg) from exc
 
     def _log_http_request(self, method: str, endpoint: str) -> None:
         """Log outgoing HTTP request at DEBUG level.
@@ -321,8 +419,10 @@ class MattermostClient:
     ) -> dict[str, Any] | list[Any] | None:
         """Make HTTP request to Mattermost API with retry.
 
-        The bearer token is injected per-request; explicit ``headers`` passed by
-        callers take precedence on key conflicts.
+        The bearer token and the default JSON content type are attached
+        per-request rather than to the client, because the client may be a pool
+        shared with other users. Explicit ``headers`` passed by callers take
+        precedence on key conflicts, case-insensitively.
 
         Args:
             method: HTTP method (GET, POST, PUT, DELETE)
@@ -337,15 +437,27 @@ class MattermostClient:
             AuthenticationError: If authentication failed
             NotFoundError: If resource not found
             RateLimitError: If rate limited (after retries exhausted)
+            ConnectionPoolTimeoutError: If no pooled connection came free in time
             MattermostAPIError: For other API errors
         """
-        retrying = self._make_retrying()
-        headers = {**self._auth_headers, **(kwargs.pop("headers", None) or {})}
+        retrying = self._make_retrying(method)
+        caller_headers = kwargs.pop("headers", None)
+
+        headers = httpx.Headers(self._auth_headers)
+        if "files" not in kwargs:
+            # httpx derives multipart's Content-Type, boundary included, from
+            # ``files=``; a default set here would clobber it.
+            headers["Content-Type"] = _JSON_CONTENT_TYPE
+        if caller_headers:
+            # httpx.Headers.update replaces case-insensitively, so a caller's
+            # lowercase ``authorization`` overrides ours instead of being sent
+            # alongside it.
+            headers.update(caller_headers)
 
         @retrying
         async def _do_request() -> dict[str, Any] | list[Any] | None:
             self._log_http_request(method, endpoint)
-            response = await self._http.request(method, endpoint, headers=headers, **kwargs)
+            response = await self._send(method, endpoint, headers=headers, **kwargs)
             self._log_http_response(response.status_code)
             return self._handle_response(response)
 
@@ -1157,12 +1269,15 @@ class MattermostClient:
         Returns:
             Upload response with file_infos list
         """
-        retrying = self._make_retrying()
+        retrying = self._make_retrying("POST")
 
         @retrying
         async def _do_upload() -> dict[str, Any] | list[Any] | None:
             self._log_http_request("POST", "/files")
-            response = await self._http.post(
+            # No Content-Type here on purpose: httpx builds the multipart one,
+            # boundary included, from ``files=``.
+            response = await self._send(
+                "POST",
                 "/files",
                 params={"channel_id": channel_id, "filename": filename},
                 data={"channel_id": channel_id},

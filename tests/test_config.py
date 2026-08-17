@@ -536,7 +536,8 @@ class TestPoolSettings:
 
         assert settings.max_connections == 100
         assert settings.max_keepalive_connections == 20
-        assert settings.keepalive_expiry == 5.0
+        # 30s, not httpx's 5s: an agent pauses 5-30s between two tool calls.
+        assert settings.keepalive_expiry == 30.0
 
     def test_pool_env_override(self, monkeypatch):
         from mcp_server_mattermost.config import Settings
@@ -564,6 +565,19 @@ class TestPoolSettings:
 
         with pytest.raises(ValueError, match="cannot exceed"):
             Settings()
+
+    def test_lowering_only_max_connections_clamps_instead_of_aborting(self, monkeypatch):
+        # The operator never named MATTERMOST_MAX_KEEPALIVE_CONNECTIONS, so
+        # refusing to start and blaming that variable would be nonsense.
+        from mcp_server_mattermost.config import Settings
+
+        monkeypatch.setenv("MATTERMOST_URL", "https://mm.example.com")
+        monkeypatch.setenv("MATTERMOST_TOKEN", "t")
+        monkeypatch.setenv("MATTERMOST_MAX_CONNECTIONS", "2")
+        settings = Settings()
+
+        assert settings.max_connections == 2
+        assert settings.max_keepalive_connections == 2
 
     def test_keepalive_equal_to_max_connections_is_allowed(self, monkeypatch):
         from mcp_server_mattermost.config import Settings

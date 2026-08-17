@@ -271,6 +271,48 @@ class TestSharedClient:
         assert content_type.startswith("multipart/form-data")
         assert route.calls[0].request.headers["Authorization"] == "Bearer test-token-12345"
 
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_lowercase_caller_header_replaces_rather_than_duplicates(self, mock_settings):
+        # A plain dict merge is case-sensitive and would put two Authorization
+        # lines on the wire, where the server's own token wins the tie.
+        from mcp_server_mattermost.config import get_settings
+
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            return_value=httpx.Response(200, json={"id": "u1"}),
+        )
+        client = MattermostClient(get_settings(), token="base-token")
+        async with client.lifespan():
+            await client.get("/users/me", headers={"authorization": "Bearer override"})
+
+        raw = [value for name, value in route.calls[0].request.headers.raw if name.lower() == b"authorization"]
+        assert raw == [b"Bearer override"]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_json_content_type_on_requests_without_a_body(self, mock_settings):
+        # Unchanged from before the shared pool: only multipart differs.
+        from mcp_server_mattermost.config import get_settings
+
+        get_route = respx.get("https://test.mattermost.com/api/v4/posts/p1").mock(
+            return_value=httpx.Response(200, json={"id": "p1"}),
+        )
+        pin_route = respx.post("https://test.mattermost.com/api/v4/posts/p1/pin").mock(
+            return_value=httpx.Response(200, json={}),
+        )
+        delete_route = respx.delete("https://test.mattermost.com/api/v4/posts/p1").mock(
+            return_value=httpx.Response(200, json={}),
+        )
+
+        client = MattermostClient(get_settings())
+        async with client.lifespan():
+            await client.get_post(post_id="p1")
+            await client.pin_post(post_id="p1")
+            await client.delete_post(post_id="p1")
+
+        for route in (get_route, pin_route, delete_route):
+            assert route.calls[0].request.headers["content-type"] == "application/json"
+
 
 class TestMattermostClientResponseHandler:
     """Test response handling and error mapping."""
@@ -606,6 +648,76 @@ class TestMattermostClientRequest:
             and call.kwargs.get("extra", {}).get("endpoint") == "/users/me"
             for call in mock_debug.call_args_list
         )
+
+
+class TestStaleConnectionRetry:
+    """Retrying the socket a keepalive pool handed over after the server closed it."""
+
+    @staticmethod
+    def _settings():
+        return Settings(url="https://test.mattermost.com", token="test-token-12345", max_retries=2)
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_retries_a_dropped_connection_on_a_replayable_method(self, mock_settings):
+        client = MattermostClient(self._settings())
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            side_effect=[
+                httpx.RemoteProtocolError("server disconnected without sending a response"),
+                httpx.Response(200, json={"id": "user123"}),
+            ],
+        )
+
+        async with client.lifespan():
+            assert await client._request("GET", "/users/me") == {"id": "user123"}
+
+        assert route.call_count == 2
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_does_not_replay_a_post(self, mock_settings):
+        # A POST may have reached the server before the socket broke; replaying
+        # it could post the same message twice.
+        client = MattermostClient(self._settings())
+        route = respx.post("https://test.mattermost.com/api/v4/posts").mock(
+            side_effect=httpx.RemoteProtocolError("server disconnected without sending a response"),
+        )
+
+        async with client.lifespan():
+            with pytest.raises(httpx.RemoteProtocolError):
+                await client._request("POST", "/posts", json={"message": "hi"})
+
+        assert route.call_count == 1
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_read_timeout_is_still_not_retried(self, mock_settings):
+        # Unchanged behaviour: a timeout means the server is slow, not that the
+        # connection was stale, and retrying would multiply the wait.
+        client = MattermostClient(self._settings())
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(
+            side_effect=httpx.ReadTimeout("too slow"),
+        )
+
+        async with client.lifespan():
+            with pytest.raises(httpx.ReadTimeout):
+                await client._request("GET", "/users/me")
+
+        assert route.call_count == 1
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_pool_exhaustion_names_the_pool_and_is_not_retried(self, mock_settings):
+        from mcp_server_mattermost.exceptions import ConnectionPoolTimeoutError
+
+        client = MattermostClient(self._settings())
+        route = respx.get("https://test.mattermost.com/api/v4/users/me").mock(side_effect=httpx.PoolTimeout("full"))
+
+        async with client.lifespan():
+            with pytest.raises(ConnectionPoolTimeoutError, match="MATTERMOST_MAX_CONNECTIONS"):
+                await client._request("GET", "/users/me")
+
+        assert route.call_count == 1
 
 
 class TestMattermostClientRetry:
@@ -2515,7 +2627,7 @@ class TestCreateHttpClient:
             limits = spy.call_args.kwargs["limits"]
             assert limits.max_connections == 100
             assert limits.max_keepalive_connections == 20
-            assert limits.keepalive_expiry == 5.0
+            assert limits.keepalive_expiry == 30.0
         finally:
             await client.aclose()
 
