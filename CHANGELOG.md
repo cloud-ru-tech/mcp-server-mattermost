@@ -8,21 +8,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Shared HTTP connection pool: the Mattermost HTTP client is created once at
-  startup and reused across all tool calls (sequential and concurrent),
-  eliminating per-call TCP/TLS handshakes and TIME_WAIT churn. Pool limits are
-  configurable via `MATTERMOST_MAX_CONNECTIONS` (default 100),
+- Shared HTTP connection pool: the Mattermost HTTP client is created once and
+  reused across all tool calls (sequential and concurrent), eliminating per-call
+  TCP/TLS handshakes and TIME_WAIT churn. Pool limits are configurable via
+  `MATTERMOST_MAX_CONNECTIONS` (default 100),
   `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS` (default 20), and
-  `MATTERMOST_KEEPALIVE_EXPIRY` (default 5.0s). The bearer token is sent
+  `MATTERMOST_KEEPALIVE_EXPIRY` (default 30.0s). The bearer token is sent
   per-request and is never stored in the shared client's default headers, so a
-  single pool safely serves multiple users without mixing tokens.
+  single pool safely serves multiple users without mixing tokens. Token
+  verification in `client_token`/`oauth_proxy` mode goes through the same pool
+  and therefore obeys the same limits.
+- Embedded and library use share the pool too. It is owned by the server
+  lifespan but reached through an internal registry rather than the lifespan
+  context, so adding these tools to your own FastMCP server (`add_tool`,
+  `import_server`, `mount`) or driving `get_client()` directly keeps working
+  exactly as before — and now pools connections as well, with no lifespan
+  wiring on your side.
+
+### Changed
+- `MATTERMOST_KEEPALIVE_EXPIRY` defaults to 30s rather than httpx's 5s. An agent
+  typically spends 5-30s between two tool calls; at 5s every one of them
+  redialled, which defeated the point of the pool. Measured: with a 7s gap, 5s
+  opens a second connection and 30s reuses the first.
+- The pool imposes a process-wide ceiling of `MATTERMOST_MAX_CONNECTIONS`
+  in-flight requests, which per-call clients did not have. Requests beyond it
+  wait, and on timeout report the pool and the variable to raise instead of a
+  misleading "upstream request timed out".
+- Transport errors on `GET`/`HEAD`/`OPTIONS`/`PUT`/`DELETE` are now retried
+  immediately (within `MATTERMOST_MAX_RETRIES`). Pooled sockets can be closed by
+  the server while idle between two tool calls; `POST` is never replayed, and
+  read/write timeouts are still not retried.
+- Setting only `MATTERMOST_MAX_CONNECTIONS` below the keepalive default no
+  longer aborts startup naming a variable you never set — the keepalive cap is
+  clamped to it. An explicit conflict between the two is still an error.
+- Log lifecycle: the pool logs one INFO when created and one when closed, and
+  warns when `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS=0` or
+  `MATTERMOST_KEEPALIVE_EXPIRY=0` disables connection reuse. The per-call
+  "Initializing Mattermost API client" line moved to DEBUG.
 
 ### Fixed
 - File uploads now send the correct `multipart/form-data` Content-Type. The
   client previously carried a default `Content-Type: application/json` header
-  that httpx did not override for multipart requests.
-- Server shutdown now closes the auth provider even if closing the shared HTTP
-  pool fails, so a failing `aclose()` no longer leaks the auth provider.
+  that httpx did not override for multipart requests. Every other request is
+  unchanged and still sends `application/json`.
+- A second, still-open session no longer breaks when the first one disconnects.
+  FastMCP closes a server's lifespan stack on the first session's exit without
+  waiting for the others; the pool is now retired rather than closed outright,
+  so in-flight requests finish and the next call gets a fresh pool.
+- Server shutdown attempts both the pool teardown and the auth provider
+  teardown, and reports both failures rather than discarding the first.
 - `Post.file_ids` defaults to an empty list — Mattermost ≤ v10.4.0 omits the key on posts
   without attachments, which broke parsing in every tool that returns posts
   ([#27](https://github.com/cloud-ru-tech/mcp-server-mattermost/issues/27))
@@ -35,7 +69,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - The shared HTTP pool is transport-only: its cookie jar is disabled, so a
   `Set-Cookie` from one user's response is never stored and replayed on another
-  user's request through the pool (`client_token`/`oauth_proxy` modes).
+  user's request through the pool (`client_token`/`oauth_proxy` modes). This now
+  covers token verification too, which previously used a client of its own.
+- The pool is never published in the FastMCP lifespan context. FastMCP
+  shallow-merges composed lifespans, so a context key can be overwritten by
+  another lifespan — whose client would then be handed the Mattermost token.
 - Upgraded FastMCP to 3.4.4 — fixes CVE-2026-27124 (GHSA-rww4-4w9c-7733, missing consent check in the
   OAuth proxy callback), plus CVE-2026-32871 (authenticated SSRF) and CVE-2025-64340 (command injection)
   present in the previous 3.0.2. Floor raised to `fastmcp>=3.4.4,<4`; 3.4.3 is the first release with the

@@ -88,8 +88,8 @@ Optional:
 - `MATTERMOST_LOG_FORMAT` (default: json) - Log format: 'json' for production, 'text' for development
 - `MATTERMOST_API_VERSION` (default: v4)
 - `MATTERMOST_MAX_CONNECTIONS` (default: 100) - Max HTTP connections in the shared pool
-- `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS` (default: 20) - Max idle keepalive connections (≤ max connections)
-- `MATTERMOST_KEEPALIVE_EXPIRY` (default: 5.0) - Idle keepalive connection lifetime in seconds
+- `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS` (default: 20) - Max idle keepalive connections, clamped to max connections
+- `MATTERMOST_KEEPALIVE_EXPIRY` (default: 30.0) - Idle keepalive connection lifetime in seconds
 - `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` (default: false) - Allow HTTP clients to use their own Mattermost tokens
 - `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` (default: none) - Host/Origin protection: `off`, `auto`, or `strict`
 - `MATTERMOST_HTTP_ALLOWED_HOSTS` (default: none) - Extra allowed `Host` header values (JSON array or comma-separated)
