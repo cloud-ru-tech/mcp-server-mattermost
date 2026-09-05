@@ -113,13 +113,14 @@ Once configured, you can ask your AI assistant:
 </details>
 
 <details>
-<summary>Files (3 tools)</summary>
+<summary>Files (4 tools)</summary>
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `upload_file` | Upload a file | `channel_id`, `file_path` ✓ |
 | `get_file_info` | Get file metadata | `file_id` ✓ |
 | `get_file_link` | Get download link | `file_id` ✓ |
+| `download_file` | Save a file attachment locally | `file_id`, `destination_dir` ✓ |
 
 </details>
 

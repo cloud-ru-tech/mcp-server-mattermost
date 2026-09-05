@@ -2,7 +2,7 @@
 
 from unittest.mock import AsyncMock
 
-from mcp_server_mattermost.models import FileInfo, FileLink, FileUploadResponse
+from mcp_server_mattermost.models import FileDownloadResponse, FileInfo, FileLink, FileUploadResponse
 from mcp_server_mattermost.tools import files
 
 
@@ -104,3 +104,58 @@ class TestGetFileLink:
 
         assert isinstance(result, FileLink)
         assert "fl1234567890123456789012" in result.link
+
+
+class TestDownloadFile:
+    """Tests for download_file tool."""
+
+    async def test_download_file(self, mock_client: AsyncMock) -> None:
+        """Test downloading a file returns FileDownloadResponse model."""
+        mock_client.download_file.return_value = {
+            "file_id": "fl1234567890123456789012",
+            "path": "/home/user/downloads/report.pdf",
+            "name": "report.pdf",
+            "size": 1234,
+            "mime_type": "application/pdf",
+        }
+
+        result = await files.download_file(
+            file_id="fl1234567890123456789012",
+            destination_dir="/home/user/downloads",
+            client=mock_client,
+        )
+
+        assert isinstance(result, FileDownloadResponse)
+        assert result.path == "/home/user/downloads/report.pdf"
+        assert result.size == 1234
+        mock_client.download_file.assert_called_once_with(
+            file_id="fl1234567890123456789012",
+            destination_dir="/home/user/downloads",
+            filename=None,
+            overwrite=False,
+        )
+
+    async def test_download_file_with_options(self, mock_client: AsyncMock) -> None:
+        """Test filename override and overwrite flag are forwarded."""
+        mock_client.download_file.return_value = {
+            "file_id": "fl1234567890123456789012",
+            "path": "/home/user/downloads/renamed.pdf",
+            "name": "renamed.pdf",
+            "size": 1,
+            "mime_type": "",
+        }
+
+        await files.download_file(
+            file_id="fl1234567890123456789012",
+            destination_dir="/home/user/downloads",
+            filename="renamed.pdf",
+            overwrite=True,
+            client=mock_client,
+        )
+
+        mock_client.download_file.assert_called_once_with(
+            file_id="fl1234567890123456789012",
+            destination_dir="/home/user/downloads",
+            filename="renamed.pdf",
+            overwrite=True,
+        )

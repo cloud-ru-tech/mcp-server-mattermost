@@ -1,6 +1,6 @@
 # File Tools
 
-Tools for uploading files and getting download links in Mattermost.
+Tools for uploading and downloading files and getting download links in Mattermost.
 
 ---
 
@@ -113,3 +113,46 @@ Object with `link` (public URL to download the file).
 ### Mattermost API
 
 [GET /api/v4/files/{file_id}/link](https://api.mattermost.com/#tag/files/operation/GetFileLink)
+
+---
+
+## download_file
+
+Download a file attachment and save it to a local directory.
+
+Counterpart of `upload_file`: fetches the content of a file by its ID (from a post's
+`file_ids` or `get_file_info`) and writes it to disk, so the file can be read or
+processed further. Only the base name of the file is used, the write is atomic
+(temp file + rename), and files larger than 100 MB are refused.
+
+### Example prompts
+
+- "Download the attachment from that message to ~/Downloads"
+- "Save the PDF from the thread into ./incoming"
+- "Fetch the file and summarize it"
+
+### Annotations
+
+| Hint | Value |
+|------|-------|
+| `readOnlyHint` | true |
+| `idempotentHint` | true |
+| `capability` | read |
+
+### Parameters
+
+| Name | Type | Required | Default | Description |
+|------|------|----------|---------|-------------|
+| `file_id` | string | ✓ | — | File ID (26-character alphanumeric) |
+| `destination_dir` | string | ✓ | — | Local directory to save into (created if missing) |
+| `filename` | string | — | server-side name | Override the saved file name |
+| `overwrite` | boolean | — | false | Replace an existing file with the same name |
+
+### Returns
+
+Object with `file_id`, `path` (absolute local path), `name`, `size` (bytes) and `mime_type`.
+
+### Mattermost API
+
+[GET /api/v4/files/{file_id}/info](https://api.mattermost.com/#tag/files/operation/GetFileInfo),
+[GET /api/v4/files/{file_id}](https://api.mattermost.com/#tag/files/operation/GetFile)

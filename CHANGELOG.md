@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `download_file` tool: saves a file attachment to a local directory by its ID, the counterpart of
+  `upload_file`. Uses only the base name of the file, writes atomically, refuses files over 100 MB and
+  never overwrites an existing file unless asked to
 - Shared HTTP connection pool: the Mattermost HTTP client is created once and
   reused across all tool calls (sequential and concurrent), eliminating per-call
   TCP/TLS handshakes and TIME_WAIT churn. Pool limits are configurable via

@@ -27,7 +27,7 @@ for _tool in ("get_me", "get_user", "get_user_by_username", "search_users", "get
     _TOOL_TO_MODULE[_tool] = "users"
 for _tool in ("list_teams", "get_team", "get_team_members"):
     _TOOL_TO_MODULE[_tool] = "teams"
-for _tool in ("upload_file", "get_file_info", "get_file_link"):
+for _tool in ("upload_file", "get_file_info", "get_file_link", "download_file"):
     _TOOL_TO_MODULE[_tool] = "files"
 for _tool in (
     "list_bookmarks",
@@ -83,7 +83,7 @@ class TestToolCount:
     """Verify expected number of tools are registered."""
 
     async def test_total_tool_count(self, all_tools):
-        assert len(all_tools) == 38, f"Expected 38 tools, got {len(all_tools)}: {list(all_tools.keys())}"
+        assert len(all_tools) == 39, f"Expected 39 tools, got {len(all_tools)}: {list(all_tools.keys())}"
 
     async def test_no_unexpected_tools(self, all_tools):
         """Catch new tools not in _TOOL_TO_MODULE."""

@@ -18,7 +18,7 @@ from .common import (
     Username,
     validate_mattermost_id,
 )
-from .file import FileInfo, FileLink, FileUploadResponse
+from .file import FileDownloadResponse, FileInfo, FileLink, FileUploadResponse
 from .post import Post, PostList, Reaction
 from .team import Team, TeamMember
 from .user import User, UserStatus
@@ -37,6 +37,7 @@ __all__ = [
     "ChannelType",
     "ChannelWithUnreads",
     "EmojiName",
+    "FileDownloadResponse",
     "FileId",
     "FileInfo",
     "FileLink",

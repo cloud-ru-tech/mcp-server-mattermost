@@ -9,7 +9,7 @@ from pydantic import Field
 from mcp_server_mattermost.client import MattermostClient
 from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
-from mcp_server_mattermost.models import ChannelId, FileId, FileInfo, FileLink, FileUploadResponse
+from mcp_server_mattermost.models import ChannelId, FileDownloadResponse, FileId, FileInfo, FileLink, FileUploadResponse
 
 
 @tool(
@@ -70,3 +70,31 @@ async def get_file_link(
     """
     data = await client.get_file_link(file_id=file_id)
     return FileLink(**data)
+
+
+@tool(
+    annotations={"readOnlyHint": True, "idempotentHint": True},
+    tags={ToolTag.MATTERMOST, ToolTag.FILE},
+    meta={"capability": Capability.READ},
+)
+async def download_file(
+    file_id: FileId,
+    destination_dir: Annotated[str, Field(description="Local directory to save the file into (created if missing)")],
+    filename: Annotated[str | None, Field(description="Override the saved file name")] = None,
+    overwrite: Annotated[bool, Field(description="Replace an existing file with the same name")] = False,  # noqa: FBT002
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> FileDownloadResponse:
+    """Download a file attachment and save it to a local directory.
+
+    Counterpart of upload_file: fetches the content of a file by its ID
+    (from a post's file_ids or get_file_info) and writes it to disk.
+    Returns the local path so the file can be read or processed further.
+    Files larger than 100 MB are refused.
+    """
+    data = await client.download_file(
+        file_id=file_id,
+        destination_dir=destination_dir,
+        filename=filename,
+        overwrite=overwrite,
+    )
+    return FileDownloadResponse(**data)
