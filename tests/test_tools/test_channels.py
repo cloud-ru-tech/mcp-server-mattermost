@@ -38,7 +38,7 @@ def make_channel_data(
     }
 
 
-def make_channel_with_unreads_data(  # noqa: PLR0913 — explicit kwargs aid IDE autocomplete in tests
+def make_channel_with_unreads_data(  # noqa: PLR0913, PLR0917 — explicit kwargs aid IDE autocomplete in tests
     channel_id: str = "ch1234567890123456789012",
     name: str = "general",
     unread_msg_count: int = 0,

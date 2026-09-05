@@ -48,7 +48,7 @@ async def list_bookmarks(
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.WRITE},
 )
-async def create_bookmark(  # noqa: PLR0913
+async def create_bookmark(  # noqa: PLR0913, PLR0917
     channel_id: ChannelId,
     display_name: Annotated[str, Field(min_length=1, max_length=255, description="Bookmark display name")],
     bookmark_type: Annotated[Literal["link", "file"], Field(description="Bookmark type: 'link' or 'file'")],
@@ -91,7 +91,7 @@ async def create_bookmark(  # noqa: PLR0913
     tags={ToolTag.MATTERMOST, ToolTag.BOOKMARK, ToolTag.CHANNEL, ToolTag.ENTRY_REQUIRED},
     meta={"capability": Capability.WRITE},
 )
-async def update_bookmark(  # noqa: PLR0913
+async def update_bookmark(  # noqa: PLR0913, PLR0917
     channel_id: ChannelId,
     bookmark_id: BookmarkId,
     display_name: Annotated[str | None, Field(default=None, description="New display name")] = None,

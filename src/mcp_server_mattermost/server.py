@@ -67,7 +67,7 @@ async def app_lifespan(_server: FastMCP) -> AsyncIterator[dict[str, object]]:
 class MattermostMCP(FastMCP):
     """FastMCP server that logs Host/Origin guard rejections on every HTTP app it builds."""
 
-    def http_app(  # noqa: PLR0913
+    def http_app(  # noqa: PLR0913, PLR0917
         self,
         path: str | None = None,
         middleware: list[Middleware] | None = None,
