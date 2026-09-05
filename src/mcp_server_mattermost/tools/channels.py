@@ -149,7 +149,7 @@ async def get_channel_by_name(
     tags={ToolTag.MATTERMOST, ToolTag.CHANNEL},
     meta={"capability": Capability.CREATE},
 )
-async def create_channel(  # noqa: PLR0913
+async def create_channel(  # noqa: PLR0913, PLR0917
     team_id: TeamId,
     name: ChannelName,
     display_name: Annotated[str, Field(min_length=1, max_length=64, description="Human-readable channel name")],

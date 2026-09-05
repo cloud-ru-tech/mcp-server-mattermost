@@ -17,7 +17,7 @@ from mcp_server_mattermost.models import Attachment, ChannelId, FileId, Post, Po
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
     meta={"capability": Capability.WRITE},
 )
-async def post_message(  # noqa: PLR0913
+async def post_message(  # noqa: PLR0913, PLR0917
     channel_id: ChannelId,
     message: Annotated[str, Field(min_length=1, max_length=16383, description="Message content (supports Markdown)")],
     root_id: Annotated[PostId | None, Field(description="Root post ID for threading")] = None,
@@ -97,7 +97,7 @@ def _validate_get_channel_messages_mode(
     tags={ToolTag.MATTERMOST, ToolTag.MESSAGE, ToolTag.CHANNEL},
     meta={"capability": Capability.READ},
 )
-async def get_channel_messages(  # noqa: PLR0913
+async def get_channel_messages(  # noqa: PLR0913, PLR0917
     channel_id: ChannelId,
     unread_only: Annotated[  # noqa: FBT002
         bool,

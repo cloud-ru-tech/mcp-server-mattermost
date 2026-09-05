@@ -705,7 +705,7 @@ class MattermostClient:
         result = await self.get(f"/teams/{team_id}/channels/name/{name}")
         return result if isinstance(result, dict) else {}
 
-    async def create_channel(  # noqa: PLR0913
+    async def create_channel(  # noqa: PLR0913, PLR0917
         self,
         team_id: str,
         name: str,
@@ -1336,7 +1336,7 @@ class MattermostClient:
         result = await self.get(f"/channels/{channel_id}/bookmarks", params=params or None)
         return result if isinstance(result, list) else []
 
-    async def create_bookmark(  # noqa: PLR0913
+    async def create_bookmark(  # noqa: PLR0913, PLR0917
         self,
         channel_id: str,
         display_name: str,
