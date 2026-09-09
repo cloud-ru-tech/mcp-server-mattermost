@@ -10,43 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.1] - 2026-09-09
 
 ### Changed
-- `ChannelBookmark.file_info` is now `FileInfo | None` instead of a dictionary. Python callers must use
-  attribute access (for example, `bookmark.file_info.id`) instead of dictionary indexing.
-  Both `file` and `file_info` input keys remain supported, but supplied metadata must satisfy `FileInfo` validation;
-  incomplete dictionaries are no longer accepted. Missing or null metadata still produces `None`.
-- The Docker image is now built in two stages. `uv` is a build tool copied into the builder
-  (`ghcr.io/astral-sh/uv:0.9.30`) rather than the image it is based on, and only the virtualenv is
-  copied into the runtime stage — `uv`, `uvx`, `src/` and the build cache no longer ship. The project
-  is installed with `--no-editable`, so `site-packages` holds a real copy instead of a `.pth` pointing
-  at a `src/` that the runtime stage does not carry. Image size drops from 469 MB to 341 MB by
-  dropping the `chown -R mcp:mcp /app`, which rewrote every file in the venv and duplicated the whole
-  ~100 MB tree into a second layer.
-- The runtime working directory is `/home/mcp` rather than `/app`, and `/app` and the venv inside it
-  are root-owned. Nothing writes into the venv at runtime, so the code the server executes is now
-  immutable to the account it runs as. Every relative path the server accepts resolves against the
-  working directory — `destination_dir` in `download_file`, `file_path` in `upload_file`,
-  `MATTERMOST_EXTRA_CA_CERTS` — so in the image they now resolve under `/home/mcp` instead of
-  `/app`. Absolute and `~`-prefixed paths are unaffected, and `/app` never held mountable data
-  (mounting over it shadows the virtualenv), so this only moves where a relative path points.
+- `ChannelBookmark.file_info` is now `FileInfo | None`, not a dictionary — callers need attribute
+  access (`bookmark.file_info.id`). Both `file` and `file_info` inputs are still accepted, but must
+  validate as `FileInfo`; missing or null metadata still gives `None`.
+- The Docker image builds in two stages — `uv` (pinned `0.9.30`) stays in the builder, only the
+  virtualenv ships. Dropping the `chown -R mcp:mcp /app` takes it from 469 MB to 341 MB.
+- `/app` and the virtualenv are root-owned, immutable to the account the server runs as, and the
+  working directory is `/home/mcp`, where relative `destination_dir`, `file_path` and
+  `MATTERMOST_EXTRA_CA_CERTS` now resolve. Absolute and `~`-prefixed paths are unaffected.
 
 ### Fixed
-- File bookmark metadata now populates `ChannelBookmark.file_info` from Mattermost's `file` key (#29).
-  MCP responses and output schemas expose the typed `file` object without the extra `file_info: null` field.
+- `ChannelBookmark.file_info` populates from Mattermost's `file` key (#29); responses and output
+  schemas expose the typed `file`, not `file_info: null`.
 
 ### Security
-- Base image moved from `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` to `python:3.12-slim-bookworm`,
-  closing **26 fixable advisories (4 CRITICAL, 22 HIGH)** that blocked the 0.6.0 image at the Trivy
-  gate: `openssl`/`libssl3` (CVE-2026-31789, 28387, 28388, 28389, 28390, 45447), `libgnutls30`
-  (CVE-2026-33845, 42010, 33846, 3833, 42009), `krb5` (CVE-2026-40355, 40356) and `libcap2`
-  (CVE-2026-4878). The uv image is itself `python:3.12-slim-bookworm` plus the `uv` binary, but had not
-  been rebuilt since 2026-02-03 and so lagged seven months of Debian security updates. No Python
-  dependency was affected — every `python-pkg` target scanned clean.
-- The runtime stage runs `apt-get upgrade`, so a base image that goes stale between its own rebuilds no
-  longer silently ships known-vulnerable OS packages. Both `docker/build-push-action` steps set
-  `pull: true` to re-resolve the base digest, and the scan job additionally sets
-  `no-cache-filters: runtime` — without it the upgrade would be a cache hit for as long as the base
-  digest holds, which is exactly the situation it is meant to cover. The publish job then reads that
-  layer back out of the GHA cache, so the published image carries the apt state that was scanned.
+- Base image moved from `ghcr.io/astral-sh/uv:python3.12-bookworm-slim`, unrebuilt since 2026-02-03,
+  to `python:3.12-slim-bookworm`, closing **26 fixable advisories (4 CRITICAL, 22 HIGH)** that blocked
+  the 0.6.0 image at the Trivy gate: `openssl`/`libssl3` (CVE-2026-31789, 28387, 28388, 28389, 28390,
+  45447), `libgnutls30` (CVE-2026-33845, 42010, 33846, 3833, 42009), `krb5` (CVE-2026-40355, 40356)
+  and `libcap2` (CVE-2026-4878). No Python dependency was affected.
+- The runtime stage runs `apt-get upgrade`, forced by `no-cache-filters: runtime` on the scan job —
+  without it the upgrade is a cache hit for as long as the base digest holds.
 
 ## [0.6.0] - 2026-09-09
 
