@@ -12,7 +12,7 @@ from mcp_server_mattermost.enums import ToolTag
 try:
     __version__ = version("mcp-server-mattermost")
 except PackageNotFoundError:
-    __version__ = "0.6.0"
+    __version__ = "0.6.1"
 
 __all__ = [
     "ToolTag",

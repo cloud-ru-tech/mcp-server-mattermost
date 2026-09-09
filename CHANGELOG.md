@@ -7,15 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- File bookmark metadata now populates `ChannelBookmark.file_info` from Mattermost's `file` key (#29).
-  MCP responses and output schemas expose the typed `file` object without the extra `file_info: null` field.
+## [0.6.1] - 2026-09-09
 
 ### Changed
-- `ChannelBookmark.file_info` is now `FileInfo | None` instead of a dictionary. Python callers must use
-  attribute access (for example, `bookmark.file_info.id`) instead of dictionary indexing.
-  Both `file` and `file_info` input keys remain supported, but supplied metadata must satisfy `FileInfo` validation;
-  incomplete dictionaries are no longer accepted. Missing or null metadata still produces `None`.
+- `ChannelBookmark.file_info` is now `FileInfo | None`, not a dictionary — callers need attribute
+  access (`bookmark.file_info.id`). Both `file` and `file_info` inputs are still accepted, but must
+  validate as `FileInfo`; missing or null metadata still gives `None`.
+- The Docker image builds in two stages — `uv` (pinned `0.9.30`) stays in the builder, only the
+  virtualenv ships. Dropping the `chown -R mcp:mcp /app` takes it from 469 MB to 341 MB.
+- `/app` and the virtualenv are root-owned, immutable to the account the server runs as, and the
+  working directory is `/home/mcp`, where relative `destination_dir`, `file_path` and
+  `MATTERMOST_EXTRA_CA_CERTS` now resolve. Absolute and `~`-prefixed paths are unaffected.
+
+### Fixed
+- `ChannelBookmark.file_info` populates from Mattermost's `file` key (#29); responses and output
+  schemas expose the typed `file`, not `file_info: null`.
+
+### Security
+- Base image moved from `ghcr.io/astral-sh/uv:python3.12-bookworm-slim`, unrebuilt since 2026-02-03,
+  to `python:3.12-slim-bookworm`, closing **26 fixable advisories (4 CRITICAL, 22 HIGH)** in
+  `openssl`, `gnutls`, `krb5` and `libcap2` that blocked the 0.6.0 image at the Trivy gate. No Python
+  dependency was affected.
+- The runtime stage runs `apt-get upgrade`, forced by `no-cache-filters: runtime` on the scan job —
+  without it the upgrade is a cache hit for as long as the base digest holds.
 
 ## [0.6.0] - 2026-09-09
 

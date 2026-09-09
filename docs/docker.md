@@ -161,6 +161,22 @@ docker run -i --rm \
 | `MCP_HOST` | `127.0.0.1` | HTTP bind host (use `0.0.0.0` in Docker) |
 | `MCP_PORT` | `8000` | HTTP port |
 
+## Writable Paths
+
+The container runs as `mcp` (uid 1000) with the working directory `/home/mcp`, the only
+path it can write to — `/app` and the virtualenv inside it are root-owned.
+
+Every relative path the server accepts resolves against that working directory — `destination_dir`
+in `download_file`, `file_path` in `upload_file`, and `MATTERMOST_EXTRA_CA_CERTS`. So `./incoming`
+becomes `/home/mcp/incoming`. **Prefer absolute paths in a container**, and mount volumes where the
+container can reach them.
+
+Downloads written to `/home/mcp` live and die with the container — mount a volume to keep them:
+
+```bash
+docker run -v ~/Downloads:/home/mcp/downloads ...
+```
+
 ## Healthcheck Behavior
 
 The Dockerfile includes a healthcheck that probes `/health` endpoint. This only works
