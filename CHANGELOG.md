@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-09
+
 ### Added
 - `download_file` tool: saves a file attachment to a local directory by its ID, the counterpart of
   `upload_file`. A leading `~` in the destination is expanded. Uses only the base name of the file,
@@ -56,6 +58,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   warns when `MATTERMOST_MAX_KEEPALIVE_CONNECTIONS=0` or
   `MATTERMOST_KEEPALIVE_EXPIRY=0` disables connection reuse. The per-call
   "Initializing Mattermost API client" line moved to DEBUG.
+
+### Deprecated
+- Host/Origin protection defaults to off; **in 1.0.0 the default becomes `auto`** (#30). Set
+  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` explicitly now — `=off` included — and that upgrade changes
+  nothing for you.
 
 ### Fixed
 - File uploads now send the correct `multipart/form-data` Content-Type. The
@@ -111,11 +118,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a parent application — previously none of those were protected. Rejections are logged with the
   offending `Host`/`Origin` and the variable that would accept it. See
   [HTTP transport security](docs/configuration.md#http-transport-security).
-
-### Deprecated
-- Host/Origin protection defaults to off; **in 1.0.0 the default becomes `auto`** (#30). Set
-  `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` explicitly now — `=off` included — and that upgrade changes
-  nothing for you.
 
 ## [0.5.1] - 2026-07-07
 
