@@ -3,9 +3,11 @@
 from unittest.mock import AsyncMock
 
 import pytest
+import respx
+from fastmcp import Client
 
 from mcp_server_mattermost.exceptions import AuthenticationError, NotFoundError, ValidationError
-from mcp_server_mattermost.models import ChannelBookmark
+from mcp_server_mattermost.models import ChannelBookmark, FileInfo
 from mcp_server_mattermost.tools import bookmarks
 
 from .conftest import make_bookmark_data
@@ -13,6 +15,14 @@ from .conftest import make_bookmark_data
 
 class TestListBookmarks:
     """Tests for list_bookmarks tool."""
+
+    async def test_list_bookmarks_returns_file_metadata(self, mock_client, file_bookmark_data):
+        mock_client.get_bookmarks.return_value = [file_bookmark_data]
+
+        result = await bookmarks.list_bookmarks(channel_id=file_bookmark_data["channel_id"], client=mock_client)
+
+        assert isinstance(result[0].file_info, FileInfo)
+        assert result[0].file_info.name == "doc.pdf"
 
     async def test_list_bookmarks_returns_bookmarks(self, mock_client: AsyncMock) -> None:
         """Test successful bookmark listing returns ChannelBookmark models."""
@@ -88,24 +98,23 @@ class TestCreateBookmark:
             image_url=None,
         )
 
-    async def test_create_file_bookmark(self, mock_client: AsyncMock) -> None:
+    async def test_create_file_bookmark(self, mock_client: AsyncMock, file_bookmark_data) -> None:
         """Test creating a file bookmark returns ChannelBookmark."""
-        mock_client.create_bookmark.return_value = make_bookmark_data(
-            bookmark_type="file",
-            file_id="fl1234567890123456789012",
-        )
+        mock_client.create_bookmark.return_value = file_bookmark_data
 
         result = await bookmarks.create_bookmark(
-            channel_id="ch1234567890123456789012",
+            channel_id=file_bookmark_data["channel_id"],
             display_name="Test File",
             bookmark_type="file",
-            file_id="fl1234567890123456789012",
+            file_id=file_bookmark_data["file_id"],
             client=mock_client,
         )
 
         assert isinstance(result, ChannelBookmark)
         assert result.type == "file"
-        assert result.file_id == "fl1234567890123456789012"
+        assert result.file_id == "fl123456789012345678901234"
+        assert isinstance(result.file_info, FileInfo)
+        assert result.file_info.name == "doc.pdf"
 
     async def test_create_link_bookmark_missing_url(self, mock_client: AsyncMock) -> None:
         """Test link bookmark without link_url raises ValidationError."""
@@ -264,6 +273,46 @@ class TestUpdateBookmarkSortOrder:
             bookmark_id="bk1234567890123456789012",
             new_sort_order=0,
         )
+
+
+@pytest.mark.parametrize("tool_name", ["list_bookmarks", "create_bookmark"])
+@respx.mock
+async def test_file_bookmark_mcp_response_and_schema(mock_settings, file_bookmark_data, tool_name):
+    """Expose file metadata under the same typed key in MCP results and schemas."""
+    from mcp_server_mattermost.server import mcp
+
+    channel_id = file_bookmark_data["channel_id"]
+    url = f"https://test.mattermost.com/api/v4/channels/{channel_id}/bookmarks"
+    arguments = {"channel_id": channel_id}
+    if tool_name == "list_bookmarks":
+        respx.get(url).respond(200, json=[file_bookmark_data])
+    else:
+        respx.post(url).respond(200, json=file_bookmark_data)
+        arguments.update(
+            display_name="Important Document",
+            bookmark_type="file",
+            file_id=file_bookmark_data["file_id"],
+        )
+
+    async with Client(mcp) as client:
+        tool = next(tool for tool in await client.list_tools() if tool.name == tool_name)
+        result = await client.call_tool(tool_name, arguments)
+
+    schema = tool.outputSchema
+    data = result.structured_content
+    if tool_name == "list_bookmarks":
+        schema = schema["properties"]["result"]["items"]
+        data = data["result"][0]
+
+    assert "file_info" not in data
+    assert data["file"]["id"] == "fl123456789012345678901234"
+    assert data["file"]["name"] == "doc.pdf"
+    assert data["file"]["size"] == 1024
+    assert "mini_preview" in data["file"]
+    assert "file_info" not in schema["properties"]
+    file_schema = next(variant for variant in schema["properties"]["file"]["anyOf"] if variant["type"] == "object")
+    assert file_schema["properties"]["name"]["type"] == "string"
+    assert file_schema["properties"]["size"]["type"] == "integer"
 
 
 class TestErrorHandling:

@@ -3,6 +3,7 @@
 from pydantic import Field
 
 from .base import MattermostResponse
+from .file import FileInfo
 
 
 class ChannelBookmark(MattermostResponse):
@@ -27,4 +28,4 @@ class ChannelBookmark(MattermostResponse):
     emoji: str | None = Field(default=None, description="Emoji icon")
     original_id: str | None = Field(default=None, description="Original bookmark ID if copied")
     parent_id: str | None = Field(default=None, description="Parent bookmark ID")
-    file_info: dict[str, object] | None = Field(default=None, description="File metadata for file bookmarks")
+    file_info: FileInfo | None = Field(default=None, alias="file", description="File metadata for file bookmarks")

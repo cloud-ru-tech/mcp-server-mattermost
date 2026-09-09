@@ -2,6 +2,11 @@
 
 Tools for managing channel bookmarks: links and files pinned to channels for quick access.
 
+Bookmark responses include `file`, an object with file metadata such as `id`, `name`, `size`, and `mime_type`.
+It is `null` when Mattermost does not return metadata. In Python, access it as `bookmark.file_info`,
+a `FileInfo` model or `None`; for example, use `bookmark.file_info.id` after checking for `None`.
+Both `file` and `file_info` are accepted as model input keys, but MCP responses and output schemas use `file`.
+
 > **Edition Requirements:** Channel Bookmarks require Entry, Professional, Enterprise, or Enterprise Advanced edition. Not available in Team Edition.
 >
 > **Minimum Version:** Mattermost v10.1+
