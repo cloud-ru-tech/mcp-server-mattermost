@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-09
+
 ### Changed
 - `ChannelBookmark.file_info` is now `FileInfo | None` instead of a dictionary. Python callers must use
   attribute access (for example, `bookmark.file_info.id`) instead of dictionary indexing.
