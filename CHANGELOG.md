@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- `download_file` tool: saves a file attachment to a local directory by its ID, the counterpart of
+  `upload_file`. A leading `~` in the destination is expanded. Uses only the base name of the file,
+  refuses files over 100 MB, and never overwrites an existing file unless asked to — including one that
+  appears while the download is still in flight. Publication is atomic where hard links are supported
+  and uses exclusive creation elsewhere; requested overwrites use atomic replacement. Declared as a
+  destructive `write`: it reads from Mattermost but writes to the host's filesystem, and `overwrite=true`
+  irreversibly replaces existing contents.
+  Optional `on_conflict="rename"` saves same-named attachments with numbered suffixes,
+  including concurrent downloads, and returns the actual saved path. Long Unicode
+  names are shortened as needed for the suffix. The default and legacy `overwrite`
+  flag retain their behavior; explicit `error` and `overwrite` policies are also supported.
 - Shared HTTP connection pool: the Mattermost HTTP client is created once and
   reused across all tool calls (sequential and concurrent), eliminating per-call
   TCP/TLS handshakes and TIME_WAIT churn. Pool limits are configurable via

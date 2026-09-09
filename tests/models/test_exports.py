@@ -29,6 +29,7 @@ def test_response_models_exported():
     assert hasattr(models, "FileInfo")
     assert hasattr(models, "FileUploadResponse")
     assert hasattr(models, "FileLink")
+    assert hasattr(models, "FileDownloadResponse")
 
 
 def test_input_types_still_exported():

@@ -40,3 +40,13 @@ class FileLink(MattermostResponse):
     """Public file download link."""
 
     link: str = Field(description="Public download URL")
+
+
+class FileDownloadResponse(MattermostResponse):
+    """Result of saving a file attachment to the local filesystem."""
+
+    file_id: str = Field(description="Downloaded file identifier")
+    path: str = Field(description="Absolute local path the file was saved to")
+    name: str = Field(description="Saved file name")
+    size: int = Field(description="Saved size in bytes")
+    mime_type: str = Field(default="", description="MIME type reported by Mattermost")

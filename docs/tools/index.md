@@ -1,17 +1,17 @@
 # Tools Overview
 
-MCP Server Mattermost provides 37 tools organized into 7 categories.
+MCP Server Mattermost provides 39 tools organized into 7 categories.
 
 ## Categories
 
 | Category | Tools | Description |
 |----------|-------|-------------|
-| [Channels](channels.md) | 10 | List, create, join, manage channels and DMs |
+| [Channels](channels.md) | 11 | List, create, join, manage channels and DMs |
 | [Messages](messages.md) | 5 | Send, search, edit, delete messages |
 | [Reactions & Threads](posts.md) | 6 | Emoji reactions, pins, thread history |
 | [Users](users.md) | 5 | Lookup, search, status |
 | [Teams](teams.md) | 3 | List teams, members |
-| [Files](files.md) | 3 | Upload, metadata, download links |
+| [Files](files.md) | 4 | Upload, download, metadata, download links |
 | [Bookmarks](bookmarks.md) | 5 | Channel bookmarks (Entry+ edition) |
 
 ## Quick Reference
@@ -82,6 +82,7 @@ to filter tools by agent profile.
 | `upload_file` | write | Upload a file |
 | `get_file_info` | read | Get file metadata |
 | `get_file_link` | read | Get download link |
+| `download_file` | write | Save a file attachment locally |
 
 ### Bookmarks
 

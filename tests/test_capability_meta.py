@@ -47,6 +47,7 @@ EXPECTED_CAPABILITIES: dict[str, Capability] = {
     "upload_file": Capability.WRITE,
     "get_file_info": Capability.READ,
     "get_file_link": Capability.READ,
+    "download_file": Capability.WRITE,
     # bookmarks.py
     "list_bookmarks": Capability.READ,
     "create_bookmark": Capability.WRITE,
@@ -54,6 +55,8 @@ EXPECTED_CAPABILITIES: dict[str, Capability] = {
     "delete_bookmark": Capability.DELETE,
     "update_bookmark_sort_order": Capability.WRITE,
 }
+
+DESTRUCTIVE_WRITE_TOOLS = {"download_file"}
 
 
 @pytest.fixture
@@ -129,7 +132,10 @@ class TestCapabilityAnnotationConsistency:
             assert read_only is True, f"{tool_name}: capability=read but readOnlyHint={read_only}"
         elif expected_cap in (Capability.WRITE, Capability.CREATE):
             assert read_only is not True, f"{tool_name}: capability={expected_cap} but readOnlyHint=True"
-            assert destructive is False, f"{tool_name}: capability={expected_cap} but destructiveHint={destructive}"
+            if tool_name in DESTRUCTIVE_WRITE_TOOLS:
+                assert destructive is not False, f"{tool_name}: destructive write but destructiveHint=False"
+            else:
+                assert destructive is False, f"{tool_name}: capability={expected_cap} but destructiveHint={destructive}"
         elif expected_cap == Capability.DELETE:
             assert read_only is not True, f"{tool_name}: capability=delete but readOnlyHint=True"
             # delete tools use default annotations (destructiveHint defaults to true)
@@ -182,7 +188,7 @@ class TestCapabilityCounts:
 
     def test_expected_tool_count(self):
         """Total tool count matches expectations."""
-        assert len(EXPECTED_CAPABILITIES) == 38
+        assert len(EXPECTED_CAPABILITIES) == 39
 
     def test_capability_distribution(self):
         """Capability distribution matches design."""
@@ -190,6 +196,6 @@ class TestCapabilityCounts:
         for cap in EXPECTED_CAPABILITIES.values():
             counts[cap] = counts.get(cap, 0) + 1
         assert counts[Capability.READ] == 20
-        assert counts[Capability.WRITE] == 14
+        assert counts[Capability.WRITE] == 15
         assert counts[Capability.CREATE] == 2
         assert counts[Capability.DELETE] == 2

@@ -2064,6 +2064,37 @@ class TestMattermostClientFilesAPI:
                 assert "not a file" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_upload_file_expands_tilde(self, mock_settings, tmp_path, monkeypatch):
+        """upload_file() expands a leading ``~``, symmetrically with download_file().
+
+        Without it, ``resolve(strict=True)`` reports the unhelpful "Cannot resolve path:
+        No such file or directory: '~'" for a path a user would naturally write.
+        """
+        captured: list[httpx.Request] = []
+
+        def capture(request: httpx.Request) -> httpx.Response:
+            captured.append(request)
+            return httpx.Response(201, json={"file_infos": [{"id": "file123"}]})
+
+        respx.post("https://test.mattermost.com/api/v4/files").mock(side_effect=capture)
+
+        home = tmp_path / "home"
+        home.mkdir()
+        (home / "report.pdf").write_bytes(b"pdf bytes")
+        monkeypatch.setenv("HOME", str(home))
+
+        from mcp_server_mattermost.config import get_settings
+
+        client = MattermostClient(get_settings())
+        async with client.lifespan():
+            await client.upload_file("ch123", "~/report.pdf")
+
+        assert len(captured) == 1
+        assert b"pdf bytes" in captured[0].content
+
+    @pytest.mark.asyncio
     async def test_upload_file_symlink_raises_error(self, mock_settings):
         """upload_file() should raise FileValidationError for symlink."""
         import tempfile
@@ -2244,6 +2275,464 @@ class TestMattermostClientFilesAPI:
         # Verify path resolution works
         path = Path("test.txt").resolve(strict=True)  # noqa: ASYNC240 — sync path check in test
         assert path == test_file
+
+
+class TestMattermostClientFileDownload:
+    """Tests for download_file client method."""
+
+    FILE_ID = "fl1234567890123456789012"
+    INFO_URL = f"https://test.mattermost.com/api/v4/files/{FILE_ID}/info"
+    CONTENT_URL = f"https://test.mattermost.com/api/v4/files/{FILE_ID}"
+
+    def _info(self, **overrides):
+        data = {
+            "id": self.FILE_ID,
+            "user_id": "us1234567890123456789012",
+            "channel_id": "ch1234567890123456789012",
+            "create_at": 1706400000000,
+            "update_at": 1706400000000,
+            "delete_at": 0,
+            "name": "report.pdf",
+            "extension": "pdf",
+            "size": 11,
+            "mime_type": "application/pdf",
+            "post_id": "",
+            "width": 0,
+            "height": 0,
+            "has_preview_image": False,
+        }
+        data.update(overrides)
+        return data
+
+    def _client(self):
+        from mcp_server_mattermost.config import get_settings
+
+        return MattermostClient(get_settings())
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_saves_content(self, mock_settings, tmp_path):
+        """download_file() should write the exact bytes under the server-side name."""
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(
+            return_value=httpx.Response(200, content=b"%PDF-1.4 ok", headers={"Content-Type": "application/pdf"}),
+        )
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(tmp_path))
+
+        saved = tmp_path / "report.pdf"
+        assert saved.read_bytes() == b"%PDF-1.4 ok"
+        assert result == {
+            "file_id": self.FILE_ID,
+            "path": str(saved),
+            "name": "report.pdf",
+            "size": 11,
+            "mime_type": "application/pdf",
+        }
+        assert list(tmp_path.iterdir()) == [saved]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_custom_filename_and_missing_dir(self, mock_settings, tmp_path):
+        """download_file() should honour filename override and create the directory."""
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"data"))
+
+        target_dir = tmp_path / "nested" / "dir"
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(target_dir), filename="renamed.bin")
+
+        assert (target_dir / "renamed.bin").read_bytes() == b"data"
+        assert result["name"] == "renamed.bin"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_accepts_long_multibyte_name(self, mock_settings, tmp_path, monkeypatch):
+        """A valid target name must not make the temporary name exceed a byte limit."""
+        import errno
+        import tempfile
+
+        filename = "😀" * 62
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info(name=filename)))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"unicode"))
+
+        named_temporary_file = tempfile.NamedTemporaryFile
+
+        def byte_limited_tempfile(*args, prefix="", **kwargs):
+            if len(f"{prefix}abcdefgh".encode()) > 255:
+                raise OSError(errno.ENAMETOOLONG, "File name too long")
+            return named_temporary_file(*args, prefix=prefix, **kwargs)
+
+        monkeypatch.setattr(tempfile, "NamedTemporaryFile", byte_limited_tempfile)
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert result["name"] == filename
+        assert (tmp_path / filename).read_bytes() == b"unicode"
+        assert list(tmp_path.iterdir()) == [tmp_path / filename]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_uses_base_name_only(self, mock_settings, tmp_path):
+        """A server-side name with path components must not escape the directory."""
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info(name="../../evil.sh")))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"x"))
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert result["path"] == str(tmp_path / "evil.sh")
+        assert (tmp_path / "evil.sh").exists()
+        assert not (tmp_path.parent.parent / "evil.sh").exists()
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_refuses_overwrite_by_default(self, mock_settings, tmp_path):
+        """download_file() should not clobber an existing file unless overwrite=True."""
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        content_route = respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"new"))
+        (tmp_path / "report.pdf").write_bytes(b"old")
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="already exists"):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+            assert content_route.call_count == 0
+            assert (tmp_path / "report.pdf").read_bytes() == b"old"
+
+            await client.download_file(self.FILE_ID, str(tmp_path), overwrite=True)
+            assert (tmp_path / "report.pdf").read_bytes() == b"new"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_rejects_too_large_before_fetching(self, mock_settings, tmp_path):
+        """download_file() should refuse files above the limit without downloading them."""
+        from mcp_server_mattermost.client import MAX_DOWNLOAD_SIZE_BYTES
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(
+            return_value=httpx.Response(200, json=self._info(size=MAX_DOWNLOAD_SIZE_BYTES + 1)),
+        )
+        content_route = respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"x"))
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="download limit"):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert content_route.call_count == 0
+        assert list(tmp_path.iterdir()) == []
+
+    @pytest.mark.parametrize("size", ["bad", {"bytes": 1}, [1]])
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_rejects_invalid_metadata_size(self, mock_settings, tmp_path, size):
+        """Malformed sizes raise a validation error before fetching file content."""
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info(size=size)))
+        content_route = respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"new"))
+        existing = tmp_path / "report.pdf"
+        existing.write_bytes(b"old")
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="Invalid file size in metadata") as exc_info:
+                await client.download_file(self.FILE_ID, str(tmp_path), overwrite=True)
+
+        assert isinstance(exc_info.value.__cause__, (TypeError, ValueError))
+        assert content_route.call_count == 0
+        assert existing.read_bytes() == b"old"
+        assert list(tmp_path.iterdir()) == [existing]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_destination_is_a_file(self, mock_settings, tmp_path):
+        """download_file() should reject a destination that is not a directory."""
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        not_a_dir = tmp_path / "file.txt"
+        not_a_dir.write_text("x")
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError):
+                await client.download_file(self.FILE_ID, str(not_a_dir))
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_not_found(self, mock_settings, tmp_path):
+        """download_file() should raise NotFoundError for an unknown file id."""
+        from mcp_server_mattermost.exceptions import NotFoundError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(404, json={"message": "File not found"}))
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(NotFoundError):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_retries_on_server_error(self, mock_settings, tmp_path):
+        """download_file() should retry content fetch on 5xx like other API methods."""
+        settings = Settings(url="https://test.mattermost.com", token="test-token-12345", max_retries=2)
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        content_route = respx.get(self.CONTENT_URL).mock(
+            side_effect=[httpx.Response(503), httpx.Response(200, content=b"%PDF-1.4 ok")],
+        )
+
+        async with MattermostClient(settings).lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert content_route.call_count == 2
+        assert result["size"] == 11
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_falls_back_when_hard_links_are_unavailable(
+        self,
+        mock_settings,
+        tmp_path,
+        monkeypatch,
+    ):
+        """A writable filesystem without hard links must still accept downloads."""
+        import errno
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"fallback"))
+
+        def unsupported(self, target):
+            raise OSError(errno.EOPNOTSUPP, "Operation not supported")
+
+        monkeypatch.setattr("pathlib.Path.hardlink_to", unsupported)
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(tmp_path))
+
+        saved = tmp_path / "report.pdf"
+        assert saved.read_bytes() == b"fallback"
+        assert result["path"] == str(saved)
+        assert list(tmp_path.iterdir()) == [saved]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_fallback_does_not_clobber_a_concurrent_file(
+        self,
+        mock_settings,
+        tmp_path,
+        monkeypatch,
+    ):
+        """The fallback must retain no-overwrite semantics if the target appears."""
+        import errno
+
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"loser"))
+
+        def target_appears(self, target):
+            self.write_bytes(b"winner")
+            raise OSError(errno.EOPNOTSUPP, "Operation not supported")
+
+        monkeypatch.setattr("pathlib.Path.hardlink_to", target_appears)
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="already exists"):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert (tmp_path / "report.pdf").read_bytes() == b"winner"
+        assert list(tmp_path.iterdir()) == [tmp_path / "report.pdf"]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_cleans_up_and_wraps_a_failed_write(self, mock_settings, tmp_path, monkeypatch):
+        """A failed fallback write leaves no fragments and raises FileValidationError.
+
+        ``NamedTemporaryFile(delete=False)`` means an unguarded failure between creation
+        and publication strands a temporary file. The exclusive fallback can also leave a
+        partial target if its write fails after creation.
+        """
+        import errno
+
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"%PDF-1.4 ok"))
+
+        def unsupported(self, target):
+            raise OSError(errno.EOPNOTSUPP, "Operation not supported")
+
+        path_open = type(tmp_path).open
+
+        class PartialWriter:
+            def __init__(self, target_file):
+                self.target_file = target_file
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                self.target_file.close()
+
+            def write(self, content):
+                self.target_file.write(content[:1])
+                raise OSError(28, "No space left on device")
+
+        def fail_after_partial_write(self, *args, **kwargs):
+            target_file = path_open(self, *args, **kwargs)
+            if self == tmp_path / "report.pdf":
+                return PartialWriter(target_file)
+            return target_file
+
+        monkeypatch.setattr("pathlib.Path.hardlink_to", unsupported)
+        monkeypatch.setattr("pathlib.Path.open", fail_after_partial_write)
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="Cannot write file"):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert list(tmp_path.iterdir()) == [], "temp file left behind after a failed write"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_cleans_up_a_failed_overwrite(self, mock_settings, tmp_path, monkeypatch):
+        """The overwrite=True branch cleans up too, not just the exclusive-link one."""
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"new"))
+        (tmp_path / "report.pdf").write_bytes(b"old")
+
+        def boom(self, target):
+            raise OSError(21, "Is a directory")
+
+        monkeypatch.setattr("pathlib.Path.replace", boom)
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="Cannot write file"):
+                await client.download_file(self.FILE_ID, str(tmp_path), overwrite=True)
+
+        assert (tmp_path / "report.pdf").read_bytes() == b"old"
+        assert list(tmp_path.iterdir()) == [tmp_path / "report.pdf"]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_does_not_clobber_a_file_that_appeared_mid_download(
+        self,
+        mock_settings,
+        tmp_path,
+    ):
+        """A target created while the download was in flight must not be overwritten.
+
+        The exists() pre-check runs before the download, so with a plain os.replace the
+        no-overwrite guarantee holds only for the sequential case. Simulates the concurrent
+        one by creating the file from the response handler, i.e. during the fetch.
+        """
+        from mcp_server_mattermost.exceptions import FileValidationError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+
+        def create_target_then_respond(request: httpx.Request) -> httpx.Response:
+            (tmp_path / "report.pdf").write_bytes(b"winner")
+            return httpx.Response(200, content=b"loser")
+
+        respx.get(self.CONTENT_URL).mock(side_effect=create_target_then_respond)
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(FileValidationError, match="already exists"):
+                await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert (tmp_path / "report.pdf").read_bytes() == b"winner"
+        assert not [p for p in tmp_path.iterdir() if p.name.startswith(".report.pdf.")], "temp file left behind"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_accepts_symlinked_destination(self, mock_settings, tmp_path):
+        """A symlinked destination directory is valid and must not be refused.
+
+        Guards the deliberate absence of a symlink check: on macOS /tmp, /var and /etc are
+        symlinks, so rejecting them refuses obviously valid paths. Only the leaf was ever
+        testable anyway — ``resolve()`` follows symlinks in every parent component.
+        """
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"%PDF-1.4 ok"))
+
+        real_dir = tmp_path / "real"
+        real_dir.mkdir()
+        link = tmp_path / "link"
+        link.symlink_to(real_dir, target_is_directory=True)
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, str(link))
+
+        assert (real_dir / "report.pdf").read_bytes() == b"%PDF-1.4 ok"
+        assert result["path"] == str(real_dir / "report.pdf")
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_expands_tilde(self, mock_settings, tmp_path, monkeypatch):
+        """A leading ``~`` must reach the home directory, not a literal '~' under the CWD.
+
+        ``Path.resolve()`` does not expand it, so without ``expanduser`` the documented
+        "~/Downloads" example silently creates a directory named '~' in the process CWD
+        and reports success. Regression guard.
+        """
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(return_value=httpx.Response(200, content=b"%PDF-1.4 ok"))
+
+        home = tmp_path / "home"
+        home.mkdir()
+        monkeypatch.setenv("HOME", str(home))
+        monkeypatch.chdir(tmp_path)
+
+        async with self._client().lifespan() as client:
+            result = await client.download_file(self.FILE_ID, "~/Downloads")
+
+        assert result["path"] == str(home / "Downloads" / "report.pdf")
+        assert (home / "Downloads" / "report.pdf").read_bytes() == b"%PDF-1.4 ok"
+        assert not (tmp_path / "~").exists(), "created a directory literally named '~'"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_sends_authorization_header(self, mock_settings, tmp_path):
+        """The content fetch must carry the per-request bearer token.
+
+        The shared pool deliberately holds no default ``Authorization`` header so
+        that one pool can serve several users; a download that talked to httpx
+        directly would go out unauthenticated and get a 401. Regression guard.
+        """
+        captured: list[httpx.Request] = []
+
+        def capture_request(request: httpx.Request) -> httpx.Response:
+            captured.append(request)
+            return httpx.Response(200, content=b"%PDF-1.4 ok")
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(side_effect=capture_request)
+
+        settings = Settings(url="https://test.mattermost.com", token="test-token-12345")
+        async with MattermostClient(settings).lifespan() as client:
+            await client.download_file(self.FILE_ID, str(tmp_path))
+
+        assert len(captured) == 1
+        assert captured[0].headers["authorization"] == "Bearer test-token-12345"
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_download_file_reports_pool_exhaustion(self, mock_settings, tmp_path):
+        """A pool timeout must surface as ConnectionPoolTimeoutError, not an upstream one.
+
+        The download path has to go through ``_send`` for that translation to
+        happen; talking to httpx directly reports a misleading upstream timeout.
+        """
+        from mcp_server_mattermost.exceptions import ConnectionPoolTimeoutError
+
+        respx.get(self.INFO_URL).mock(return_value=httpx.Response(200, json=self._info()))
+        respx.get(self.CONTENT_URL).mock(side_effect=httpx.PoolTimeout("pool is full"))
+
+        async with self._client().lifespan() as client:
+            with pytest.raises(ConnectionPoolTimeoutError):
+                await client.download_file(self.FILE_ID, str(tmp_path))
 
 
 class TestCreateDirectChannel:
