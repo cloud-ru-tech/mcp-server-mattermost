@@ -1,8 +1,8 @@
 ---
-title: "HTTP-транспорт: teardown lifespan не выполняется при SIGTERM"
-summary: На `--http` шатдаун по SIGTERM не доводит lifespan до конца, поэтому
-  общий HTTP-пул и auth-провайдер не закрываются, а логи шатдауна не пишутся.
-  `docker stop` шлёт именно SIGTERM. На stdio и по SIGINT всё отрабатывает.
+title: "HTTP transport: lifespan teardown does not run on SIGTERM"
+summary: On `--http`, a SIGTERM shutdown never finishes the lifespan, so the shared
+  HTTP pool and the auth provider are not closed and no shutdown logs are written.
+  `docker stop` sends exactly SIGTERM. Both stdio and SIGINT work.
 category: bug
 created: 2026-09-04
 files:
@@ -11,36 +11,35 @@ files:
   - src/mcp_server_mattermost/http_pool.py
 ---
 
-Баг не наш: воспроизводится на голом `FastMCP` с пустым lifespan, без единой
-строки кода проекта. Проверен на 3.4.4.
+Not our bug: it reproduces on bare `FastMCP` with an empty lifespan, without a single
+line of project code. Verified on 3.4.4.
 
-**Матрица:**
+**Matrix:**
 
-| Запуск | Сигнал | Teardown |
+| Entry point | Signal | Teardown |
 | --- | --- | --- |
-| `mcp.run(transport="http")` — то, что делает `main()` | SIGTERM | не выполняется вообще, даже `finally` |
-| `mcp.run(transport="http")` | SIGINT | выполняется полностью |
-| `uvicorn.run(mcp.http_app())` | SIGTERM | выполняется полностью |
-| stdio (`mcp.run(transport="stdio")`) | EOF на stdin | выполняется полностью |
+| `mcp.run(transport="http")` — what `main()` does | SIGTERM | never runs, not even `finally` |
+| `mcp.run(transport="http")` | SIGINT | runs fully |
+| `uvicorn.run(mcp.http_app())` | SIGTERM | runs fully |
+| stdio (`mcp.run(transport="stdio")`) | EOF on stdin | runs fully |
 
-По SIGTERM uvicorn пишет `Waiting for application shutdown.`, затем сразу
-`Finished server process` — lifespan он не дожидается.
+On SIGTERM uvicorn logs `Waiting for application shutdown.` and then immediately
+`Finished server process` — it does not wait for the lifespan.
 
-**Следствия:** `HTTP connection pool closed` и `Mattermost MCP server shutdown
-complete` не пишутся; `_close_auth_provider` не вызывается. Сокеты забирает ОС
-при выходе процесса, так что утечки за пределы процесса нет — ломается именно
-graceful shutdown, и для всего, что кто-либо положит в lifespan, а не только
-для пула.
+**Consequences:** `HTTP connection pool closed` and `Mattermost MCP server shutdown
+complete` are never written, and `_close_auth_provider` is never called. The OS reclaims
+the sockets when the process exits, so nothing leaks beyond the process — what breaks is
+graceful shutdown itself, for anything anyone puts in the lifespan, not just the pool.
 
-**Проверка:**
+**Reproduce:**
 
 ```bash
 MATTERMOST_URL=http://127.0.0.1:59999 MATTERMOST_TOKEN=t MATTERMOST_LOG_FORMAT=text \
   uv run mcp-server-mattermost --http --port 8811 2>&1 | tee /tmp/probe.log &
 sleep 6 && kill -TERM $(pgrep -f "mcp-server-mattermost --http" | tail -1)
-grep "connection pool" /tmp/probe.log   # ожидается пара created/closed, будет только created
+grep "connection pool" /tmp/probe.log   # expect a created/closed pair; only created appears
 ```
 
-**Починку проверять на всех трёх путях:** `--http`, stdio, `fastmcp run`.
-Кандидаты — поднимать uvicorn самим через `mcp.http_app()` вместо
-`mcp.run(transport="http")`, либо завести issue в PrefectHQ/fastmcp.
+**Verify any fix on all three paths:** `--http`, stdio, `fastmcp run`. Candidates — run
+uvicorn ourselves via `mcp.http_app()` instead of `mcp.run(transport="http")`, or file an
+issue against PrefectHQ/fastmcp.
