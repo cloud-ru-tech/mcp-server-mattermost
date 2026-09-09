@@ -1,9 +1,5 @@
-# uv is pinned (a build tool must be deterministic); the base image floats
-# (it must be fresh). The previous single-stage build inverted both roles by
-# using ghcr.io/astral-sh/uv:python3.12-bookworm-slim as the base — that image
-# is itself python:3.12-slim-bookworm plus the uv binary, and it stopped being
-# rebuilt, so it shipped 26 fixable CRITICAL/HIGH OS advisories and blocked the
-# 0.6.0 release at the Trivy gate.
+# uv is pinned (a build tool must be deterministic); the base image floats (it
+# must be fresh). Basing the image on a uv image inverts both roles.
 FROM python:3.12-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.30 /uv /uvx /usr/local/bin/
@@ -20,22 +16,18 @@ COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Install the project itself (re-runs only when src/ changes).
-# --no-editable copies the package into site-packages instead of leaving a .pth
-# pointing at /app/src, which the runtime stage does not carry.
+# --no-editable: the runtime stage carries no src/ for a .pth to point at.
 COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
 
 
-# Both stages share the same base, so the interpreter the venv was built
-# against is byte-for-byte the one that runs it.
+# Same base as the builder, so the venv runs on the interpreter it was built
+# against.
 FROM python:3.12-slim-bookworm AS runtime
 
-# Pick up Debian security updates published after the base image was last
-# rebuilt. This is a RUN with no file inputs, so BuildKit would serve it from
-# cache for as long as the base digest holds — exactly the case it exists for.
-# The scan job passes `no-cache-filters: runtime` to force it; see
-# .github/workflows/docker-publish.yml. Being in its own stage, re-running it
-# never invalidates the uv sync layers.
+# Debian updates published after the base image was last rebuilt. A RUN with no
+# file inputs, so BuildKit caches it while the base digest holds — the scan job
+# forces it with `no-cache-filters: runtime`.
 RUN apt-get update \
     && apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
@@ -44,22 +36,18 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1
 
-# Create non-root user for security. `-m` also creates /home/mcp, the WORKDIR
-# below. No `chown -R /app` afterwards: it would rewrite every file in the venv
-# and duplicate the whole ~100 MB tree into a second layer.
+# Non-root user; `-m` creates /home/mcp, the WORKDIR below. Never `chown -R
+# /app` here — it rewrites every file in the venv into a second ~100 MB layer.
 RUN useradd -m -u 1000 mcp
 
-# Only the virtualenv ships; uv, uvx and the build cache stay in the builder.
-# Left root-owned: nothing writes into it at runtime — UV_COMPILE_BYTECODE
-# precompiled the .pyc in the builder against this same path — so the code the
-# server executes is immutable to the account it runs as.
+# Root-owned: nothing writes into the venv at runtime (the .pyc are precompiled
+# in the builder against this same path), so the code the server executes is
+# immutable to the account it runs as.
 COPY --from=builder /app/.venv /app/.venv
 
 USER mcp
 
-# A relative `destination_dir` in download_file resolves against the cwd, so the
-# cwd has to be writable by the runtime user. /app is deliberately not (see
-# above), which leaves the user's home.
+# Relative paths resolve against the cwd, and /app is deliberately not writable.
 WORKDIR /home/mcp
 
 # Default port for HTTP mode

@@ -51,20 +51,12 @@ jobs:
           platforms: ${{ matrix.platform }}
           push: false
           load: true
-          # Re-resolve the base image digest instead of building on a cached
-          # one, so a rebuilt base actually lands in the scanned image.
+          # Re-resolve the base digest rather than build on a cached one.
           pull: true
-          # `pull: true` alone leaves the runtime stage's `apt-get upgrade` a
-          # cache hit whenever the base digest is unchanged — a RUN with no file
-          # inputs keys on (parent digest, command), and neither moves. That is
-          # precisely the case the upgrade exists for: a base that has NOT been
-          # rebuilt since Debian published a fix. Forcing the stage costs a few
-          # seconds (apt plus a COPY from the cached builder) and leaves the
-          # expensive uv sync layers untouched.
-          #
-          # Only here, not in build-and-push: that job then reads this freshly
-          # built layer back out of the GHA cache, so the published image
-          # carries the apt state that was actually scanned.
+          # Without this the runtime stage's `apt-get upgrade` is a cache hit
+          # whenever the base digest holds — precisely the case it exists for.
+          # Not set in build-and-push: that job reads this layer back from the
+          # GHA cache, so the published image carries the apt state scanned here.
           no-cache-filters: runtime
           tags: ${{ env.IMAGE_NAME }}:scan-${{ steps.arch.outputs.label }}
           cache-from: type=gha,scope=${{ steps.arch.outputs.label }}
