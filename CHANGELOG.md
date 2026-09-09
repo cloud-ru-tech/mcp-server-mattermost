@@ -25,10 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 - Base image moved from `ghcr.io/astral-sh/uv:python3.12-bookworm-slim`, unrebuilt since 2026-02-03,
-  to `python:3.12-slim-bookworm`, closing **26 fixable advisories (4 CRITICAL, 22 HIGH)** that blocked
-  the 0.6.0 image at the Trivy gate: `openssl`/`libssl3` (CVE-2026-31789, 28387, 28388, 28389, 28390,
-  45447), `libgnutls30` (CVE-2026-33845, 42010, 33846, 3833, 42009), `krb5` (CVE-2026-40355, 40356)
-  and `libcap2` (CVE-2026-4878). No Python dependency was affected.
+  to `python:3.12-slim-bookworm`, closing **26 fixable advisories (4 CRITICAL, 22 HIGH)** in
+  `openssl`, `gnutls`, `krb5` and `libcap2` that blocked the 0.6.0 image at the Trivy gate. No Python
+  dependency was affected.
 - The runtime stage runs `apt-get upgrade`, forced by `no-cache-filters: runtime` on the scan job —
   without it the upgrade is a cache hit for as long as the base digest holds.
 
