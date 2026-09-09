@@ -132,9 +132,18 @@ def _create_mcp() -> MattermostMCP:
     install_extra_ca_certs(settings)
     apply_http_security_settings(settings)
     auth = build_auth_provider_from_env()
+    instructions = "MCP server for Mattermost team collaboration platform"
+    if settings.default_team_id is not None:
+        instructions += (
+            f". Default Mattermost team is {settings.default_team_id}. "
+            "For tools requiring a team, omit team_id or pass null to use this default; "
+            "pass an explicit team_id to select another team. "
+            "Do not call list_teams solely to discover the configured default. "
+            "search_users does not use this default: omit its team_id to search without a team filter."
+        )
     return MattermostMCP(
         name="Mattermost",
-        instructions="MCP server for Mattermost team collaboration platform",
+        instructions=instructions,
         lifespan=app_lifespan,
         providers=[FileSystemProvider(Path(__file__).parent / "tools")],
         auth=auth,

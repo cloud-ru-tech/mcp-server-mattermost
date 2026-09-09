@@ -150,3 +150,54 @@ class TestOAuthProxyDiscovery:
         assert authorization_metadata["registration_endpoint"] == "http://localhost:8000/register"
         assert authorization_metadata["token_endpoint"] == "http://localhost:8000/token"
         assert authorization_metadata.get("client_id_metadata_document_supported") is not True
+
+
+@pytest.mark.parametrize("auth_mode", ["static_token", "client_token", "oauth_proxy"])
+@respx.mock
+async def test_default_team_keeps_request_credentials(mock_settings, monkeypatch, auth_mode):
+    """Default selection preserves authenticated claims and explicit overrides do not persist."""
+    from fastmcp.server.auth import AccessToken
+
+    from tests.test_tools.test_teams import make_team_data
+
+    default_team = "o5w8h47pdfbzjc4d8w7dhnhren"
+    other_team = "tm123456789012345678901234"
+    monkeypatch.setenv("MATTERMOST_DEFAULT_TEAM_ID", default_team)
+    monkeypatch.setenv("MATTERMOST_AUTH_MODE", auth_mode)
+    if auth_mode == "oauth_proxy":
+        for name, value in {
+            "MATTERMOST_OAUTH_CLIENT_TYPE": "public",
+            "MATTERMOST_OAUTH_CLIENT_ID": "mm-client",
+            "MATTERMOST_OAUTH_JWT_SIGNING_KEY": "signing-key-1234567890",
+            "MATTERMOST_OAUTH_MCP_PUBLIC_URL": "http://localhost:8000",
+        }.items():
+            monkeypatch.setenv(name, value)
+    from mcp_server_mattermost.server import _create_mcp
+
+    for team_id in (default_team, other_team):
+        respx.get(f"https://test.mattermost.com/api/v4/teams/{team_id}").respond(
+            200,
+            json=make_team_data(team_id=team_id),
+        )
+
+    with patch("mcp_server_mattermost.deps.get_access_token") as access_token:
+        async with Client(_create_mcp()) as client:
+            for user in ("alice", "bob"):
+                access_token.return_value = AccessToken(
+                    token="mcp-token",
+                    client_id=user,
+                    scopes=[],
+                    claims={"mattermost_token": f"{user}-mm-token"},
+                )
+                for args, expected in (
+                    ({"team_id": other_team}, other_team),
+                    ({}, default_team),
+                    ({"team_id": None}, default_team),
+                ):
+                    result = await client.call_tool("get_team", args)
+                    assert result.data.id == expected
+                    request = respx.calls.last.request
+                    expected_token = "test-token-12345" if auth_mode == "static_token" else f"{user}-mm-token"
+                    assert request.headers["Authorization"] == f"Bearer {expected_token}"
+                    assert request.url.path == f"/api/v4/teams/{expected}"
+    assert len(respx.calls) == 6

@@ -46,6 +46,16 @@ UserId = Annotated[MattermostId, Field(description=_id_desc("user"))]
 
 TeamId = Annotated[MattermostId, Field(description=_id_desc("team"))]
 
+DefaultableTeamId = Annotated[
+    TeamId | None,
+    Field(
+        description=(
+            "26-character team identifier. Omit or pass null to use MATTERMOST_DEFAULT_TEAM_ID; "
+            "an explicit ID overrides the default. Required if no default is configured."
+        ),
+    ),
+]
+
 PostId = Annotated[MattermostId, Field(description=_id_desc("post/message"))]
 
 FileId = Annotated[MattermostId, Field(description=_id_desc("file"))]

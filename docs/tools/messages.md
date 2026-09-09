@@ -158,6 +158,9 @@ Object with:
 Search for messages matching specific criteria across channels.
 
 Searches message content within a team.
+An explicit `team_id` overrides the [configured default team](../configuration.md#default-team).
+Omitted or null `team_id` uses that default; without either, the tool returns an error recommending
+`team_id` and `list_teams`.
 Supports Mattermost search syntax (from:, in:, before:, after:).
 For simply reading recent channel messages, use get_channel_messages instead.
 
@@ -179,7 +182,7 @@ For simply reading recent channel messages, use get_channel_messages instead.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID to search in |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `terms` | string | ✓ | — | Search terms, supports Mattermost syntax (1-512 chars) |
 | `is_or_search` | boolean | — | false | Use OR instead of AND for multiple terms |
 
