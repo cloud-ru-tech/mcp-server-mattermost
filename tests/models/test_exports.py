@@ -37,6 +37,8 @@ def test_input_types_still_exported():
     assert hasattr(models, "ChannelId")
     assert hasattr(models, "UserId")
     assert hasattr(models, "TeamId")
+    assert hasattr(models, "DefaultableTeamId")
+    assert "DefaultableTeamId" in models.__all__
 
 
 def test_all_contains_new_models():

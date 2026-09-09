@@ -15,6 +15,7 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `MATTERMOST_DEFAULT_TEAM_ID` | — | Default team ID for team-scoped tools (26 alphanumeric characters); explicit `team_id` overrides it |
 | `MATTERMOST_TIMEOUT` | 30 | Request timeout in seconds (1-300) |
 | `MATTERMOST_MAX_RETRIES` | 3 | Maximum retry attempts for failed requests (0-10) |
 | `MATTERMOST_VERIFY_SSL` | true | Verify SSL certificates |
@@ -28,6 +29,58 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md).
 | `MATTERMOST_HTTP_HOST_ORIGIN_PROTECTION` | — | Host/Origin protection: `off`, `auto`, or `strict` (unset: FastMCP's own default, off) |
 | `MATTERMOST_HTTP_ALLOWED_HOSTS` | — | Extra allowed `Host` values for HTTP (JSON array or comma-separated) |
 | `MATTERMOST_HTTP_ALLOWED_ORIGINS` | — | Extra allowed `Origin` values for HTTP (JSON array or comma-separated) |
+
+## Default team
+
+Set `MATTERMOST_DEFAULT_TEAM_ID` to avoid passing the same team ID on every team-scoped call.
+The value must contain exactly 26 alphanumeric characters. Surrounding whitespace is trimmed;
+an empty or whitespace-only value is treated as unset. An invalid value fails configuration validation.
+Restart the MCP server after changing this setting.
+
+The default applies to `list_public_channels`, `list_my_channels`, `get_channel_by_name`,
+`create_channel`, `search_messages`, `get_team`, and `get_team_members`:
+
+- An explicit `team_id` takes precedence over the configured default.
+- Omitting `team_id` or passing `null` uses the configured default.
+- If neither is available, the tool returns an error asking you to provide `team_id` and suggesting
+  `list_teams` to find one. The server does not discover a team automatically or remember a team per session.
+
+`search_users` keeps its optional filter: omitted or `null` `team_id` searches without a team filter,
+even when a default is configured. Pass an explicit ID to restrict that search to a team.
+
+The setting works with every authentication mode (`static_token`, `client_token`, and `oauth_proxy`).
+It selects a team only; requests still use the authenticated account's credentials and Mattermost permissions.
+In modes with per-client credentials, all clients share the configured default, but each client's access
+is checked with that client's credentials.
+
+### Corporate gateway example
+
+A corporate MCP gateway serving a single Mattermost team can configure the default on the MCP server:
+
+```bash
+MATTERMOST_URL=https://mattermost.example.com
+MATTERMOST_AUTH_MODE=client_token
+MATTERMOST_DEFAULT_TEAM_ID=abcdefghijklmnopqrstuvwxyz
+```
+
+Clients still supply their own bearer tokens. With this configuration, these tool calls use the default team:
+
+```json
+{"name": "list_my_channels", "arguments": {}}
+```
+
+```json
+{"name": "search_messages", "arguments": {"terms": "deployment", "team_id": null}}
+```
+
+An explicit ID selects another team for that call, subject to the caller's access:
+
+```json
+{"name": "list_my_channels", "arguments": {"team_id": "0123456789abcdefghijklmnop"}}
+```
+
+If the gateway blocks team discovery, obtain the team ID from your Mattermost administrator and configure
+it here. The default avoids a `list_teams` discovery call; it does not bypass gateway or Mattermost access rules.
 
 ## HTTP transport security
 

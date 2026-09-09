@@ -131,6 +131,7 @@ all `MATTERMOST_OAUTH_*`), see [Authentication](authentication.md#configuration-
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
+| `MATTERMOST_DEFAULT_TEAM_ID` | No | — | Default team ID for team-scoped tools (26 alphanumeric characters); explicit `team_id` overrides it |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |

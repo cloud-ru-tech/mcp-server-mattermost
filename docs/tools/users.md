@@ -120,6 +120,8 @@ Search for users by name or username.
 
 Searches across username, first name, last name, and nickname.
 Use to find users when you don't know their exact username or ID.
+Omitting `team_id` or passing null searches without a team filter. This tool does not use
+[the configured default team](../configuration.md#default-team); pass an explicit ID to filter by team.
 
 ### Example prompts
 
@@ -140,7 +142,7 @@ Use to find users when you don't know their exact username or ID.
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
 | `term` | string | ✓ | — | Search term (1-256 chars) |
-| `team_id` | string | — | — | Limit search to a specific team |
+| `team_id` | string or null | — | null | Limit search to a specific team. Omitted or null leaves the search unfiltered; `MATTERMOST_DEFAULT_TEAM_ID` does not apply. |
 
 ### Returns
 

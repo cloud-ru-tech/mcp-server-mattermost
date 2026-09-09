@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional `MATTERMOST_DEFAULT_TEAM_ID` for team-scoped tools (#11). Omitted or null `team_id`
+  uses the configured default; an explicit ID overrides it. Applies to `list_public_channels`,
+  `list_my_channels`, `get_channel_by_name`, `create_channel`, `search_messages`, `get_team`,
+  and `get_team_members` in every authentication mode. `search_users` retains its unfiltered
+  default. Requests continue to use the authenticated account's credentials and permissions.
+
 ### Changed
+- Python tool functions `get_channel_by_name`, `create_channel`, and `search_messages` now require
+  keyword arguments (#11). Update direct calls to name each argument, for example
+  `get_channel_by_name(team_id=team_id, channel_name="general", client=client)`.
+  Positional calls raise `TypeError`; MCP calls continue to use named arguments.
 - Require `fastmcp>=4.0,<5` (was `>=3.4.4,<4`) and `pydantic>=2.11` (was `>=2.0`). FastMCP 4 adds a
   `session_idle_timeout` argument to `http_app`, which the server's override now passes through, and
   `serialize_by_alias` (pydantic 2.11) keeps Mattermost field names such as `file` in tool results
