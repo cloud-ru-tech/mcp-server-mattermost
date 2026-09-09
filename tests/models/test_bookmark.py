@@ -1,8 +1,10 @@
 """Tests for bookmark response models."""
 
 import pytest
+from pydantic import ValidationError
 
 from mcp_server_mattermost.models.bookmark import ChannelBookmark
+from mcp_server_mattermost.models.file import FileInfo
 
 
 def test_bookmark_parses_minimal_fields():
@@ -50,25 +52,51 @@ def test_bookmark_parses_link_type():
     assert bookmark.file_info is None
 
 
-def test_bookmark_parses_file_type():
-    """Test ChannelBookmark with file type."""
-    data = {
-        "id": "bm123",
-        "create_at": 1706400000000,
-        "update_at": 1706400000000,
-        "delete_at": 0,
-        "channel_id": "ch456",
-        "owner_id": "user789",
-        "file_id": "file123",
-        "display_name": "Important Document",
-        "sort_order": 2,
-        "type": "file",
-        "file_info": {"id": "file123", "name": "doc.pdf"},
-    }
+@pytest.mark.parametrize("key", ["file", "file_info"])
+def test_bookmark_parses_file_type(file_bookmark_data, key):
+    """Parse the server key and the legacy Python field name into typed metadata."""
+    data = file_bookmark_data
+    data[key] = data.pop("file")
 
     bookmark = ChannelBookmark(**data)
-    assert bookmark.file_id == "file123"
-    assert bookmark.file_info["id"] == "file123"
+    assert isinstance(bookmark.file_info, FileInfo)
+    assert bookmark.file_info.id == "fl123456789012345678901234"
+    assert bookmark.file_info.name == "doc.pdf"
+    assert bookmark.file_info.size == 1024
+    assert bookmark.file_info.user_id == ""
+    assert bookmark.file_info.create_at == 0
+    assert bookmark.file_info.width == 0
+    assert "file" not in bookmark.model_extra
+    assert bookmark.file_info.model_extra["mini_preview"] is None
+    assert bookmark.file_info.model_extra["remote_id"] is None
+    assert bookmark.file_info.model_extra["archived"] is False
+
+    serialized = bookmark.model_dump(by_alias=True)
+    assert serialized["file"]["id"] == "fl123456789012345678901234"
+    assert serialized["file"]["mini_preview"] is None
+    assert serialized["file"]["remote_id"] is None
+    assert serialized["file"]["archived"] is False
+    assert "file_info" not in serialized
+
+
+@pytest.mark.parametrize("include_null", [False, True])
+def test_bookmark_accepts_missing_file_metadata(file_bookmark_data, include_null):
+    data = file_bookmark_data
+    data.pop("file")
+    if include_null:
+        data["file"] = None
+
+    bookmark = ChannelBookmark(**data)
+
+    assert bookmark.file_info is None
+    assert "file" not in bookmark.model_extra
+
+
+def test_bookmark_rejects_incomplete_file_metadata(file_bookmark_data):
+    file_bookmark_data["file"] = {"id": "file123", "name": "doc.pdf"}
+
+    with pytest.raises(ValidationError, match="user_id"):
+        ChannelBookmark(**file_bookmark_data)
 
 
 def test_bookmark_allows_extra_fields():
@@ -101,12 +129,14 @@ def test_bookmark_generates_json_schema():
     assert "type" in schema["properties"]
     assert schema["properties"]["id"]["type"] == "string"
     assert "description" in schema["properties"]["id"]
+    assert schema["properties"]["file"]["anyOf"] == [{"$ref": "#/$defs/FileInfo"}, {"type": "null"}]
+    assert schema["$defs"]["FileInfo"]["properties"]["size"]["type"] == "integer"
+    assert "file" not in schema["required"]
+    assert "file_info" not in schema["properties"]
 
 
 def test_bookmark_requires_all_required_fields():
     """Test that missing required fields raise ValidationError."""
-    from pydantic import ValidationError
-
     with pytest.raises(ValidationError) as exc_info:
         ChannelBookmark(id="bm123")  # Missing other required fields
 

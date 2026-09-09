@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- File bookmark metadata now populates `ChannelBookmark.file_info` from Mattermost's `file` key (#29).
+  MCP responses and output schemas expose the typed `file` object without the extra `file_info: null` field.
+
+### Changed
+- `ChannelBookmark.file_info` is now `FileInfo | None` instead of a dictionary. Python callers must use
+  attribute access (for example, `bookmark.file_info.id`) instead of dictionary indexing.
+  Both `file` and `file_info` input keys remain supported, but supplied metadata must satisfy `FileInfo` validation;
+  incomplete dictionaries are no longer accepted. Missing or null metadata still produces `None`.
+
 ## [0.6.0] - 2026-09-09
 
 ### Added
