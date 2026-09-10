@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `serialize_by_alias` (pydantic 2.11) keeps Mattermost field names such as `file` in tool results
   and output schemas, where FastMCP 4 would otherwise emit Python names such as `file_info`.
 
+### Fixed
+- Calls using the default team now log the resolved team ID at INFO level with the request ID,
+  so logs identify the selected team even when `team_id` is omitted or null (#11).
+
 ### Security
 - Lock `anyio` 4.14.2+, `pyjwt` 2.15.1, `urllib3` 2.8.0 and `certifi` 2026.10.19 to pick up fixes
   for 17 published CVEs and GHSA-6q48-6c7w-9gw2, including a critical TLS certificate spoofing issue

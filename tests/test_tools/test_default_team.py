@@ -1,6 +1,7 @@
 """Default team selection at the MCP and Mattermost HTTP boundaries."""
 
 import json
+import logging
 
 import pytest
 import respx
@@ -27,10 +28,26 @@ TOOL_CASES = [
 ]
 
 
+@pytest.fixture
+def tool_logs(caplog, monkeypatch):
+    """Capture actual application records, including when propagation is disabled."""
+    from mcp_server_mattermost.logging import logger, request_id_var
+
+    caplog.set_level(logging.INFO, logger=logger.name)
+    monkeypatch.setattr(logger, "propagate", False)
+    logger.addHandler(caplog.handler)
+    token = request_id_var.set(None)
+    try:
+        yield caplog
+    finally:
+        request_id_var.reset(token)
+        logger.removeHandler(caplog.handler)
+
+
 @pytest.mark.parametrize("case", TOOL_CASES, ids=[case[0] for case in TOOL_CASES])
 @pytest.mark.parametrize("selection", ["omitted", "null", "explicit", "explicit-no-default"])
 @respx.mock
-async def test_default_team_http_selection(mock_settings, monkeypatch, case, selection):
+async def test_default_team_http_selection(mock_settings, monkeypatch, case, selection, tool_logs):
     """Every team-scoped tool resolves omission and honors an explicit override without discovery."""
     from tests.test_tools.test_channels import make_channel_data
     from tests.test_tools.test_teams import make_team_data
@@ -42,9 +59,11 @@ async def test_default_team_http_selection(mock_settings, monkeypatch, case, sel
         response = make_team_data()
     if selection != "explicit-no-default":
         monkeypatch.setenv("MATTERMOST_DEFAULT_TEAM_ID", DEFAULT_TEAM)
+    from mcp_server_mattermost.middleware import LoggingMiddleware
     from mcp_server_mattermost.server import _create_mcp
 
     server = _create_mcp()
+    server.add_middleware(LoggingMiddleware())
     expected_team = OTHER_TEAM if selection.startswith("explicit") else DEFAULT_TEAM
     args = dict(arguments)
     if selection != "omitted":
@@ -56,6 +75,25 @@ async def test_default_team_http_selection(mock_settings, monkeypatch, case, sel
     async with Client(server) as client:
         result = await client.call_tool(tool_name, args)
 
+    from mcp_server_mattermost.logging import JSONFormatter
+
+    resolved = [record for record in tool_logs.records if getattr(record, "event", None) == "default_team_resolved"]
+    if selection in {"omitted", "null"}:
+        assert len(resolved) == 1
+        start = next(record for record in tool_logs.records if getattr(record, "event", None) == "tool_call_start")
+        record = resolved[0]
+        assert record.team_id == expected_team
+        assert record.request_id == start.request_id
+        assert record.request_id is not None
+        assert record.levelno == logging.INFO
+        payload = json.loads(JSONFormatter().format(record))
+        assert payload["team_id"] == expected_team
+        assert payload["request_id"] == start.request_id
+        assert payload["event"] == "default_team_resolved"
+        assert expected_team in logging.Formatter("%(message)s").format(record)
+    else:
+        assert not resolved
+
     assert not result.is_error
     assert route.call_count == 1
     assert len(respx.calls) == (2 if tool_name == "list_my_channels" else 1)
@@ -66,7 +104,7 @@ async def test_default_team_http_selection(mock_settings, monkeypatch, case, sel
 @pytest.mark.parametrize("case", TOOL_CASES, ids=[case[0] for case in TOOL_CASES])
 @pytest.mark.parametrize("invalid", ["missing", "null", "empty", "malformed"])
 @respx.mock
-async def test_invalid_team_never_calls_mattermost(mock_settings, monkeypatch, case, invalid):
+async def test_invalid_team_never_calls_mattermost(mock_settings, monkeypatch, case, invalid, tool_logs):
     """Missing configuration and invalid explicit IDs fail before any Mattermost request."""
     tool_name, arguments, *_ = case
     if invalid not in {"missing", "null"}:
@@ -90,6 +128,7 @@ async def test_invalid_team_never_calls_mattermost(mock_settings, monkeypatch, c
     else:
         assert "Invalid Mattermost ID" in error
     assert not respx.calls
+    assert not any(getattr(record, "event", None) == "default_team_resolved" for record in tool_logs.records)
 
 
 @pytest.mark.parametrize("raw", [None, " \t\n", DEFAULT_TEAM, f" \t{DEFAULT_TEAM}\n"])
@@ -150,7 +189,7 @@ async def test_reordered_tools_reject_positional_calls(mock_settings, tool_name)
 
 @pytest.mark.parametrize("case", TOOL_CASES, ids=[case[0] for case in TOOL_CASES])
 @respx.mock
-async def test_imported_tools_use_client_specific_settings(mock_settings, monkeypatch, case):
+async def test_imported_tools_use_client_specific_settings(mock_settings, monkeypatch, case, tool_logs):
     """Imported tools honor their client's default and token even when global settings disagree."""
     from mcp_server_mattermost.client import MattermostClient
     from mcp_server_mattermost.config import Settings, get_settings
@@ -201,6 +240,10 @@ async def test_imported_tools_use_client_specific_settings(mock_settings, monkey
             if tool_name == "create_channel":
                 assert json.loads(request.content)["team_id"] == expected
 
+    resolved = [record for record in tool_logs.records if getattr(record, "event", None) == "default_team_resolved"]
+    assert len(resolved) == 2
+    assert all(record.team_id == OTHER_TEAM and record.request_id is None for record in resolved)
+
     start = len(respx.calls)
     async with MattermostClient(Settings(default_team_id=None)).lifespan() as client:
         with pytest.raises(ValidationError, match="MATTERMOST_DEFAULT_TEAM_ID"):
@@ -226,7 +269,7 @@ async def test_inaccessible_default_does_not_select_another_team(mock_settings, 
 
 @pytest.mark.parametrize("selection", ["omitted", "null", "explicit"])
 @respx.mock
-async def test_search_users_keeps_optional_filter(mock_settings, monkeypatch, selection):
+async def test_search_users_keeps_optional_filter(mock_settings, monkeypatch, selection, tool_logs):
     """A default team never narrows user search unless the caller explicitly supplies a filter."""
     monkeypatch.setenv("MATTERMOST_DEFAULT_TEAM_ID", DEFAULT_TEAM)
     from mcp_server_mattermost.server import _create_mcp
@@ -239,3 +282,4 @@ async def test_search_users_keeps_optional_filter(mock_settings, monkeypatch, se
         await client.call_tool("search_users", args)
     payload = json.loads(route.calls.last.request.content)
     assert payload == ({"term": "alice", "team_id": OTHER_TEAM} if selection == "explicit" else {"term": "alice"})
+    assert not any(getattr(record, "event", None) == "default_team_resolved" for record in tool_logs.records)
