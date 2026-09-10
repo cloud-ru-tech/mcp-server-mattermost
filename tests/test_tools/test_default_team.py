@@ -134,6 +134,8 @@ async def test_invalid_team_never_calls_mattermost(mock_settings, monkeypatch, c
 @pytest.mark.parametrize("raw", [None, " \t\n", DEFAULT_TEAM, f" \t{DEFAULT_TEAM}\n"])
 async def test_default_team_schema_and_instructions(mock_settings, monkeypatch, raw):
     """Clients can omit team_id and learn the deployment default without a discovery call."""
+    from jsonschema import Draft202012Validator
+
     from mcp_server_mattermost.config import Settings
 
     if raw is not None:
@@ -156,13 +158,16 @@ async def test_default_team_schema_and_instructions(mock_settings, monkeypatch, 
         field = schema["properties"]["team_id"]
         assert field == tools["list_public_channels"].inputSchema["properties"]["team_id"]
         assert field["default"] is None
-        assert (
-            {option.get("type") for option in field["anyOf"]}
-            == {option.get("type") for option in settings_field["anyOf"]}
-            == {"string", "null"}
-        )
-        assert "default" in field["description"].lower()
-        assert "explicit" in field["description"].lower()
+        for candidate in (field, settings_field):
+            validator = Draft202012Validator(candidate)
+            for value in (DEFAULT_TEAM, OTHER_TEAM, None):
+                assert validator.is_valid(value)
+            for value in (0, True, [], {}):
+                assert not validator.is_valid(value)
+        # Python 3.10 can wrap nullable Annotated parameters in an additional anyOf.
+        description = json.dumps(field)
+        assert "Omit or pass null to use MATTERMOST_DEFAULT_TEAM_ID" in description
+        assert "an explicit ID overrides the default" in description
 
 
 @pytest.mark.parametrize("tool_name", ["get_channel_by_name", "create_channel", "search_messages"])
