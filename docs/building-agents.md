@@ -60,11 +60,13 @@ Here's what a client receives from `tools/list` for a read-only tool:
   "inputSchema": {
     "type": "object",
     "properties": {
-      "team_id": {"type": "string"},
+      "team_id": {
+        "anyOf": [{"type": "string"}, {"type": "null"}],
+        "default": null
+      },
       "page": {"type": "integer", "minimum": 0},
       "per_page": {"type": "integer", "minimum": 1, "maximum": 200}
-    },
-    "required": ["team_id"]
+    }
   },
   "annotations": {
     "readOnlyHint": true,

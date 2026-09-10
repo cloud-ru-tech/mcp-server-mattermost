@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional `MATTERMOST_DEFAULT_TEAM_ID` for team-scoped tools (#11). Omitted or null `team_id`
+  uses the configured default; an explicit ID overrides it. Applies to `list_public_channels`,
+  `list_my_channels`, `get_channel_by_name`, `create_channel`, `search_messages`, `get_team`,
+  and `get_team_members` in every authentication mode. `search_users` retains its unfiltered
+  default. Requests continue to use the authenticated account's credentials and permissions.
+
+### Changed
+- Python tool functions `get_channel_by_name`, `create_channel`, and `search_messages` now require
+  keyword arguments (#11). Update direct calls to name each argument, for example
+  `get_channel_by_name(team_id=team_id, channel_name="general", client=client)`.
+  Positional calls raise `TypeError`; MCP calls continue to use named arguments.
+
+### Fixed
+- Calls using the default team now log the resolved team ID at INFO level with the request ID,
+  so logs identify the selected team even when `team_id` is omitted or null (#11).
+
 ## [0.6.1] - 2026-09-09
 
 ### Changed
