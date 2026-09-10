@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `get_channel_by_name(team_id=team_id, channel_name="general", client=client)`.
   Positional calls raise `TypeError`; MCP calls continue to use named arguments.
 
+### Fixed
+- Calls using the default team now log the resolved team ID at INFO level with the request ID,
+  so logs identify the selected team even when `team_id` is omitted or null (#11).
+
 ## [0.6.1] - 2026-09-09
 
 ### Changed
