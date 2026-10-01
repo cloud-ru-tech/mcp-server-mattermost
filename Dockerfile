@@ -1,6 +1,6 @@
 # uv is pinned (a build tool must be deterministic); the base image floats (it
 # must be fresh). Basing the image on a uv image inverts both roles.
-FROM python:3.12-slim-bookworm AS builder
+FROM python:3.14-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.9.30 /uv /uvx /usr/local/bin/
 
@@ -23,7 +23,7 @@ RUN uv sync --frozen --no-dev --no-editable
 
 # Same base as the builder, so the venv runs on the interpreter it was built
 # against.
-FROM python:3.12-slim-bookworm AS runtime
+FROM python:3.14-slim-bookworm AS runtime
 
 # Debian updates published after the base image was last rebuilt. A RUN with no
 # file inputs, so BuildKit caches it while the base digest holds — the scan job
