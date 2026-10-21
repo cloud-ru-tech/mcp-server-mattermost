@@ -145,18 +145,18 @@ async def test_default_team_schema_and_instructions(mock_settings, monkeypatch, 
     server = _create_mcp()
     async with Client(server) as client:
         tools = {tool.name: tool for tool in await client.list_tools()}
-        instructions = client.initialize_result.instructions or ""
+        instructions = client.instructions or ""
 
     configured = Settings().default_team_id is not None
     assert (DEFAULT_TEAM in instructions) is configured
     settings_field = Settings.model_json_schema()["properties"]["default_team_id"]
     assert settings_field["default"] is None
     for name, arguments, *_ in TOOL_CASES:
-        schema = tools[name].inputSchema
+        schema = tools[name].input_schema
         assert "team_id" not in schema.get("required", [])
         assert set(arguments) == set(schema.get("required", []))
         field = schema["properties"]["team_id"]
-        assert field == tools["list_public_channels"].inputSchema["properties"]["team_id"]
+        assert field == tools["list_public_channels"].input_schema["properties"]["team_id"]
         assert field["default"] is None
         for candidate in (field, settings_field):
             validator = Draft202012Validator(candidate)
