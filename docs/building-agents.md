@@ -176,8 +176,8 @@ def is_safe_reader(tool) -> bool:
     meta = tool.meta or {}
     return (
         meta.get("capability") == "read"
-        and getattr(ann, "readOnlyHint", None) is True
-        and getattr(ann, "idempotentHint", None) is True
+        and getattr(ann, "read_only_hint", None) is True
+        and getattr(ann, "idempotent_hint", None) is True
     )
 
 safe_tools = [t for t in tools.tools if is_safe_reader(t)]
@@ -269,7 +269,7 @@ async def main():
             )
 
             # 4. Handle the result
-            if result.isError:
+            if result.is_error:
                 error_text = result.content[0].text
                 print(f"Tool failed: {error_text}")
             else:
