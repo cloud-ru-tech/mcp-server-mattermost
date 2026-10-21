@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
-- Lock `anyio` 4.14.2+, `pyjwt` 2.15.1 and `urllib3` 2.8.0 to pick up fixes for 17 published CVEs,
-  including a critical TLS certificate spoofing issue in `anyio` (CVE-2026-63374).
+- Lock `anyio` 4.14.2+, `pyjwt` 2.15.1, `urllib3` 2.8.0 and `certifi` 2026.10.19 to pick up fixes
+  for 17 published CVEs and GHSA-6q48-6c7w-9gw2, including a critical TLS certificate spoofing issue
+  in `anyio` (CVE-2026-63374).
 
 ## [0.6.1] - 2026-09-09
 
