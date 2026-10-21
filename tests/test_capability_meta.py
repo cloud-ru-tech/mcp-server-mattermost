@@ -123,21 +123,23 @@ class TestCapabilityAnnotationConsistency:
     def test_capability_matches_annotations(self, all_tools, tool_name, expected_cap):
         """Capability and annotations must not contradict each other."""
         tool = all_tools[tool_name]
-        ann = tool.annotations or {}
-        # annotations is ToolAnnotations object, access via attributes
-        read_only = getattr(ann, "readOnlyHint", None)
-        destructive = getattr(ann, "destructiveHint", None)
+        ann = tool.annotations
+        # Direct attribute access, so a renamed ToolAnnotations field fails loudly instead of reading as None.
+        read_only = ann.read_only_hint if ann else None
+        destructive = ann.destructive_hint if ann else None
 
         if expected_cap == Capability.READ:
-            assert read_only is True, f"{tool_name}: capability=read but readOnlyHint={read_only}"
+            assert read_only is True, f"{tool_name}: capability=read but read_only_hint={read_only}"
         elif expected_cap in (Capability.WRITE, Capability.CREATE):
-            assert read_only is not True, f"{tool_name}: capability={expected_cap} but readOnlyHint=True"
+            assert read_only is not True, f"{tool_name}: capability={expected_cap} but read_only_hint=True"
             if tool_name in DESTRUCTIVE_WRITE_TOOLS:
-                assert destructive is not False, f"{tool_name}: destructive write but destructiveHint=False"
+                assert destructive is not False, f"{tool_name}: destructive write but destructive_hint=False"
             else:
-                assert destructive is False, f"{tool_name}: capability={expected_cap} but destructiveHint={destructive}"
+                assert destructive is False, (
+                    f"{tool_name}: capability={expected_cap} but destructive_hint={destructive}"
+                )
         elif expected_cap == Capability.DELETE:
-            assert read_only is not True, f"{tool_name}: capability=delete but readOnlyHint=True"
+            assert read_only is not True, f"{tool_name}: capability=delete but read_only_hint=True"
             # delete tools use default annotations (destructiveHint defaults to true)
 
 

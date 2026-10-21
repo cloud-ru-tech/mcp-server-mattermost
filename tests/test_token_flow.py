@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import patch
 
 import httpx
+import httpx2
 import pytest
 import respx
 from asgi_lifespan import LifespanManager
@@ -65,13 +66,13 @@ class TestClientTokenFlow:
 
                 def asgi_httpx_factory(
                     headers: dict[str, str] | None = None,
-                    timeout: httpx.Timeout | None = None,
-                    auth: httpx.Auth | None = None,
+                    timeout: httpx2.Timeout | None = None,
+                    auth: httpx2.Auth | None = None,
                     **kwargs: Any,
-                ) -> httpx.AsyncClient:
-                    """Create httpx client with ASGI transport for in-memory testing."""
-                    return httpx.AsyncClient(
-                        transport=httpx.ASGITransport(app=asgi_app),
+                ) -> httpx2.AsyncClient:
+                    """Create the FastMCP client's httpx2 client with ASGI transport for in-memory testing."""
+                    return httpx2.AsyncClient(
+                        transport=httpx2.ASGITransport(app=asgi_app),
                         headers=headers,
                         timeout=timeout,
                         auth=auth,
@@ -96,7 +97,7 @@ class TestClientTokenFlow:
             get_settings.cache_clear()
 
         assert result is not None
-        # FastMCP 3 call_tool returns a ToolResult; content[0].text is JSON-serialized.
+        # FastMCP call_tool returns a ToolResult; content[0].text is JSON-serialized.
         data = json.loads(result.content[0].text)
         assert data["id"] == "user123"
 

@@ -13,4 +13,7 @@ class MattermostResponse(BaseModel):
     model_config = ConfigDict(
         extra="allow",
         populate_by_name=True,
+        # FastMCP 4 emits field names unless a model opts into aliases; keep the
+        # Mattermost wire names (e.g. ``file``) in tool results and output schemas.
+        serialize_by_alias=True,
     )

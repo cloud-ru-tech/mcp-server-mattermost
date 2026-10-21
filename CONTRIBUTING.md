@@ -115,7 +115,7 @@ manual edits stop Dependabot from auto-updating that PR.
 ### Library compatibility
 
 This package is published to PyPI with intentionally broad version ranges (e.g.
-`fastmcp>=3.4,<4`). Do **not** raise a dependency's minimum version without a
+`fastmcp>=4.0,<5`). Do **not** raise a dependency's minimum version without a
 concrete reason — it forces downstream users to upgrade. Treat any PR that lifts
 a lower bound as potentially breaking, and note the reason in the changelog.
 
