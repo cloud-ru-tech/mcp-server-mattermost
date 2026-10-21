@@ -298,7 +298,7 @@ async def test_file_bookmark_mcp_response_and_schema(mock_settings, file_bookmar
         tool = next(tool for tool in await client.list_tools() if tool.name == tool_name)
         result = await client.call_tool(tool_name, arguments)
 
-    schema = tool.outputSchema
+    schema = tool.output_schema
     data = result.structured_content
     if tool_name == "list_bookmarks":
         schema = schema["properties"]["result"]["items"]

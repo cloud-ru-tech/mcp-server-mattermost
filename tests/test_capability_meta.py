@@ -125,8 +125,8 @@ class TestCapabilityAnnotationConsistency:
         tool = all_tools[tool_name]
         ann = tool.annotations or {}
         # annotations is ToolAnnotations object, access via attributes
-        read_only = getattr(ann, "readOnlyHint", None)
-        destructive = getattr(ann, "destructiveHint", None)
+        read_only = getattr(ann, "read_only_hint", None)
+        destructive = getattr(ann, "destructive_hint", None)
 
         if expected_cap == Capability.READ:
             assert read_only is True, f"{tool_name}: capability=read but readOnlyHint={read_only}"

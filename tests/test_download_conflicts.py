@@ -263,14 +263,14 @@ async def test_mcp_rename_and_schema(mock_settings, tmp_path):
 
     async with Client(server) as client:
         tool = next(t for t in await client.list_tools() if t.name == "download_file")
-        policy = tool.inputSchema["properties"]["on_conflict"]
+        policy = tool.input_schema["properties"]["on_conflict"]
         assert policy["default"] is None
         validator = Draft202012Validator(policy)
         for value in ("error", "rename", "overwrite", None):
             assert validator.is_valid(value), f"Schema rejected supported policy: {value!r}"
         for value in ("invalid", "", True, 0, [], {}):
             assert not validator.is_valid(value), f"Schema accepted invalid policy: {value!r}"
-        assert "on_conflict" not in tool.inputSchema.get("required", [])
+        assert "on_conflict" not in tool.input_schema.get("required", [])
         for i, file_id in enumerate(identifiers):
             result = await client.call_tool(
                 "download_file",
