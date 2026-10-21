@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Literal, TypeVar
+from typing import Any, Literal, ParamSpec, TypeVar
 
 import httpx
 from tenacity import RetryCallState, retry, retry_if_exception, stop_after_attempt, wait_exponential
@@ -39,7 +39,8 @@ MAX_DOWNLOAD_SIZE_BYTES = 100 * 1024 * 1024
 _DOWNLOAD_TEMP_PREFIX = ".mattermost-download-"
 
 
-_F = TypeVar("_F", bound=Callable[..., Any])
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
 _JSON_CONTENT_TYPE = "application/json"
 
@@ -348,7 +349,7 @@ class MattermostClient:
                 await client.aclose()
                 logger.info("HTTP connection pool closed")
 
-    def _make_retrying(self, method: str) -> Callable[[_F], _F]:
+    def _make_retrying(self, method: str) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
         """Create tenacity retry decorator with instance settings.
 
         Args:
