@@ -144,6 +144,11 @@ def _create_mcp() -> MattermostMCP:
             "Do not call list_teams solely to discover the configured default. "
             "search_users does not use this default: omit its team_id to search without a team filter."
         )
+    else:
+        instructions += (
+            ". No default Mattermost team is configured: tools requiring a team need an explicit team_id; "
+            "call list_teams to find one."
+        )
     return MattermostMCP(
         name="Mattermost",
         instructions=instructions,

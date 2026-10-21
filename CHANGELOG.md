@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `list_my_channels`, `get_channel_by_name`, `create_channel`, `search_messages`, `get_team`,
   and `get_team_members` in every authentication mode. `search_users` retains its unfiltered
   default. Requests continue to use the authenticated account's credentials and permissions.
+  Calls that use the default log the resolved team ID at INFO level with the request ID. Server
+  instructions state the configured default, or that none is set and `list_teams` finds a team.
 
 ### Changed
 - Python tool functions `get_channel_by_name`, `create_channel`, and `search_messages` now require
@@ -23,10 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `session_idle_timeout` argument to `http_app`, which the server's override now passes through, and
   `serialize_by_alias` (pydantic 2.11) keeps Mattermost field names such as `file` in tool results
   and output schemas, where FastMCP 4 would otherwise emit Python names such as `file_info`.
-
-### Fixed
-- Calls using the default team now log the resolved team ID at INFO level with the request ID,
-  so logs identify the selected team even when `team_id` is omitted or null (#11).
 
 ### Security
 - Lock `anyio` 4.14.2+, `pyjwt` 2.15.1, `urllib3` 2.8.0 and `certifi` 2026.10.19 to pick up fixes

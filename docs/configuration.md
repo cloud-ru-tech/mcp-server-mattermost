@@ -51,7 +51,8 @@ even when a default is configured. Pass an explicit ID to restrict that search t
 The setting works with every authentication mode (`static_token`, `client_token`, and `oauth_proxy`).
 It selects a team only; requests still use the authenticated account's credentials and Mattermost permissions.
 In modes with per-client credentials, all clients share the configured default, but each client's access
-is checked with that client's credentials.
+is checked with that client's credentials: non-members get Mattermost's 403/404, and members of several teams
+act in the default team whenever they omit `team_id`. If users work in different teams, leave the default unset.
 
 ### Corporate gateway example
 

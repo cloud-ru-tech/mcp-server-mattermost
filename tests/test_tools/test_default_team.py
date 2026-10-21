@@ -149,6 +149,16 @@ async def test_default_team_schema_and_instructions(mock_settings, monkeypatch, 
 
     configured = Settings().default_team_id is not None
     assert (DEFAULT_TEAM in instructions) is configured
+    if configured:
+        assert "omit team_id or pass null to use this default" in instructions
+        assert "pass an explicit team_id to select another team" in instructions
+        assert "Do not call list_teams" in instructions
+        assert "search_users does not use this default" in instructions
+        assert "No default Mattermost team is configured" not in instructions
+    else:
+        assert "No default Mattermost team is configured" in instructions
+        assert "need an explicit team_id" in instructions
+        assert "call list_teams" in instructions
     settings_field = Settings.model_json_schema()["properties"]["default_team_id"]
     assert settings_field["default"] is None
     for name, arguments, *_ in TOOL_CASES:
