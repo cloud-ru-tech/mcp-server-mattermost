@@ -2,6 +2,11 @@
 
 Tools for managing Mattermost channels: listing, creating, joining, and member management.
 
+For `list_public_channels`, `list_my_channels`, `get_channel_by_name`, and `create_channel`,
+an explicit `team_id` overrides the [configured default team](../configuration.md#default-team).
+Omitted or null `team_id` uses that default. Without either, the tool returns an error recommending
+`team_id` and `list_teams`.
+
 ---
 
 ## list_public_channels
@@ -31,7 +36,7 @@ For channels you are already a member of (including private), use list_my_channe
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID (26-character alphanumeric) |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `page` | integer | — | 0 | Page number (0-indexed) |
 | `per_page` | integer | — | 60 | Results per page (1-200) |
 
@@ -74,7 +79,7 @@ For discovering public channels you haven't joined yet, use list_public_channels
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID (26-character alphanumeric) |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `channel_types` | array | — | null | Channel types to include: O (public), P (private), D (direct), G (group). Default null returns all types. |
 | `only_unread` | boolean | — | false | Return only channels with unread messages. |
 
@@ -159,7 +164,7 @@ For lookup by ID, use get_channel instead.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `channel_name` | string | ✓ | — | Channel name (lowercase, no spaces, 1-64 chars) |
 
 ### Returns
@@ -196,7 +201,7 @@ Each call creates a new channel; use get_channel_by_name to check if it exists.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `name` | string | ✓ | — | URL-friendly name (lowercase, no spaces, 1-64 chars) |
 | `display_name` | string | ✓ | — | Human-readable name (1-64 chars) |
 | `channel_type` | string | — | "O" | "O" (public) or "P" (private) |

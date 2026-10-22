@@ -2,6 +2,10 @@
 
 Tools for accessing team information in Mattermost.
 
+For `get_team` and `get_team_members`, an explicit `team_id` overrides the
+[configured default team](../configuration.md#default-team). Omitted or null `team_id` uses that default.
+Without either, the tool returns an error recommending `team_id` and `list_teams`.
+
 ---
 
 ## list_teams
@@ -9,7 +13,8 @@ Tools for accessing team information in Mattermost.
 List teams the current user belongs to.
 
 Returns team name, description, and settings.
-Use this to discover available teams before listing channels.
+Use to discover teams when no default is configured or to choose another team.
+Team-scoped tools can use the configured default without calling `list_teams`.
 
 ### Example prompts
 
@@ -41,10 +46,10 @@ Array of team objects with `id`, `name`, `display_name`, `description`, `type`.
 
 ## get_team
 
-Get team details by ID.
+Get details of an explicit team or the configured default team.
 
 Returns team name, description, and settings.
-Use when you have the team ID and need detailed information.
+Use when you need detailed information about a team.
 
 ### Example prompts
 
@@ -63,7 +68,7 @@ Use when you have the team ID and need detailed information.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID (26-character alphanumeric) |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 
 ### Returns
 
@@ -100,7 +105,7 @@ Use to discover users before sending direct messages or mentions.
 
 | Name | Type | Required | Default | Description |
 |------|------|----------|---------|-------------|
-| `team_id` | string | ✓ | — | Team ID |
+| `team_id` | string or null | — | null | Team ID (26-character alphanumeric). Omitted or null uses `MATTERMOST_DEFAULT_TEAM_ID`; required if no default is configured. |
 | `page` | integer | — | 0 | Page number (0-indexed) |
 | `per_page` | integer | — | 60 | Results per page (1-200) |
 

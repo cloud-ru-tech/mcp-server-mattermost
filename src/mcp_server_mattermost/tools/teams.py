@@ -7,9 +7,9 @@ from fastmcp.tools import tool
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.deps import get_client
+from mcp_server_mattermost.deps import get_client, resolve_team_id
 from mcp_server_mattermost.enums import Capability, ToolTag
-from mcp_server_mattermost.models import Team, TeamId, TeamMember
+from mcp_server_mattermost.models import DefaultableTeamId, Team, TeamMember
 
 
 @tool(
@@ -23,7 +23,8 @@ async def list_teams(
     """List teams the current user belongs to.
 
     Returns team name, description, and settings.
-    Use this to discover available teams before listing channels.
+    Use to discover teams when no default is configured or to choose another team.
+    Team-scoped tools can use the configured default without calling list_teams.
     """
     data = await client.get_teams()
     return [Team(**item) for item in data]
@@ -35,15 +36,15 @@ async def list_teams(
     meta={"capability": Capability.READ},
 )
 async def get_team(
-    team_id: TeamId,
+    team_id: DefaultableTeamId = None,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> Team:
-    """Get team details by ID.
+    """Get details of an explicit team or the configured default team.
 
     Returns team name, description, and settings.
-    Use when you have the team ID and need detailed information.
+    Use when you need detailed information about a team.
     """
-    data = await client.get_team(team_id=team_id)
+    data = await client.get_team(team_id=resolve_team_id(team_id, client.settings))
     return Team(**data)
 
 
@@ -53,7 +54,7 @@ async def get_team(
     meta={"capability": Capability.READ},
 )
 async def get_team_members(
-    team_id: TeamId,
+    team_id: DefaultableTeamId = None,
     page: Annotated[int, Field(ge=0, description="Page number (0-indexed)")] = 0,
     per_page: Annotated[int, Field(ge=1, le=200, description="Results per page")] = 60,
     client: MattermostClient = Depends(get_client),  # noqa: B008
@@ -64,7 +65,7 @@ async def get_team_members(
     Use to discover users before sending direct messages or mentions.
     """
     data = await client.get_team_members(
-        team_id=team_id,
+        team_id=resolve_team_id(team_id, client.settings),
         page=page,
         per_page=per_page,
     )

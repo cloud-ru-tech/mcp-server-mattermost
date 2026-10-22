@@ -7,9 +7,9 @@ from fastmcp.tools import tool
 from pydantic import Field
 
 from mcp_server_mattermost.client import MattermostClient
-from mcp_server_mattermost.deps import get_client
+from mcp_server_mattermost.deps import get_client, resolve_team_id
 from mcp_server_mattermost.enums import Capability, ToolTag
-from mcp_server_mattermost.models import Attachment, ChannelId, FileId, Post, PostId, PostList, TeamId
+from mcp_server_mattermost.models import Attachment, ChannelId, DefaultableTeamId, FileId, Post, PostId, PostList
 
 
 @tool(
@@ -209,9 +209,10 @@ async def get_channel_messages(  # noqa: PLR0913, PLR0917
     meta={"capability": Capability.READ},
 )
 async def search_messages(
-    team_id: TeamId,
+    *,
     terms: Annotated[str, Field(min_length=1, max_length=512, description="Search terms (Mattermost syntax)")],
-    is_or_search: Annotated[bool, Field(description="Use OR instead of AND for multiple terms")] = False,  # noqa: FBT002
+    team_id: DefaultableTeamId = None,
+    is_or_search: Annotated[bool, Field(description="Use OR instead of AND for multiple terms")] = False,
     client: MattermostClient = Depends(get_client),  # noqa: B008
 ) -> PostList:
     """Search for messages matching specific criteria across channels.
@@ -227,7 +228,7 @@ async def search_messages(
     - Combined: "from:alice in:dev-ops deployment failed"
     """
     data = await client.search_posts(
-        team_id=team_id,
+        team_id=resolve_team_id(team_id, client.settings),
         terms=terms,
         is_or_search=is_or_search,
     )
