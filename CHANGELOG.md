@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and output schemas, where FastMCP 4 would otherwise emit Python names such as `file_info`.
 
 ### Security
+- Require `fastmcp>=4.1.2` and lock 4.1.5 to fix GHSA-7xgj-8392-5q4r (authorization skipped for
+  components changed by transforms) and GHSA-vqqp-x5qm-5qp4. FastMCP 4.1 also accepts `"auto"` for
+  `session_idle_timeout`, which the `http_app` override now allows.
+- Lock `authlib` 1.9.2, `joserfc` 1.7.7, `opentelemetry-api` 1.45.2 and `dnspython` 2.9.1 to pick up
+  fixes for published CVEs, including a critical signature verification bypass in `authlib`
+  (CVE-2026-96760). Python 3.10 keeps `dnspython` 2.8.0, the last release that supports it; its
+  CVE-2026-114605 is suppressed in `.trivyignore` because the DNS code is never called.
 - Lock `anyio` 4.14.2+, `pyjwt` 2.15.1, `urllib3` 2.8.0 and `certifi` 2026.10.19 to pick up fixes
   for 17 published CVEs and GHSA-6q48-6c7w-9gw2, including a critical TLS certificate spoofing issue
   in `anyio` (CVE-2026-63374).

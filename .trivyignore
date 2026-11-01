@@ -5,3 +5,8 @@
 #
 # Format:
 # CVE-YYYY-NNNNN  # reason; review by YYYY-MM-DD
+
+# dnspython DoS via excessive DNS responses. 2.9.0+ requires Python 3.11, so the Python 3.10 lock
+# stays on 2.8.0. Not exploitable: dnspython is pulled in only by email-validator, which pydantic
+# calls with check_deliverability=False, so no DNS queries run. Remove when Python 3.10 is dropped.
+CVE-2026-114605  # not exploitable in our context; review by 2027-02-01

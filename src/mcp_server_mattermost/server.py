@@ -79,7 +79,7 @@ class MattermostMCP(FastMCP):
         host_origin_protection: bool | Literal["auto"] | None = None,  # noqa: FBT001
         allowed_hosts: list[str] | None = None,
         allowed_origins: list[str] | None = None,
-        session_idle_timeout: float | None = None,
+        session_idle_timeout: float | Literal["auto"] | None = None,
     ) -> StarletteWithLifespan:
         """Build the HTTP app with rejection logging wrapped around the Host/Origin guard.
 
@@ -97,7 +97,8 @@ class MattermostMCP(FastMCP):
             host_origin_protection: Host/Origin validation level; defaults to FastMCP settings.
             allowed_hosts: Additional accepted Host header values.
             allowed_origins: Additional accepted browser origins.
-            session_idle_timeout: Idle seconds before a streamable-HTTP session is terminated.
+            session_idle_timeout: Idle seconds before a streamable-HTTP session is terminated;
+                ``"auto"`` uses the MCP SDK default.
 
         Returns:
             The Starlette application, with rejection logging as its outermost middleware.
