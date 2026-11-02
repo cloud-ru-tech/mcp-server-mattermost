@@ -42,16 +42,20 @@ Once configured, you can ask your AI assistant:
 
 ## Available Tools
 
+For the seven tools marked "default team", omitted or null `team_id` uses
+[`MATTERMOST_DEFAULT_TEAM_ID`](docs/configuration.md#default-team); without a configured default, provide `team_id`.
+An explicit ID overrides the default. `search_users` remains unfiltered when `team_id` is omitted or null.
+
 <details>
 <summary>Channels (11 tools)</summary>
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `list_public_channels` | List public channels in a team | `team_id` ✓ |
-| `list_my_channels` | List your channels with unread counts | `team_id` ✓, `only_unread` |
+| `list_public_channels` | List public channels in a team | `team_id` (default team) |
+| `list_my_channels` | List your channels with unread counts | `team_id` (default team), `only_unread` |
 | `get_channel` | Get channel details by ID | `channel_id` ✓ |
-| `get_channel_by_name` | Get channel by name | `team_id`, `channel_name` ✓ |
-| `create_channel` | Create a new channel | `team_id`, `name`, `display_name` ✓ |
+| `get_channel_by_name` | Get channel by name | `channel_name` ✓, `team_id` (default team) |
+| `create_channel` | Create a new channel | `name`, `display_name` ✓, `team_id` (default team) |
 | `join_channel` | Join a public channel | `channel_id` ✓ |
 | `leave_channel` | Leave a channel | `channel_id` ✓ |
 | `mark_channel_viewed` | Mark a channel as viewed (reset unread counters) | `channel_id` ✓ |
@@ -68,7 +72,7 @@ Once configured, you can ask your AI assistant:
 |------|-------------|----------------|
 | `post_message` | Send a message to a channel | `channel_id`, `message` ✓, `attachments` |
 | `get_channel_messages` | Get messages: recent, unread window, or `since` timestamp | `channel_id` ✓, `unread_only`, `since` |
-| `search_messages` | Search messages by term | `team_id`, `terms` ✓ |
+| `search_messages` | Search messages by term | `terms` ✓, `team_id` (default team) |
 | `update_message` | Edit a message | `post_id`, `message` ✓, `attachments` |
 | `delete_message` | Delete a message | `post_id` ✓ |
 
@@ -107,8 +111,8 @@ Once configured, you can ask your AI assistant:
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `list_teams` | List your teams | — |
-| `get_team` | Get team details | `team_id` ✓ |
-| `get_team_members` | List team members | `team_id` ✓ |
+| `get_team` | Get team details | `team_id` (default team) |
+| `get_team_members` | List team members | `team_id` (default team) |
 
 </details>
 
@@ -171,6 +175,7 @@ Once configured, you can ask your AI assistant:
 | `MATTERMOST_URL` | Yes | — | Mattermost server URL |
 | `MATTERMOST_AUTH_MODE` | No | `static_token` | Auth mode: `static_token`, `client_token`, or `oauth_proxy` |
 | `MATTERMOST_TOKEN` | Conditional | — | Bot or personal token. Required for `static_token`. |
+| `MATTERMOST_DEFAULT_TEAM_ID` | No | — | Default team ID for team-scoped tools (26 alphanumeric characters); explicit `team_id` overrides it |
 | `MATTERMOST_TIMEOUT` | No | 30 | Request timeout in seconds |
 | `MATTERMOST_MAX_RETRIES` | No | 3 | Max retry attempts |
 | `MATTERMOST_VERIFY_SSL` | No | true | Verify SSL certificates |

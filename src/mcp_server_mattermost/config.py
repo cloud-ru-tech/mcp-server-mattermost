@@ -10,6 +10,8 @@ from urllib.parse import urlsplit
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from .models.common import TeamId
+
 
 class AuthMode(str, Enum):
     """Mattermost authentication mode."""
@@ -54,6 +56,7 @@ class Settings(BaseSettings):
         MATTERMOST_URL: Mattermost server URL (required)
         MATTERMOST_AUTH_MODE: static_token, client_token, or oauth_proxy
         MATTERMOST_TOKEN: Bot/user access token (required for static_token)
+        MATTERMOST_DEFAULT_TEAM_ID: Default team for operations requiring a team (optional)
         MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS: Deprecated alias for MATTERMOST_AUTH_MODE=client_token
         MATTERMOST_OAUTH_CLIENT_ID: Mattermost OAuth App client ID for oauth_proxy
         MATTERMOST_OAUTH_CLIENT_TYPE: public or confidential for oauth_proxy
@@ -86,6 +89,7 @@ class Settings(BaseSettings):
 
     url: str = Field(description="Mattermost server URL")
     token: str | None = Field(default=None, description="Bot or user access token")
+    default_team_id: TeamId | None = Field(default=None, description="Default team for operations requiring a team")
     auth_mode: AuthMode = Field(default=AuthMode.STATIC_TOKEN, description="Authentication mode")
     allow_http_client_tokens: bool = Field(
         default=False,
@@ -160,6 +164,14 @@ class Settings(BaseSettings):
         if v is None:
             return v
         return v.rstrip("/")
+
+    @field_validator("default_team_id", mode="before")
+    @classmethod
+    def normalize_default_team_id(cls, v: object) -> object:
+        """Trim configured team IDs and treat blank environment values as unset."""
+        if isinstance(v, str):
+            return v.strip() or None
+        return v
 
     @field_validator("extra_ca_certs")
     @classmethod

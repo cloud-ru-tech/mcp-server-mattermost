@@ -81,6 +81,7 @@ Required environment variables:
 - `MATTERMOST_TOKEN` - Bot or user access token (conditional: required unless `MATTERMOST_ALLOW_HTTP_CLIENT_TOKENS` is enabled)
 
 Optional:
+- `MATTERMOST_DEFAULT_TEAM_ID` (default: none) - Default team ID for team-scoped tools; explicit `team_id` overrides it
 - `MATTERMOST_TIMEOUT` (default: 30)
 - `MATTERMOST_MAX_RETRIES` (default: 3)
 - `MATTERMOST_VERIFY_SSL` (default: true)

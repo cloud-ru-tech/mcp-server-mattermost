@@ -130,3 +130,13 @@ class TestGetClient:
             first_pool = first._borrowed_client
         async with get_client() as second:
             assert second._borrowed_client is first_pool
+
+
+@pytest.mark.parametrize("explicit", [None, "tm123456789012345678901234"])
+def test_resolve_team_uses_client_settings(mock_settings, explicit):
+    """Library callers resolve against their client's settings, not process-global settings."""
+    from mcp_server_mattermost.config import Settings
+    from mcp_server_mattermost.deps import resolve_team_id
+
+    settings = Settings(default_team_id="o5w8h47pdfbzjc4d8w7dhnhren")
+    assert resolve_team_id(explicit, settings) == (explicit or "o5w8h47pdfbzjc4d8w7dhnhren")

@@ -6,9 +6,10 @@ from contextlib import asynccontextmanager
 from fastmcp.server.dependencies import get_access_token
 
 from .client import MattermostClient
-from .config import AuthMode, get_settings
-from .exceptions import AuthenticationError
+from .config import AuthMode, Settings, get_settings
+from .exceptions import AuthenticationError, ValidationError
 from .http_pool import shared_http_client
+from .logging import logger, request_id_var
 
 
 def _get_mattermost_token_from_auth_context() -> str:
@@ -47,3 +48,36 @@ async def get_client() -> AsyncIterator[MattermostClient]:
         client = MattermostClient(settings, token=token, http_client=http_client)
         async with client.lifespan():
             yield client
+
+
+def resolve_team_id(team_id: str | None, settings: Settings) -> str:
+    """Resolve a validated tool argument using the deployment's default team.
+
+    Args:
+        team_id: Explicit team ID, or None to use the configured default.
+        settings: Settings of the client handling this call.
+
+    Returns:
+        The explicit or configured team ID.
+
+    Raises:
+        ValidationError: Neither a team ID nor a default is available.
+    """
+    if team_id is not None:
+        return team_id
+    if settings.default_team_id is not None:
+        logger.info(
+            "Using configured default team %s",
+            settings.default_team_id,
+            extra={
+                "event": "default_team_resolved",
+                "team_id": settings.default_team_id,
+                "request_id": request_id_var.get(),
+            },
+        )
+        return settings.default_team_id
+    msg = (
+        "team_id is required when MATTERMOST_DEFAULT_TEAM_ID is not configured. "
+        "Pass team_id; use list_teams to discover available teams."
+    )
+    raise ValidationError(msg)

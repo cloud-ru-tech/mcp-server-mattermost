@@ -590,3 +590,33 @@ class TestPoolSettings:
         settings = Settings()
 
         assert settings.max_keepalive_connections == settings.max_connections == 10
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        (None, None),
+        ("", None),
+        ("  ", None),
+        ("o5w8h47pdfbzjc4d8w7dhnhren", "o5w8h47pdfbzjc4d8w7dhnhren"),
+        ("  o5w8h47pdfbzjc4d8w7dhnhren  ", "o5w8h47pdfbzjc4d8w7dhnhren"),
+    ],
+)
+def test_default_team_configuration(mock_settings, monkeypatch, raw, expected):
+    """Default team is optional and environment whitespace is normalized."""
+    from mcp_server_mattermost.config import Settings
+
+    if raw is not None:
+        monkeypatch.setenv("MATTERMOST_DEFAULT_TEAM_ID", raw)
+    assert Settings().default_team_id == expected
+
+
+@pytest.mark.parametrize("raw", ["short", "x" * 27, "!" * 26])
+def test_invalid_default_team_configuration(mock_settings, monkeypatch, raw):
+    """Malformed configured teams fail settings loading instead of reaching Mattermost."""
+    from mcp_server_mattermost.config import get_settings
+    from mcp_server_mattermost.exceptions import ConfigurationError
+
+    monkeypatch.setenv("MATTERMOST_DEFAULT_TEAM_ID", raw)
+    with pytest.raises(ConfigurationError, match="Invalid Mattermost ID"):
+        get_settings()
