@@ -1,6 +1,6 @@
 """Message operations tools."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastmcp.dependencies import Depends
 from fastmcp.tools import tool
@@ -10,6 +10,77 @@ from mcp_server_mattermost.client import MattermostClient
 from mcp_server_mattermost.deps import get_client
 from mcp_server_mattermost.enums import Capability, ToolTag
 from mcp_server_mattermost.models import Attachment, ChannelId, FileId, Post, PostId, PostList, TeamId
+
+
+@tool(
+    annotations={"destructiveHint": False, "idempotentHint": True},
+    tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.WRITE},
+)
+async def save_message_draft(
+    channel_id: ChannelId,
+    message: Annotated[
+        str,
+        Field(
+            min_length=0,
+            max_length=16383,
+            description="Draft message content (supports Markdown); empty string clears the text",
+        ),
+    ],
+    root_id: Annotated[PostId | None, Field(description="Root post ID when drafting a thread reply")] = None,
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> dict[str, Any]:
+    """Create or update a private message draft in a channel.
+
+    Drafts are stored per user and per channel and are only visible to the
+    drafting user — nothing is posted to the channel and no notifications
+    are sent. Saving a draft never publishes it; use the Mattermost UI to
+    review and send drafts.
+    """
+    draft = await client.get_draft(channel_id)
+    payload_props = None
+    if draft:
+        result = await client.update_draft(channel_id=channel_id, message=message, root_id=root_id, props=payload_props)
+    else:
+        result = await client.create_draft(channel_id=channel_id, message=message, root_id=root_id, props=payload_props)
+    return {
+        "channel_id": result.get("channel_id", channel_id),
+        "message": result.get("message", message),
+        "root_id": result.get("root_id"),
+        "update_at": result.get("update_at"),
+        "created": not draft,
+        "note": "draft saved privately; not posted",
+    }
+
+
+@tool(
+    annotations={"readOnlyHint": True, "idempotentHint": True},
+    tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.READ},
+)
+async def get_message_draft(
+    channel_id: ChannelId,
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> dict[str, Any]:
+    """Read the current user's draft for a channel (empty when none exists).
+
+    Returns the draft message, root_id and timestamps. Drafts are private
+    to the drafting user.
+    """
+    return await client.get_draft(channel_id)
+
+
+@tool(
+    annotations={"destructiveHint": False},
+    tags={ToolTag.MATTERMOST, ToolTag.MESSAGE},
+    meta={"capability": Capability.WRITE},
+)
+async def delete_message_draft(
+    channel_id: ChannelId,
+    client: MattermostClient = Depends(get_client),  # noqa: B008
+) -> dict[str, Any]:
+    """Delete the current user's draft for a channel."""
+    return await client.delete_draft(channel_id)
 
 
 @tool(

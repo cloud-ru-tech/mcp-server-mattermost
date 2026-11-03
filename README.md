@@ -181,6 +181,30 @@ Once configured, you can ask your AI assistant:
 | `MATTERMOST_LOG_LEVEL` | No | INFO | Logging level |
 | `MATTERMOST_LOG_FORMAT` | No | json | Log output format: `json` or `text` |
 | `MATTERMOST_API_VERSION` | No | v4 | Mattermost API version |
+| `MATTERMOST_ALLOWED_TOOLS` | No | — | Comma-separated allowlist of tool names; when set, only these tools are exposed |
+| `MATTERMOST_DENIED_TOOLS` | No | — | Comma-separated denylist of tool names to hide; takes precedence over `MATTERMOST_ALLOWED_TOOLS` |
+
+### Tool visibility filtering
+
+`MATTERMOST_ALLOWED_TOOLS` and `MATTERMOST_DENIED_TOOLS` restrict which tools
+the server exposes, without changing its code:
+
+- **Allowlist mode** — when `MATTERMOST_ALLOWED_TOOLS` is set, every tool is
+  hidden except the listed ones (comma-separated, whitespace tolerated).
+- **Denylist** — `MATTERMOST_DENIED_TOOLS` always wins: a tool named in both
+  lists stays hidden.
+
+Example — expose read-only messaging plus drafts only:
+
+```bash
+MATTERMOST_ALLOWED_TOOLS=get_channel_messages,get_thread,search_posts,get_message_draft,save_message_draft
+```
+
+Example — hide destructive tools regardless of any allowlist:
+
+```bash
+MATTERMOST_DENIED_TOOLS=delete_post,delete_channel,archive_channel
+```
 
 For `client_token` and `oauth_proxy` modes — including Mattermost OAuth App
 registration, all `MATTERMOST_OAUTH_*` settings, and MCP client connection — see

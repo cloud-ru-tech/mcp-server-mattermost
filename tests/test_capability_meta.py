@@ -8,6 +8,10 @@ from mcp_server_mattermost.enums import Capability
 
 # Expected capabilities for every tool (source of truth from design doc)
 EXPECTED_CAPABILITIES: dict[str, Capability] = {
+    # drafts
+    "save_message_draft": Capability.WRITE,
+    "get_message_draft": Capability.READ,
+    "delete_message_draft": Capability.WRITE,
     # channels.py
     "list_public_channels": Capability.READ,
     "list_my_channels": Capability.READ,
@@ -190,14 +194,14 @@ class TestCapabilityCounts:
 
     def test_expected_tool_count(self):
         """Total tool count matches expectations."""
-        assert len(EXPECTED_CAPABILITIES) == 39
+        assert len(EXPECTED_CAPABILITIES) == 42
 
     def test_capability_distribution(self):
         """Capability distribution matches design."""
         counts: dict[Capability, int] = {}
         for cap in EXPECTED_CAPABILITIES.values():
             counts[cap] = counts.get(cap, 0) + 1
-        assert counts[Capability.READ] == 20
-        assert counts[Capability.WRITE] == 15
+        assert counts[Capability.READ] == 21
+        assert counts[Capability.WRITE] == 17
         assert counts[Capability.CREATE] == 2
         assert counts[Capability.DELETE] == 2

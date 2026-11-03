@@ -19,7 +19,16 @@ for _tool in (
     "create_direct_channel",
 ):
     _TOOL_TO_MODULE[_tool] = "channels"
-for _tool in ("post_message", "get_channel_messages", "search_messages", "update_message", "delete_message"):
+for _tool in (
+    "post_message",
+    "get_channel_messages",
+    "search_messages",
+    "update_message",
+    "delete_message",
+    "save_message_draft",
+    "get_message_draft",
+    "delete_message_draft",
+):
     _TOOL_TO_MODULE[_tool] = "messages"
 for _tool in ("add_reaction", "remove_reaction", "get_reactions", "pin_message", "unpin_message", "get_thread"):
     _TOOL_TO_MODULE[_tool] = "posts"
@@ -83,7 +92,7 @@ class TestToolCount:
     """Verify expected number of tools are registered."""
 
     async def test_total_tool_count(self, all_tools):
-        assert len(all_tools) == 39, f"Expected 39 tools, got {len(all_tools)}: {list(all_tools.keys())}"
+        assert len(all_tools) == 42, f"Expected 42 tools, got {len(all_tools)}: {list(all_tools.keys())}"
 
     async def test_no_unexpected_tools(self, all_tools):
         """Catch new tools not in _TOOL_TO_MODULE."""

@@ -9,13 +9,14 @@ from fastmcp import FastMCP
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.server.lifespan import lifespan
 from fastmcp.server.providers import FileSystemProvider
+from fastmcp.server.transforms import Visibility
 from mcp.server.streamable_http import EventStore
 from starlette.middleware import Middleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .auth_factory import build_auth_provider_from_env
-from .config import get_settings
+from .config import Settings, get_settings
 from .http_guard_log import GuardRejectionLoggingMiddleware
 from .http_pool import owned_shared_client
 from .http_security import apply_http_security_settings
@@ -136,13 +137,40 @@ def _create_mcp() -> MattermostMCP:
     install_extra_ca_certs(settings)
     apply_http_security_settings(settings)
     auth = build_auth_provider_from_env()
+    provider = FileSystemProvider(Path(__file__).parent / "tools")
+    for transform in tool_visibility_transforms(settings):
+        provider.add_transform(transform)
     return MattermostMCP(
         name="Mattermost",
         instructions="MCP server for Mattermost team collaboration platform",
         lifespan=app_lifespan,
-        providers=[FileSystemProvider(Path(__file__).parent / "tools")],
+        providers=[provider],
         auth=auth,
     )
+
+
+def _split_tool_names(raw: str | None) -> set[str]:
+    """Split a comma-separated tool-name list into a clean set."""
+    return {name.strip() for name in (raw or "").split(",") if name.strip()}
+
+
+def tool_visibility_transforms(settings: Settings) -> list[Visibility]:
+    """Build tool visibility transforms from MATTERMOST_ALLOWED_TOOLS / MATTERMOST_DENIED_TOOLS.
+
+    - With only an allowlist: everything is disabled first, then the listed
+      tools are re-enabled (allowlist mode).
+    - With both lists: the denylist transform is applied last, so denied
+      tools stay hidden even when the allowlist names them (deny wins).
+    """
+    allowed = _split_tool_names(settings.allowed_tools)
+    denied = _split_tool_names(settings.denied_tools)
+    transforms: list[Visibility] = []
+    if allowed:
+        transforms.append(Visibility(enabled=False, components={"tool"}, match_all=True))
+        transforms.append(Visibility(enabled=True, components={"tool"}, names=allowed))
+    if denied:
+        transforms.append(Visibility(enabled=False, components={"tool"}, names=denied))
+    return transforms
 
 
 mcp = _create_mcp()

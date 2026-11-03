@@ -1120,6 +1120,85 @@ class MattermostClient:
         result = await self.post("/posts", json=payload)
         return result if isinstance(result, dict) else {}
 
+    async def get_draft(self, channel_id: str) -> dict[str, Any]:
+        """Get the current user's draft for a channel.
+
+        Args:
+            channel_id: Channel identifier
+
+        Returns:
+            Draft object (message, root_id, timestamps) or empty dict when no draft exists
+        """
+        try:
+            result = await self.get(f"/drafts/{channel_id}")
+        except NotFoundError:
+            return {}
+        return result if isinstance(result, dict) else {}
+
+    async def create_draft(
+        self,
+        channel_id: str,
+        message: str,
+        root_id: str | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Create a draft for a channel (replaces any existing draft).
+
+        Args:
+            channel_id: Channel identifier
+            message: Draft message content
+            root_id: Parent post ID when the draft targets a thread
+            props: Additional properties (e.g. attachments)
+
+        Returns:
+            Created draft object
+        """
+        payload: dict[str, Any] = {"channel_id": channel_id, "message": message}
+        if root_id:
+            payload["root_id"] = root_id
+        if props:
+            payload["props"] = props
+        result = await self.post("/drafts", json=payload)
+        return result if isinstance(result, dict) else {}
+
+    async def update_draft(
+        self,
+        channel_id: str,
+        message: str,
+        root_id: str | None = None,
+        props: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Update the existing draft for a channel.
+
+        Args:
+            channel_id: Channel identifier
+            message: Draft message content
+            root_id: Parent post ID when the draft targets a thread
+            props: Additional properties (e.g. attachments)
+
+        Returns:
+            Updated draft object
+        """
+        payload: dict[str, Any] = {"channel_id": channel_id, "message": message}
+        if root_id:
+            payload["root_id"] = root_id
+        if props:
+            payload["props"] = props
+        result = await self.put(f"/drafts/{channel_id}", json=payload)
+        return result if isinstance(result, dict) else {}
+
+    async def delete_draft(self, channel_id: str) -> dict[str, Any]:
+        """Delete the current user's draft for a channel.
+
+        Args:
+            channel_id: Channel identifier
+
+        Returns:
+            Deleted draft object (last state)
+        """
+        result = await self.delete(f"/drafts/{channel_id}")
+        return result if isinstance(result, dict) else {}
+
     async def get_post(self, post_id: str) -> dict[str, Any]:
         """Get post by ID.
 

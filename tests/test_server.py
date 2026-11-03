@@ -65,7 +65,7 @@ class TestServerIntegration:
         from mcp_server_mattermost.server import mcp
 
         tools = await mcp.list_tools()
-        assert len(tools) == 39, f"Expected 39 tools, got {len(tools)}: {[t.name for t in tools]}"
+        assert len(tools) == 42, f"Expected 42 tools, got {len(tools)}: {[t.name for t in tools]}"
 
 
 class TestMcpAuth:

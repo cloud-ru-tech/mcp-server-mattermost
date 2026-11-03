@@ -128,6 +128,14 @@ class Settings(BaseSettings):
         default=None,
         description="Extra allowed Origin header values for HTTP transport (JSON array or comma-separated)",
     )
+    allowed_tools: str | None = Field(
+        default=None,
+        description="Comma-separated allowlist of tool names to expose; when set, all other tools are hidden",
+    )
+    denied_tools: str | None = Field(
+        default=None,
+        description="Comma-separated denylist of tool names to hide; takes precedence over allowed_tools",
+    )
 
     oauth_client_id: str | None = Field(default=None, description="Mattermost OAuth App client ID")
     oauth_client_type: OAuthClientType = Field(
